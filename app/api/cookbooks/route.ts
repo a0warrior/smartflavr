@@ -50,8 +50,8 @@ export async function POST(req: Request) {
   }
 
   await pool.query(
-    "INSERT INTO cookbooks (user_id, title, description, cover_emoji, cover_color) VALUES (?, ?, ?, ?, ?)",
-    [users[0].id, title, description, cover_emoji || "📖", cover_color || "#F97316"]
+    "INSERT INTO cookbooks (user_id, title, description, cover_emoji, cover_color, cover_image) VALUES (?, ?, ?, ?, ?, ?)",
+    [users[0].id, title, description, cover_emoji || "📖", cover_color || "#F97316", null]
   )
 
   return NextResponse.json({ success: true })
