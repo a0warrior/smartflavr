@@ -62,32 +62,32 @@ export default function Dashboard() {
   }
 
   async function uploadCoverImage(e: React.ChangeEvent<HTMLInputElement>, isEdit = false) {
-  const file = e.target.files?.[0]
-  if (!file) return
-  const reader = new FileReader()
-  reader.onloadend = () => {
-    setCropImage(reader.result as string)
-    setCropTarget(isEdit ? "edit" : "new")
-  }
-  reader.readAsDataURL(file)
-}
-
-async function handleCropDone(cropped: string) {
-  const res = await fetch("/api/upload", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ image: cropped }),
-  })
-  const data = await res.json()
-  if (data.success) {
-    if (cropTarget === "edit") {
-      setEditingCookbook((prev: any) => ({ ...prev, cover_image: data.url }))
-    } else {
-      setCoverImage(data.url)
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setCropImage(reader.result as string)
+      setCropTarget(isEdit ? "edit" : "new")
     }
+    reader.readAsDataURL(file)
   }
-  setCropImage("")
-}
+
+  async function handleCropDone(cropped: string) {
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: cropped }),
+    })
+    const data = await res.json()
+    if (data.success) {
+      if (cropTarget === "edit") {
+        setEditingCookbook((prev: any) => ({ ...prev, cover_image: data.url }))
+      } else {
+        setCoverImage(data.url)
+      }
+    }
+    setCropImage("")
+  }
 
   async function createCookbook() {
     if (!title) return
@@ -117,6 +117,7 @@ async function handleCropDone(cropped: string) {
         cover_emoji: editingCookbook.cover_emoji,
         cover_color: editingCookbook.cover_color,
         cover_image: editingCookbook.cover_image || "",
+        is_public: editingCookbook.is_public ?? 0,
       }),
     })
     setShowEditModal(false)
@@ -218,15 +219,20 @@ async function handleCropDone(cropped: string) {
                   className="font-medium text-sm text-gray-900 flex-1 truncate">
                   {book.title}
                 </div>
-                <button
-                  onClick={e => {
-                    e.stopPropagation()
-                    setEditingCookbook({ ...book })
-                    setShowEditModal(true)
-                  }}
-                  className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 text-xs px-2 transition">
-                  ✏️
-                </button>
+                <div className="flex items-center gap-1">
+                  {book.is_public === 1 && (
+                    <span className="text-xs text-green-500 font-medium">Public</span>
+                  )}
+                  <button
+                    onClick={e => {
+                      e.stopPropagation()
+                      setEditingCookbook({ ...book })
+                      setShowEditModal(true)
+                    }}
+                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 text-xs px-2 transition">
+                    ✏️
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -269,7 +275,7 @@ async function handleCropDone(cropped: string) {
                   <label className="text-sm text-gray-500 mb-1 block">Emoji (shown if no image)</label>
                   <input value={emoji} onChange={e => setEmoji(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 w-20 text-center text-2xl"/>
                 </div>
-                <div className="mb-6">
+                <div className="mb-4">
                   <label className="text-sm text-gray-500 mb-2 block">Cover color</label>
                   <div className="flex gap-2 flex-wrap">
                     {COLORS.map(c => (
@@ -279,6 +285,17 @@ async function handleCropDone(cropped: string) {
                 </div>
               </>
             )}
+            <div className="mb-6">
+              <label className="text-sm text-gray-500 mb-2 block">Visibility</label>
+              <div className="flex gap-3">
+                <button className="flex-1 py-2 rounded-xl text-sm border bg-gray-900 text-white border-gray-900">
+                  🔒 Private
+                </button>
+                <button className="flex-1 py-2 rounded-xl text-sm border border-gray-200 text-gray-500 hover:bg-gray-50">
+                  🌍 Public
+                </button>
+              </div>
+            </div>
             <div className="flex gap-3">
               <button onClick={() => setShowModal(false)} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Cancel</button>
               <button onClick={createCookbook} disabled={loading} className="flex-1 bg-orange-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-orange-600">
@@ -291,7 +308,7 @@ async function handleCropDone(cropped: string) {
 
       {showEditModal && editingCookbook && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm mx-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm mx-4 max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-medium mb-4">Edit Cookbook</h2>
             <div className="mb-4">
               <label className="text-sm text-gray-500 mb-1 block">Title</label>
@@ -325,7 +342,7 @@ async function handleCropDone(cropped: string) {
                     onChange={e => setEditingCookbook({ ...editingCookbook, cover_emoji: e.target.value })}
                     className="border border-gray-200 rounded-lg px-3 py-2 w-20 text-center text-2xl"/>
                 </div>
-                <div className="mb-6">
+                <div className="mb-4">
                   <label className="text-sm text-gray-500 mb-2 block">Cover color</label>
                   <div className="flex gap-2 flex-wrap">
                     {COLORS.map(c => (
@@ -335,6 +352,21 @@ async function handleCropDone(cropped: string) {
                 </div>
               </>
             )}
+            <div className="mb-6">
+              <label className="text-sm text-gray-500 mb-2 block">Visibility</label>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setEditingCookbook({ ...editingCookbook, is_public: 0 })}
+                  className={`flex-1 py-2 rounded-xl text-sm border transition ${editingCookbook.is_public === 0 || !editingCookbook.is_public ? "bg-gray-900 text-white border-gray-900" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
+                  🔒 Private
+                </button>
+                <button
+                  onClick={() => setEditingCookbook({ ...editingCookbook, is_public: 1 })}
+                  className={`flex-1 py-2 rounded-xl text-sm border transition ${editingCookbook.is_public === 1 ? "bg-green-500 text-white border-green-500" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
+                  🌍 Public
+                </button>
+              </div>
+            </div>
             <div className="flex gap-3">
               <button onClick={() => deleteCookbook(editingCookbook.id)} className="px-4 py-2 border border-red-200 text-red-400 rounded-xl text-sm hover:bg-red-50">Delete</button>
               <button onClick={() => setShowEditModal(false)} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Cancel</button>
@@ -375,14 +407,15 @@ async function handleCropDone(cropped: string) {
           </div>
         </div>
       )}
+
       {cropImage && (
-  <ImageCropper
-    image={cropImage}
-    aspect={16 / 9}
-    onCrop={handleCropDone}
-    onCancel={() => setCropImage("")}
-  />
-)}
+        <ImageCropper
+          image={cropImage}
+          aspect={16 / 9}
+          onCrop={handleCropDone}
+          onCancel={() => setCropImage("")}
+        />
+      )}
     </div>
   )
 }

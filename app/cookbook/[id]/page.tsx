@@ -52,6 +52,8 @@ export default function CookbookPage() {
   const [scrollMode, setScrollMode] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [recipeToDelete, setRecipeToDelete] = useState<string | null>(null)
+  const [isPublic, setIsPublic] = useState(false)
+  const [cookbookInfo, setCookbookInfo] = useState<any>(null)
   const recipeRefs = useRef<any>({})
 
   const sensors = useSensors(
@@ -64,6 +66,7 @@ export default function CookbookPage() {
     if (status === "authenticated") {
       fetchRecipes()
       fetchCategories()
+      fetchCookbookInfo()
     }
   }, [status])
 
@@ -87,6 +90,31 @@ export default function CookbookPage() {
     const res = await fetch(`/api/categories?cookbook_id=${params.id}`)
     const data = await res.json()
     setCategories(data.categories || [])
+  }
+
+  async function fetchCookbookInfo() {
+    const res = await fetch(`/api/cookbooks/${params.id}`)
+    const data = await res.json()
+    if (data.cookbook) {
+      setCookbookInfo(data.cookbook)
+      setIsPublic(data.cookbook.is_public === 1)
+    }
+  }
+
+  async function togglePublic() {
+    const newValue = !isPublic
+    setIsPublic(newValue)
+    await fetch(`/api/cookbooks/${params.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: cookbookInfo?.title,
+        cover_emoji: cookbookInfo?.cover_emoji,
+        cover_color: cookbookInfo?.cover_color,
+        cover_image: cookbookInfo?.cover_image || "",
+        is_public: newValue ? 1 : 0,
+      }),
+    })
   }
 
   async function saveRecipe() {
@@ -227,7 +255,7 @@ export default function CookbookPage() {
         <div className="w-52 bg-white border-r border-gray-100 flex flex-col overflow-hidden flex-shrink-0">
           <div className="p-3 border-b border-gray-100">
             <button onClick={() => router.push("/dashboard")} className="text-xs text-orange-500 mb-2 block">← Dashboard</button>
-            <div className="text-sm font-medium">My Cookbook</div>
+            <div className="text-sm font-medium">{cookbookInfo?.title || "My Cookbook"}</div>
             <div className="text-xs text-gray-400">{recipes.length} recipes</div>
           </div>
           <div className="p-2 border-b border-gray-100">
