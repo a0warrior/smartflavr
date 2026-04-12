@@ -14,6 +14,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false)
   const [url, setUrl] = useState("")
   const [extracting, setExtracting] = useState(false)
+  const [extractedRecipe, setExtractedRecipe] = useState<any>(null)
+  const [selectedCookbook, setSelectedCookbook] = useState("")
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login")
@@ -51,12 +53,27 @@ async function extractRecipe() {
   })
   const data = await res.json()
   if (data.success) {
-    alert(`Recipe extracted: ${data.recipe.title}! We'll add saving to a cookbook next.`)
+    setExtractedRecipe(data.recipe)
     setUrl("")
   } else {
     alert("Could not extract recipe. Try a different URL.")
   }
   setExtracting(false)
+}
+
+async function saveRecipe() {
+  if (!selectedCookbook || !extractedRecipe) return
+  await fetch("/api/recipes", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ...extractedRecipe,
+      cookbook_id: selectedCookbook,
+    }),
+  })
+  setExtractedRecipe(null)
+  setSelectedCookbook("")
+  alert("Recipe saved!")
 }
 
   if (status === "loading") {
@@ -153,6 +170,47 @@ async function extractRecipe() {
           </div>
         </div>
       )}
+      {extractedRecipe && (
+  <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+    <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4 max-h-[80vh] overflow-y-auto">
+      <h2 className="text-lg font-medium mb-1">{extractedRecipe.title}</h2>
+      <p className="text-sm text-gray-500 mb-4">{extractedRecipe.description}</p>
+      <div className="mb-3">
+        <p className="text-xs font-medium text-gray-400 uppercase mb-1">Ingredients</p>
+        <p className="text-sm text-gray-700 whitespace-pre-line">{extractedRecipe.ingredients}</p>
+      </div>
+      <div className="mb-4">
+        <p className="text-xs font-medium text-gray-400 uppercase mb-1">Instructions</p>
+        <p className="text-sm text-gray-700 whitespace-pre-line">{extractedRecipe.instructions}</p>
+      </div>
+      <div className="mb-6">
+        <p className="text-sm text-gray-500 mb-1">Save to cookbook</p>
+        <select
+          value={selectedCookbook}
+          onChange={e => setSelectedCookbook(e.target.value)}
+          className="border border-gray-200 rounded-lg px-3 py-2 w-full text-sm">
+          <option value="">Select a cookbook...</option>
+          {cookbooks.map((book: any) => (
+            <option key={book.id} value={book.id}>{book.cover_emoji} {book.title}</option>
+          ))}
+        </select>
+      </div>
+      <div className="flex gap-3">
+        <button
+          onClick={() => setExtractedRecipe(null)}
+          className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50 transition">
+          Discard
+        </button>
+        <button
+          onClick={saveRecipe}
+          disabled={!selectedCookbook}
+          className="flex-1 bg-orange-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-orange-600 transition disabled:opacity-50">
+          Save Recipe
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   )
 }
