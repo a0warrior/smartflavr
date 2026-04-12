@@ -12,6 +12,8 @@ export default function Dashboard() {
   const [title, setTitle] = useState("")
   const [emoji, setEmoji] = useState("📖")
   const [loading, setLoading] = useState(false)
+  const [url, setUrl] = useState("")
+  const [extracting, setExtracting] = useState(false)
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login")
@@ -39,6 +41,24 @@ export default function Dashboard() {
     fetchCookbooks()
   }
 
+async function extractRecipe() {
+  if (!url) return
+  setExtracting(true)
+  const res = await fetch("/api/extract", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url }),
+  })
+  const data = await res.json()
+  if (data.success) {
+    alert(`Recipe extracted: ${data.recipe.title}! We'll add saving to a cookbook next.`)
+    setUrl("")
+  } else {
+    alert("Could not extract recipe. Try a different URL.")
+  }
+  setExtracting(false)
+}
+
   if (status === "loading") {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>
   }
@@ -47,6 +67,23 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <div className="max-w-4xl mx-auto px-6 py-10">
+        <div className="bg-white border border-gray-100 rounded-2xl p-4 mb-8">
+  <p className="text-sm text-gray-500 mb-3">Extract a recipe from any URL</p>
+  <div className="flex gap-3">
+    <input
+      value={url}
+      onChange={e => setUrl(e.target.value)}
+      placeholder="Paste a Pinterest or recipe URL..."
+      className="flex-1 border border-gray-200 rounded-xl px-4 py-2 text-sm"
+    />
+    <button
+      onClick={extractRecipe}
+      disabled={extracting}
+      className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 transition">
+      {extracting ? "Extracting..." : "Extract"}
+    </button>
+  </div>
+</div>
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-medium text-gray-900">My Cookbooks</h1>
