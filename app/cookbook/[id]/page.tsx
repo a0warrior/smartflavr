@@ -332,7 +332,19 @@ export default function CookbookPage() {
             {selectedRecipe && !editMode && (
               <button onClick={() => deleteRecipe(selectedRecipe.id)} className="px-3 py-1 border border-red-200 text-red-400 rounded-lg text-xs hover:bg-red-50 ml-1">Delete</button>
             )}
-            <span className="text-xs text-gray-400 ml-auto">{lastSaved}</span>
+            <div className="ml-auto flex items-center gap-2">
+  {isPublic && (
+    <button
+      onClick={() => {
+        navigator.clipboard.writeText(`${window.location.origin}/share/cookbook/${params.id}`)
+        alert("Link copied to clipboard!")
+      }}
+      className="px-3 py-1 border border-orange-200 text-orange-500 rounded-lg text-xs hover:bg-orange-50">
+      Share ↗
+    </button>
+  )}
+  <span className="text-xs text-gray-400">{lastSaved}</span>
+</div>
           </div>
 
           <div className="flex-1 overflow-y-auto px-8 py-6" id="recipe-content">

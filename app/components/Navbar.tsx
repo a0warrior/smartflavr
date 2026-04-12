@@ -2,11 +2,22 @@
 import { signOut, useSession } from "next-auth/react"
 import Link from "next/link"
 import Image from "next/image"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 export default function Navbar() {
   const { data: session } = useSession()
   const [showMenu, setShowMenu] = useState(false)
+  const [username, setUsername] = useState("")
+
+  useEffect(() => {
+    if (session?.user?.email) {
+      fetch("/api/profile")
+        .then(res => res.json())
+        .then(data => {
+          if (data.user?.username) setUsername(data.user.username)
+        })
+    }
+  }, [session])
 
   return (
     <nav className="bg-white border-b border-gray-100 px-6 py-2 flex items-center justify-between">
@@ -24,12 +35,21 @@ export default function Navbar() {
           </button>
           {showMenu && (
             <div className="absolute right-0 top-10 bg-white border border-gray-100 rounded-xl shadow-sm w-48 z-50 py-1">
+              {username && (
+                <Link
+                  href={`/u/${username}`}
+                  onClick={() => setShowMenu(false)}
+                  className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
+                  Profile
+                </Link>
+              )}
               <Link
                 href="/profile/settings"
                 onClick={() => setShowMenu(false)}
                 className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
-                Profile settings
+                Settings
               </Link>
+              <div className="border-t border-gray-100 my-1"/>
               <button
                 onClick={() => signOut({ callbackUrl: "/login?code=returning" })}
                 className="block w-full text-left px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">

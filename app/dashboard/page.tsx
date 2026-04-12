@@ -40,8 +40,13 @@ export default function Dashboard() {
 
   async function registerUser() {
     const urlParams = new URLSearchParams(window.location.search)
-    const code = urlParams.get("code")
-    if (code && code !== "") {
+    let code = urlParams.get("code")
+
+    if (!code) {
+      code = localStorage.getItem("pendingInviteCode")
+    }
+
+    if (code && code !== "" && code !== "returning") {
       await fetch("/api/invite", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -52,6 +57,7 @@ export default function Dashboard() {
           image: session?.user?.image,
         }),
       })
+      localStorage.removeItem("pendingInviteCode")
     }
   }
 

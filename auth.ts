@@ -21,10 +21,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       )
 
       if (existing.length > 0) {
+        await pool.query(
+          "UPDATE users SET name = ?, image = ? WHERE email = ?",
+          [user.name, user.image, email]
+        )
         return true
       }
 
-      return false
+      return "/unauthorized"
     }
   }
 })

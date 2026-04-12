@@ -7,6 +7,7 @@ import Image from "next/image"
 function LoginContent() {
   const searchParams = useSearchParams()
   const code = searchParams.get("code")
+  const redirect = searchParams.get("redirect") || "/dashboard"
   const [loading, setLoading] = useState(false)
 
   if (!code) {
@@ -18,7 +19,10 @@ function LoginContent() {
 
   async function handleSignIn() {
     setLoading(true)
-    signIn("google", { callbackUrl: `/dashboard?code=${isReturning ? "" : code}` })
+    if (!isReturning) {
+      localStorage.setItem("pendingInviteCode", code!)
+    }
+    signIn("google", { callbackUrl: redirect })
   }
 
   return (

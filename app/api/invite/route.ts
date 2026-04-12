@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import pool from "@/lib/db"
 
 export async function POST(req: Request) {
-  const { code, email, name, image } = await req.json()
+  const { code } = await req.json()
 
   const [rows]: any = await pool.query(
     "SELECT * FROM invite_codes WHERE code = ? AND used_by IS NULL",
@@ -18,6 +18,8 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   const { code, email, name, image } = await req.json()
+
+  if (!email) return NextResponse.json({ success: false })
 
   const [rows]: any = await pool.query(
     "SELECT * FROM invite_codes WHERE code = ? AND used_by IS NULL",
@@ -36,7 +38,7 @@ export async function PUT(req: Request) {
   if (users.length === 0) {
     await pool.query(
       "INSERT INTO users (name, email, image) VALUES (?, ?, ?)",
-      [name, email, image]
+      [name || email, email, image || null]
     )
     ;[users] = await pool.query(
       "SELECT id FROM users WHERE email = ?",

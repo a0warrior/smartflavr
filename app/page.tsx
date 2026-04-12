@@ -29,7 +29,8 @@ export default function HomePage() {
     })
     const data = await res.json()
     if (data.valid) {
-      router.push(`/login?code=${code}`)
+      const redirect = new URLSearchParams(window.location.search).get("redirect") || ""
+      router.push(`/login?code=${code}${redirect ? `&redirect=${redirect}` : ""}`)
     } else {
       setError("That code isn't valid. Check with whoever invited you.")
     }
@@ -44,7 +45,10 @@ export default function HomePage() {
           <span className="text-lg font-medium">Smart<span className="text-orange-500">Flavr</span></span>
         </div>
         <button
-          onClick={() => router.push("/login?code=returning")}
+          onClick={() => {
+            const redirect = new URLSearchParams(window.location.search).get("redirect") || ""
+            router.push(`/login?code=returning${redirect ? `&redirect=${redirect}` : ""}`)
+          }}
           className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-500 hover:bg-gray-50 transition">
           Sign in
         </button>
