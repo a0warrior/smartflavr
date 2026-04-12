@@ -115,7 +115,7 @@ async function saveRecipe() {
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {cookbooks.map((book: any) => (
-            <div key={book.id} className="bg-white border border-gray-100 rounded-2xl overflow-hidden cursor-pointer hover:shadow-sm transition">
+            <div key={book.id} onClick={() => router.push(`/cookbook/${book.id}`)} className="bg-white border border-gray-100 rounded-2xl overflow-hidden cursor-pointer hover:shadow-sm transition">
               <div className="h-24 flex items-center justify-center text-4xl" style={{ backgroundColor: book.cover_color + "22" }}>
                 {book.cover_emoji}
               </div>
