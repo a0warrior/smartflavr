@@ -1,26 +1,31 @@
 import pool from "@/lib/db"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { auth } from "@/auth"
-import { redirect } from "next/navigation"
 
 export default async function PublicCookbookPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
 
-  const session = await auth()
-  if (session?.user) {
-  redirect(`/cookbook/${id}`)
-}
-
   const [cookbooks]: any = await pool.query(
-    "SELECT cookbooks.*, users.name as author_name, users.username as author_username, users.image as author_image FROM cookbooks LEFT JOIN users ON cookbooks.user_id = users.id WHERE cookbooks.id = ? AND cookbooks.is_public = 1",
+    "SELECT cookbooks.*, users.name as author_name, users.username as author_username, users.image as author_image, users.id as author_id FROM cookbooks LEFT JOIN users ON cookbooks.user_id = users.id WHERE cookbooks.id = ? AND cookbooks.is_public = 1",
     [id]
   )
 
   if (cookbooks.length === 0) notFound()
 
   const cookbook = cookbooks[0]
+
+  const session = await auth()
+  if (session?.user?.email) {
+    const [sessionUser]: any = await pool.query(
+      "SELECT id FROM users WHERE email = ?",
+      [session.user.email]
+    )
+    if (sessionUser.length > 0 && sessionUser[0].id === cookbook.user_id) {
+      redirect(`/cookbook/${id}`)
+    }
+  }
 
   const [recipes]: any = await pool.query(
     "SELECT * FROM recipes WHERE cookbook_id = ? ORDER BY sort_order ASC",
@@ -86,20 +91,22 @@ export default async function PublicCookbookPage({ params }: { params: Promise<{
           </div>
         </div>
 
-        <div className="bg-orange-50 border border-orange-100 rounded-2xl p-5 mb-8 flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-medium text-orange-900 mb-1">Want to see all {recipes.length} recipes?</p>
-            <p className="text-xs text-orange-700">Join SmartFlavr to view the full cookbook, save recipes, and create your own.</p>
+        {!session?.user && (
+          <div className="bg-orange-50 border border-orange-100 rounded-2xl p-5 mb-8 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-orange-900 mb-1">Want to see all {recipes.length} recipes?</p>
+              <p className="text-xs text-orange-700">Join SmartFlavr to view the full cookbook, save recipes, and create your own.</p>
+            </div>
+            <Link href={`/?redirect=/share/cookbook/${id}`} className="flex-shrink-0 bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 transition">
+              Get started →
+            </Link>
           </div>
-          <Link href={`/?redirect=/share/cookbook/${id}`} className="flex-shrink-0 bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 transition">
-            Get started →
-          </Link>
-        </div>
+        )}
 
-        <h2 className="text-lg font-medium mb-4">Preview</h2>
+        <h2 className="text-lg font-medium mb-4">{session?.user ? "Recipes" : "Preview"}</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          {previewRecipes.map((recipe: any) => (
+          {(session?.user ? recipes : previewRecipes).map((recipe: any) => (
             <div key={recipe.id} className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
               {recipe.image_url && (
                 <div className="h-36 overflow-hidden">
@@ -119,12 +126,28 @@ export default async function PublicCookbookPage({ params }: { params: Promise<{
                 {recipe.ingredients && (
                   <div className="mt-4">
                     <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Ingredients</div>
-                    {recipe.ingredients.split("\n").filter(Boolean).slice(0, 4).map((ing: string, i: number) => (
+                    {recipe.ingredients.split("\n").filter(Boolean).slice(0, session?.user ? 100 : 4).map((ing: string, i: number) => (
                       <div key={i} className="py-1.5 border-b border-gray-50 text-sm">{ing}</div>
                     ))}
-                    {recipe.ingredients.split("\n").filter(Boolean).length > 4 && (
+                    {!session?.user && recipe.ingredients.split("\n").filter(Boolean).length > 4 && (
                       <p className="text-xs text-gray-400 mt-1">+ {recipe.ingredients.split("\n").filter(Boolean).length - 4} more ingredients</p>
                     )}
+                  </div>
+                )}
+                {session?.user && recipe.instructions && (
+                  <div className="mt-4">
+                    <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Instructions</div>
+                    {recipe.instructions.split("\n").filter(Boolean).map((step: string, i: number) => (
+                      <div key={i} className="flex gap-3 mb-3">
+                        <div className="w-5 h-5 rounded-full bg-orange-50 text-orange-700 text-xs font-medium flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</div>
+                        <p className="text-sm leading-relaxed flex-1">{step}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {session?.user && recipe.notes && (
+                  <div className="mt-4 bg-amber-50 rounded-xl p-3 text-sm text-amber-800">
+                    💡 {recipe.notes}
                   </div>
                 )}
               </div>
@@ -132,7 +155,7 @@ export default async function PublicCookbookPage({ params }: { params: Promise<{
           ))}
         </div>
 
-        {remainingCount > 0 && (
+        {!session?.user && remainingCount > 0 && (
           <div className="relative">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 opacity-30 pointer-events-none select-none">
               {recipes.slice(2, 4).map((recipe: any) => (
