@@ -44,7 +44,7 @@ export default function HomePage() {
           <span className="text-lg font-medium">Smart<span className="text-orange-500">Flavr</span></span>
         </div>
         <button
-          onClick={() => document.getElementById("invite-box")?.scrollIntoView({ behavior: "smooth" })}
+          onClick={() => router.push("/login?code=returning")}
           className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-500 hover:bg-gray-50 transition">
           Sign in
         </button>
@@ -86,7 +86,7 @@ export default function HomePage() {
 
       <div className="bg-gray-50 py-16 px-6">
         <h2 className="text-2xl font-medium text-center mb-10">Everything you need to cook smarter</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-width-4xl mx-auto" style={{ maxWidth: "860px", margin: "0 auto" }}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4" style={{ maxWidth: "860px", margin: "0 auto" }}>
           {[
             { icon: "✦", title: "AI recipe extraction", desc: "Paste any URL — AI pulls the recipe automatically." },
             { icon: "📖", title: "Beautiful cookbooks", desc: "Organize recipes with categories, photos, and notes." },
