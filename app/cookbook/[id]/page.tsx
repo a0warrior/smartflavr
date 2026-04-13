@@ -47,6 +47,7 @@ export default function CookbookPage() {
   const [saving, setSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState("")
   const [search, setSearch] = useState("")
+  const [sortBy, setSortBy] = useState("default")
   const [edited, setEdited] = useState<any>(null)
   const [showCategoryModal, setShowCategoryModal] = useState(false)
   const [newCatName, setNewCatName] = useState("")
@@ -80,7 +81,6 @@ export default function CookbookPage() {
     }
   }, [status])
 
-  // Firebase presence tracking
   useEffect(() => {
     if (!session?.user?.email || !params.id) return
 
@@ -96,7 +96,7 @@ export default function CookbookPage() {
     const unsubscribe = onValue(allPresenceRef, (snapshot) => {
       const data = snapshot.val()
       if (data) {
-        const users = Object.values(data).filter((u: any) => 
+        const users = Object.values(data).filter((u: any) =>
           Date.now() - u.timestamp < 30000 && u.email !== session.user?.email
         )
         setActiveUsers(users as any[])
@@ -120,7 +120,6 @@ export default function CookbookPage() {
     }
   }, [session, params.id])
 
-  // Firebase recipe sync
   useEffect(() => {
     if (!params.id) return
 
@@ -143,19 +142,19 @@ export default function CookbookPage() {
   }, [activeCategory])
 
   async function fetchRecipes() {
-  const res = await fetch(`/api/recipes?cookbook_id=${params.id}`)
-  const data = await res.json()
-  const sorted = (data.recipes || []).sort((a: any, b: any) => a.sort_order - b.sort_order)
-  setRecipes(sorted)
-  const urlParams = new URLSearchParams(window.location.search)
-  const recipeId = urlParams.get("recipe")
-  if (recipeId) {
-    const target = sorted.find((r: any) => r.id == recipeId)
-    if (target) setSelectedRecipe(target)
-  } else if (sorted.length > 0 && !selectedRecipe) {
-    setSelectedRecipe(sorted[0])
+    const res = await fetch(`/api/recipes?cookbook_id=${params.id}`)
+    const data = await res.json()
+    const sorted = (data.recipes || []).sort((a: any, b: any) => a.sort_order - b.sort_order)
+    setRecipes(sorted)
+    const urlParams = new URLSearchParams(window.location.search)
+    const recipeId = urlParams.get("recipe")
+    if (recipeId) {
+      const target = sorted.find((r: any) => r.id == recipeId)
+      if (target) setSelectedRecipe(target)
+    } else if (sorted.length > 0 && !selectedRecipe) {
+      setSelectedRecipe(sorted[0])
+    }
   }
-}
 
   async function fetchCategories() {
     const res = await fetch(`/api/categories?cookbook_id=${params.id}`)
@@ -181,7 +180,7 @@ export default function CookbookPage() {
         setIsOwner(owner)
         if (!owner) {
           const isCollab = (collaboratorsData.collaborators || []).some(
-            (c: any) => c.id === profileData.user.id
+            (c: any) => c.id === profileData.user.id && c.status === "accepted"
           )
           setIsCollaborator(isCollab)
         }
@@ -308,7 +307,7 @@ export default function CookbookPage() {
     if (data.error) {
       setInviteError(data.error)
     } else {
-      setInviteSuccess(`${inviteUsername} added as collaborator!`)
+      setInviteSuccess(`${inviteUsername} invited!`)
       setInviteUsername("")
       fetchCookbookInfo()
     }
@@ -345,11 +344,31 @@ export default function CookbookPage() {
     }
   }
 
-  const filteredRecipes = recipes.filter(r => {
-    const matchesSearch = r.title.toLowerCase().includes(search.toLowerCase())
-    const matchesCategory = activeCategory === "all" || r.category_id == activeCategory
-    return matchesSearch && matchesCategory
-  })
+  const filteredRecipes = recipes
+    .filter(r => {
+      const matchesSearch = r.title.toLowerCase().includes(search.toLowerCase())
+      const matchesCategory = activeCategory === "all" || r.category_id == activeCategory
+      return matchesSearch && matchesCategory
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "az": return a.title.localeCompare(b.title)
+        case "za": return b.title.localeCompare(a.title)
+        case "time_asc": return (parseInt(a.prep_time) || 999) - (parseInt(b.prep_time) || 999)
+        case "time_desc": return (parseInt(b.prep_time) || 0) - (parseInt(a.prep_time) || 0)
+        case "servings_asc": return (parseInt(a.servings) || 999) - (parseInt(b.servings) || 999)
+        case "servings_desc": return (parseInt(b.servings) || 0) - (parseInt(a.servings) || 0)
+        case "difficulty_asc": {
+          const order = ["easy", "medium", "hard"]
+          return order.indexOf(a.difficulty?.toLowerCase()) - order.indexOf(b.difficulty?.toLowerCase())
+        }
+        case "difficulty_desc": {
+          const order = ["hard", "medium", "easy"]
+          return order.indexOf(a.difficulty?.toLowerCase()) - order.indexOf(b.difficulty?.toLowerCase())
+        }
+        default: return a.sort_order - b.sort_order
+      }
+    })
 
   const canEdit = isOwner || isCollaborator
 
@@ -376,8 +395,22 @@ export default function CookbookPage() {
               </div>
             )}
           </div>
-          <div className="p-2 border-b border-gray-100">
+          <div className="p-2 border-b border-gray-100 space-y-2">
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search recipes..." className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2 py-1.5 text-xs"/>
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2 py-1.5 text-xs outline-none">
+              <option value="default">Sort: Default</option>
+              <option value="az">A → Z</option>
+              <option value="za">Z → A</option>
+              <option value="time_asc">Time: Shortest first</option>
+              <option value="time_desc">Time: Longest first</option>
+              <option value="servings_asc">Servings: Least first</option>
+              <option value="servings_desc">Servings: Most first</option>
+              <option value="difficulty_asc">Difficulty: Easiest first</option>
+              <option value="difficulty_desc">Difficulty: Hardest first</option>
+            </select>
           </div>
           <div className="px-2 pt-2 pb-1 text-xs font-medium text-gray-400 uppercase tracking-wide flex items-center justify-between">
             Categories
@@ -432,20 +465,20 @@ export default function CookbookPage() {
               {editMode ? "Edit mode" : "Read mode"}
             </span>
             {isCollaborator && !isOwner && (
-  <button
-    onClick={async () => {
-      if (!confirm("Leave this cookbook? You will lose access.")) return
-      await fetch("/api/collaborators", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cookbook_id: params.id, user_id: "self" }),
-      })
-      router.push("/dashboard")
-    }}
-    className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium hover:bg-red-50 hover:text-red-500 transition">
-    Collaborator · Leave
-  </button>
-)}
+              <button
+                onClick={async () => {
+                  if (!confirm("Leave this cookbook? You will lose access.")) return
+                  await fetch("/api/collaborators", {
+                    method: "DELETE",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ cookbook_id: params.id, user_id: "self" }),
+                  })
+                  router.push("/dashboard")
+                }}
+                className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium hover:bg-red-50 hover:text-red-500 transition">
+                Collaborator · Leave
+              </button>
+            )}
             <div className="w-px h-4 bg-gray-100 mx-1"/>
             {!editMode && (
               <>
@@ -719,7 +752,6 @@ export default function CookbookPage() {
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm mx-4">
             <h2 className="text-lg font-medium mb-4">Collaborators</h2>
             <p className="text-xs text-gray-400 mb-4">Only mutual friends can be invited as collaborators.</p>
-
             <div className="mb-4">
               <label className="text-sm text-gray-500 mb-1 block">Invite a friend</label>
               <div className="flex gap-2">
@@ -738,7 +770,6 @@ export default function CookbookPage() {
               {inviteError && <p className="text-xs text-red-500 mt-1">{inviteError}</p>}
               {inviteSuccess && <p className="text-xs text-green-600 mt-1">{inviteSuccess}</p>}
             </div>
-
             {collaborators.length > 0 && (
               <div className="mb-4">
                 <label className="text-sm text-gray-500 mb-2 block">Current collaborators</label>
@@ -755,7 +786,9 @@ export default function CookbookPage() {
                         )}
                         <div>
                           <div className="text-sm font-medium">{c.name}</div>
-                          <div className="text-xs text-gray-400">@{c.username}</div>
+                          <div className="text-xs text-gray-400">
+                            @{c.username} · {c.status === "pending" ? "⏳ Pending" : c.status === "accepted" ? "✓ Accepted" : "✗ Declined"}
+                          </div>
                         </div>
                       </div>
                       <button
@@ -768,7 +801,6 @@ export default function CookbookPage() {
                 </div>
               </div>
             )}
-
             <button
               onClick={() => {
                 setShowCollaboratorModal(false)
