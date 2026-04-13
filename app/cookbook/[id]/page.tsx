@@ -630,9 +630,19 @@ export default function CookbookPage() {
                         <div className="bg-amber-50 rounded-xl p-4 text-sm text-amber-800 leading-relaxed">💡 {recipe.notes}</div>
                       </div>
                     )}
-                    {recipe.source_url && (
-                      <a href={recipe.source_url} target="_blank" className="text-xs text-orange-500 mt-2 block">View original source ↗</a>
-                    )}
+                    <div className="flex items-center gap-3 mt-4">
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/share/recipe/${recipe.id}`)
+                          alert("Recipe link copied to clipboard!")
+                        }}
+                        className="px-3 py-1.5 border border-orange-200 text-orange-500 rounded-lg text-xs hover:bg-orange-50 transition">
+                        Share recipe ↗
+                      </button>
+                      {recipe.source_url && (
+                        <a href={recipe.source_url} target="_blank" className="text-xs text-orange-500">View original source ↗</a>
+                      )}
+                    </div>
                   </>
                 ) : (
                   <>
