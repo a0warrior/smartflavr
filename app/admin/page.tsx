@@ -23,6 +23,7 @@ export default function AdminPage() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [activeTab, setActiveTab] = useState<"codes" | "users">("codes")
+  const [userSearch, setUserSearch] = useState("")
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login?code=returning")
@@ -77,12 +78,26 @@ export default function AdminPage() {
     setTimeout(() => setSuccess(""), 2000)
   }
 
+  async function toggleAdmin(userId: string, currentStatus: number) {
+    await fetch("/api/admin/users", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: userId, is_admin: currentStatus === 1 ? 0 : 1 }),
+    })
+    fetchData()
+  }
+
   if (status === "loading") {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>
   }
 
   const usedCodes = codes.filter((c: any) => c.used_by !== null)
   const unusedCodes = codes.filter((c: any) => c.used_by === null)
+  const filteredUsers = users.filter((user: any) =>
+    user.name?.toLowerCase().includes(userSearch.toLowerCase()) ||
+    user.username?.toLowerCase().includes(userSearch.toLowerCase()) ||
+    user.email?.toLowerCase().includes(userSearch.toLowerCase())
+  )
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -204,44 +219,63 @@ export default function AdminPage() {
 
         {activeTab === "users" && (
           <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
-            <div className="px-5 py-3 border-b border-gray-100">
-              <h2 className="text-sm font-medium">All users ({users.length})</h2>
+            <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between gap-4">
+              <h2 className="text-sm font-medium">All users ({filteredUsers.length}{userSearch ? ` of ${users.length}` : ""})</h2>
+              <input
+                value={userSearch}
+                onChange={e => setUserSearch(e.target.value)}
+                placeholder="Search by name, username or email..."
+                className="flex-1 max-w-xs border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none"
+              />
             </div>
             <div className="divide-y divide-gray-50">
-              {users.map((user: any) => (
-                <div key={user.id} className="px-5 py-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {user.profile_image ? (
-                      <img src={user.profile_image} className="w-9 h-9 rounded-full object-cover"/>
-                    ) : (
-                      <div className="w-9 h-9 rounded-full bg-orange-500 flex items-center justify-center text-white text-sm font-medium">
-                        {user.name?.charAt(0).toUpperCase()}
+              {filteredUsers.length === 0 ? (
+                <div className="px-5 py-8 text-center text-sm text-gray-400">No users found</div>
+              ) : (
+                filteredUsers.map((user: any) => (
+                  <div key={user.id} className="px-5 py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {user.profile_image ? (
+                        <img src={user.profile_image} className="w-9 h-9 rounded-full object-cover"/>
+                      ) : (
+                        <div className="w-9 h-9 rounded-full bg-orange-500 flex items-center justify-center text-white text-sm font-medium">
+                          {user.name?.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div>
+                        <div className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                          {user.name}
+                          {user.is_admin === 1 && (
+                            <span className="text-xs bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full">Admin</span>
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {user.username ? `@${user.username}` : "No username set"} · {user.email}
+                        </div>
                       </div>
-                    )}
-                    <div>
-                      <div className="text-sm font-medium text-gray-900 flex items-center gap-2">
-                        {user.name}
-                        {user.is_admin === 1 && (
-                          <span className="text-xs bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full">Admin</span>
-                        )}
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="flex gap-4 text-xs text-gray-400">
+                        <div className="text-center">
+                          <div className="font-medium text-gray-900">{user.cookbook_count}</div>
+                          <div>cookbooks</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="font-medium text-gray-900">{user.recipe_count}</div>
+                          <div>recipes</div>
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-400">
-                        {user.username ? `@${user.username}` : "No username set"} · {user.email}
-                      </div>
+                      {user.email !== session?.user?.email && (
+                        <button
+                          onClick={() => toggleAdmin(user.id, user.is_admin)}
+                          className={`px-3 py-1 rounded-lg text-xs border transition ${user.is_admin === 1 ? "border-red-200 text-red-400 hover:bg-red-50" : "border-orange-200 text-orange-500 hover:bg-orange-50"}`}>
+                          {user.is_admin === 1 ? "Remove admin" : "Make admin"}
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <div className="flex gap-4 text-xs text-gray-400">
-                    <div className="text-center">
-                      <div className="font-medium text-gray-900">{user.cookbook_count}</div>
-                      <div>cookbooks</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="font-medium text-gray-900">{user.recipe_count}</div>
-                      <div>recipes</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         )}
