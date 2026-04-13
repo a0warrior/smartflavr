@@ -27,9 +27,13 @@ export default function Dashboard() {
   const [url, setUrl] = useState("")
   const [extracting, setExtracting] = useState(false)
   const [extractedRecipe, setExtractedRecipe] = useState<any>(null)
-  const [selectedCookbook, setSelectedCookbook] = useState("")
+  const [selectedCookbooks, setSelectedCookbooks] = useState<string[]>([])
   const [cropImage, setCropImage] = useState("")
   const [cropTarget, setCropTarget] = useState<"new" | "edit">("new")
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [importedRecipes, setImportedRecipes] = useState<any[]>([])
+  const [importCookbooks, setImportCookbooks] = useState<{[key: number]: string[]}>({})
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login?code=returning")
@@ -168,16 +172,105 @@ export default function Dashboard() {
     setExtracting(false)
   }
 
-  async function saveRecipe() {
-    if (!selectedCookbook || !extractedRecipe) return
-    await fetch("/api/recipes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...extractedRecipe, cookbook_id: selectedCookbook }),
+  async function handleFileImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImporting(true)
+    setShowImportModal(true)
+    setImportedRecipes([])
+    setImportCookbooks({})
+
+    if (file.type.startsWith("image/")) {
+      const reader = new FileReader()
+      reader.onloadend = async () => {
+        const res = await fetch("/api/extract-file", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: reader.result, type: "image" }),
+        })
+        const data = await res.json()
+        if (data.success) setImportedRecipes(data.recipes)
+        else alert("Could not extract recipe from image.")
+        setImporting(false)
+      }
+      reader.readAsDataURL(file)
+    } else if (file.type === "application/pdf") {
+      const reader = new FileReader()
+      reader.onloadend = async () => {
+        const res = await fetch("/api/extract-file", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: reader.result, type: "image" }),
+        })
+        const data = await res.json()
+        if (data.success) setImportedRecipes(data.recipes)
+        else alert("Could not extract recipe from PDF.")
+        setImporting(false)
+      }
+      reader.readAsDataURL(file)
+    } else {
+      const text = await file.text()
+      const res = await fetch("/api/extract-file", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, type: "text" }),
+      })
+      const data = await res.json()
+      if (data.success) setImportedRecipes(data.recipes)
+      else alert("Could not extract recipe from file.")
+      setImporting(false)
+    }
+  }
+
+  function toggleImportCookbook(recipeIndex: number, cookbookId: string) {
+    setImportCookbooks(prev => {
+      const current = prev[recipeIndex] || []
+      if (current.includes(cookbookId)) {
+        return { ...prev, [recipeIndex]: current.filter(id => id !== cookbookId) }
+      } else {
+        return { ...prev, [recipeIndex]: [...current, cookbookId] }
+      }
     })
+  }
+
+  async function saveImportedRecipes() {
+    if (importedRecipes.length === 0) return
+    let saved = 0
+    for (let i = 0; i < importedRecipes.length; i++) {
+      const cookbookIds = importCookbooks[i] || []
+      for (const cookbookId of cookbookIds) {
+        await fetch("/api/recipes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...importedRecipes[i], cookbook_id: cookbookId }),
+        })
+        saved++
+      }
+    }
+    setShowImportModal(false)
+    setImportedRecipes([])
+    setImportCookbooks({})
+    alert(`Saved ${saved} recipe${saved !== 1 ? "s" : ""}!`)
+  }
+
+  async function saveRecipe() {
+    if (selectedCookbooks.length === 0 || !extractedRecipe) return
+    for (const cookbookId of selectedCookbooks) {
+      await fetch("/api/recipes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...extractedRecipe, cookbook_id: cookbookId }),
+      })
+    }
     setExtractedRecipe(null)
-    setSelectedCookbook("")
-    alert("Recipe saved!")
+    setSelectedCookbooks([])
+    alert(`Recipe saved to ${selectedCookbooks.length} cookbook${selectedCookbooks.length > 1 ? "s" : ""}!`)
+  }
+
+  function toggleCookbook(id: string) {
+    setSelectedCookbooks(prev =>
+      prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
+    )
   }
 
   if (status === "loading") {
@@ -189,7 +282,7 @@ export default function Dashboard() {
       <Navbar />
       <div className="max-w-4xl mx-auto px-6 py-10">
         <div className="bg-white border border-gray-100 rounded-2xl p-4 mb-8">
-          <p className="text-sm text-gray-500 mb-3">Extract a recipe from any URL</p>
+          <p className="text-sm text-gray-500 mb-3">Extract a recipe from any URL or file</p>
           <div className="flex gap-3">
             <input
               value={url}
@@ -203,6 +296,18 @@ export default function Dashboard() {
               className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 transition">
               {extracting ? "Extracting..." : "Extract"}
             </button>
+            <button
+              onClick={() => document.getElementById("file-import")?.click()}
+              className="border border-gray-200 text-gray-500 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition">
+              📷 Import file
+            </button>
+            <input
+              type="file"
+              id="file-import"
+              accept="image/*,.pdf,.txt"
+              onChange={handleFileImport}
+              className="hidden"
+            />
           </div>
         </div>
 
@@ -447,18 +552,97 @@ export default function Dashboard() {
               <p className="text-sm text-gray-700 whitespace-pre-line">{extractedRecipe.instructions}</p>
             </div>
             <div className="mb-6">
-              <p className="text-sm text-gray-500 mb-1">Save to cookbook</p>
-              <select value={selectedCookbook} onChange={e => setSelectedCookbook(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 w-full text-sm">
-                <option value="">Select a cookbook...</option>
+              <p className="text-sm text-gray-500 mb-2">Save to cookbook(s)</p>
+              <div className="space-y-2">
                 {cookbooks.map((book: any) => (
-                  <option key={book.id} value={book.id}>{book.cover_emoji} {book.title}</option>
+                  <label key={book.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedCookbooks.includes(book.id)}
+                      onChange={() => toggleCookbook(book.id)}
+                      className="w-4 h-4 accent-orange-500"
+                    />
+                    <span className="text-sm">{book.cover_emoji} {book.title}</span>
+                  </label>
                 ))}
-              </select>
+              </div>
             </div>
             <div className="flex gap-3">
-              <button onClick={() => setExtractedRecipe(null)} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Discard</button>
-              <button onClick={saveRecipe} disabled={!selectedCookbook} className="flex-1 bg-orange-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-orange-600 disabled:opacity-50">Save Recipe</button>
+              <button onClick={() => { setExtractedRecipe(null); setSelectedCookbooks([]) }} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Discard</button>
+              <button onClick={saveRecipe} disabled={selectedCookbooks.length === 0} className="flex-1 bg-orange-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-orange-600 disabled:opacity-50">
+                Save to {selectedCookbooks.length > 0 ? `${selectedCookbooks.length} cookbook${selectedCookbooks.length > 1 ? "s" : ""}` : "cookbook"}
+              </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg font-medium mb-4">Import Recipes</h2>
+            {importing ? (
+              <div className="text-center py-12">
+                <div className="text-4xl mb-3">🤖</div>
+                <p className="text-sm text-gray-500">AI is reading your file...</p>
+                <p className="text-xs text-gray-400 mt-1">This may take a few seconds</p>
+              </div>
+            ) : importedRecipes.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-sm text-gray-500">No recipes found</p>
+                <button
+                  onClick={() => setShowImportModal(false)}
+                  className="mt-4 border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-500 hover:bg-gray-50">
+                  Close
+                </button>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-gray-500 mb-4">
+                  Found {importedRecipes.length} recipe{importedRecipes.length > 1 ? "s" : ""}! Select which cookbooks to save each to.
+                </p>
+                <div className="space-y-4 mb-4">
+                  {importedRecipes.map((r, i) => (
+                    <div key={i} className="bg-gray-50 rounded-xl p-3">
+                      <div className="font-medium text-sm mb-1">{r.title}</div>
+                      {r.description && <div className="text-xs text-gray-500 mb-2 line-clamp-2">{r.description}</div>}
+                      <div className="flex gap-3 mb-3 text-xs text-gray-400">
+                        {r.prep_time && <span>⏱ {r.prep_time}</span>}
+                        {r.servings && <span>👤 {r.servings}</span>}
+                        {r.difficulty && <span>★ {r.difficulty}</span>}
+                      </div>
+                      <p className="text-xs text-gray-500 mb-2">Save to:</p>
+                      <div className="space-y-1">
+                        {cookbooks.map((book: any) => (
+                          <label key={book.id} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-white cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={(importCookbooks[i] || []).includes(book.id)}
+                              onChange={() => toggleImportCookbook(i, book.id)}
+                              className="w-3.5 h-3.5 accent-orange-500"
+                            />
+                            <span className="text-xs">{book.cover_emoji} {book.title}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => { setShowImportModal(false); setImportedRecipes([]); setImportCookbooks({}) }}
+                    className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">
+                    Cancel
+                  </button>
+                  <button
+                    onClick={saveImportedRecipes}
+                    disabled={Object.values(importCookbooks).every(v => v.length === 0)}
+                    className="flex-1 bg-orange-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-orange-600 disabled:opacity-50">
+                    Save {Object.values(importCookbooks).flat().length} to cookbook{Object.values(importCookbooks).flat().length !== 1 ? "s" : ""}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
