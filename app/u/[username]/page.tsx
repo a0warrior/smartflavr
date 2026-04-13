@@ -4,6 +4,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { auth } from "@/auth"
 import FollowButton from "@/app/components/FollowButton"
+import FollowersModal from "../../components/FollowersModal"
 
 export default async function ProfilePage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params
@@ -67,22 +68,24 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
               <p className="text-sm text-gray-400 mb-3">@{user.username}</p>
               {user.bio && <p className="text-sm text-gray-600 leading-relaxed max-w-md mb-4">{user.bio}</p>}
               <div className="flex gap-6">
-                <div>
+                <div className="text-center">
                   <div className="text-lg font-medium text-gray-900">{cookbooks.length}</div>
                   <div className="text-xs text-gray-400">Cookbooks</div>
                 </div>
-                <div>
+                <div className="text-center">
                   <div className="text-lg font-medium text-gray-900">{recipeCount[0].count}</div>
                   <div className="text-xs text-gray-400">Recipes</div>
                 </div>
-                <div>
-                  <div className="text-lg font-medium text-gray-900">{followerCount[0].count}</div>
-                  <div className="text-xs text-gray-400">Followers</div>
-                </div>
-                <div>
-                  <div className="text-lg font-medium text-gray-900">{followingCount[0].count}</div>
-                  <div className="text-xs text-gray-400">Following</div>
-                </div>
+                <FollowersModal
+                  username={username}
+                  type="followers"
+                  count={followerCount[0].count}
+                />
+                <FollowersModal
+                  username={username}
+                  type="following"
+                  count={followingCount[0].count}
+                />
               </div>
             </div>
           </div>

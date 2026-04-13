@@ -10,15 +10,15 @@ export async function POST(req: Request) {
 
   const { username } = await req.json()
 
-  const [currentUser]: any = await pool.query(
-    "SELECT id FROM users WHERE email = ?",
+  const [currentUser] = await pool.query(
+    "SELECT id, name FROM users WHERE email = ?",
     [session.user.email]
-  )
+  ) as any[]
 
-  const [targetUser]: any = await pool.query(
+  const [targetUser] = await pool.query(
     "SELECT id FROM users WHERE username = ?",
     [username]
-  )
+  ) as any[]
 
   if (currentUser.length === 0 || targetUser.length === 0) {
     return NextResponse.json({ error: "User not found" }, { status: 404 })
@@ -33,6 +33,15 @@ export async function POST(req: Request) {
     [currentUser[0].id, targetUser[0].id]
   )
 
+  await pool.query(
+    "INSERT INTO notifications (user_id, type, message, data) VALUES (?, 'new_follower', ?, ?)",
+    [
+      targetUser[0].id,
+      `${currentUser[0].name} started following you`,
+      JSON.stringify({ follower_id: currentUser[0].id, follower_name: currentUser[0].name })
+    ]
+  )
+
   return NextResponse.json({ success: true })
 }
 
@@ -44,15 +53,15 @@ export async function DELETE(req: Request) {
 
   const { username } = await req.json()
 
-  const [currentUser]: any = await pool.query(
+  const [currentUser] = await pool.query(
     "SELECT id FROM users WHERE email = ?",
     [session.user.email]
-  )
+  ) as any[]
 
-  const [targetUser]: any = await pool.query(
+  const [targetUser] = await pool.query(
     "SELECT id FROM users WHERE username = ?",
     [username]
-  )
+  ) as any[]
 
   if (currentUser.length === 0 || targetUser.length === 0) {
     return NextResponse.json({ error: "User not found" }, { status: 404 })
@@ -75,29 +84,29 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const username = searchParams.get("username")
 
-  const [currentUser]: any = await pool.query(
+  const [currentUser] = await pool.query(
     "SELECT id FROM users WHERE email = ?",
     [session.user.email]
-  )
+  ) as any[]
 
-  const [targetUser]: any = await pool.query(
+  const [targetUser] = await pool.query(
     "SELECT id FROM users WHERE username = ?",
     [username]
-  )
+  ) as any[]
 
   if (currentUser.length === 0 || targetUser.length === 0) {
     return NextResponse.json({ isFollowing: false, isFriend: false })
   }
 
-  const [following]: any = await pool.query(
+  const [following] = await pool.query(
     "SELECT id FROM follows WHERE follower_id = ? AND following_id = ?",
     [currentUser[0].id, targetUser[0].id]
-  )
+  ) as any[]
 
-  const [followedBack]: any = await pool.query(
+  const [followedBack] = await pool.query(
     "SELECT id FROM follows WHERE follower_id = ? AND following_id = ?",
     [targetUser[0].id, currentUser[0].id]
-  )
+  ) as any[]
 
   return NextResponse.json({
     isFollowing: following.length > 0,
