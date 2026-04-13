@@ -65,6 +65,7 @@ export default function CookbookPage() {
   const [inviteError, setInviteError] = useState("")
   const [inviteSuccess, setInviteSuccess] = useState("")
   const [activeUsers, setActiveUsers] = useState<any[]>([])
+  const [aiLoading, setAiLoading] = useState<string | null>(null)
   const recipeRefs = useRef<any>({})
 
   const sensors = useSensors(
@@ -325,6 +326,26 @@ export default function CookbookPage() {
       body: JSON.stringify({ cookbook_id: params.id, user_id: userId }),
     })
     fetchCookbookInfo()
+  }
+
+  async function aiAssist(type: string) {
+    if (!edited) return
+    setAiLoading(type)
+    const res = await fetch("/api/ai-assist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type, recipe: edited }),
+    })
+    const data = await res.json()
+    if (data.success) {
+      switch (type) {
+        case "description": updateEdited("description", data.content); break
+        case "ingredients": updateEdited("ingredients", (edited.ingredients ? edited.ingredients + "\n" : "") + data.content); break
+        case "instructions": updateEdited("instructions", data.content); break
+        case "notes": updateEdited("notes", data.content); break
+      }
+    }
+    setAiLoading(null)
   }
 
   function startEdit() {
@@ -678,19 +699,51 @@ export default function CookbookPage() {
                     </div>
                     <input type="file" id="photo-upload" accept="image/*" onChange={uploadPhoto} className="hidden"/>
                     <div className="mb-4">
-                      <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Description</div>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Description</div>
+                        <button
+                          onClick={() => aiAssist("description")}
+                          disabled={aiLoading === "description"}
+                          className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1">
+                          {aiLoading === "description" ? "✨ Writing..." : "✨ AI write"}
+                        </button>
+                      </div>
                       <textarea value={edited.description || ""} onChange={e => updateEdited("description", e.target.value)} placeholder="Add a description..." className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none outline-none" rows={2}/>
                     </div>
                     <div className="mb-4">
-                      <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Ingredients <span className="text-gray-300 font-normal normal-case">(one per line)</span></div>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Ingredients <span className="text-gray-300 font-normal normal-case">(one per line)</span></div>
+                        <button
+                          onClick={() => aiAssist("ingredients")}
+                          disabled={aiLoading === "ingredients"}
+                          className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1">
+                          {aiLoading === "ingredients" ? "✨ Suggesting..." : "✨ AI suggest"}
+                        </button>
+                      </div>
                       <textarea value={edited.ingredients || ""} onChange={e => updateEdited("ingredients", e.target.value)} placeholder="200g pasta&#10;100g cheese&#10;Salt" className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none outline-none" rows={6}/>
                     </div>
                     <div className="mb-4">
-                      <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Instructions <span className="text-gray-300 font-normal normal-case">(one step per line)</span></div>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Instructions <span className="text-gray-300 font-normal normal-case">(one step per line)</span></div>
+                        <button
+                          onClick={() => aiAssist("instructions")}
+                          disabled={aiLoading === "instructions"}
+                          className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1">
+                          {aiLoading === "instructions" ? "✨ Improving..." : "✨ AI improve"}
+                        </button>
+                      </div>
                       <textarea value={edited.instructions || ""} onChange={e => updateEdited("instructions", e.target.value)} placeholder="Boil water&#10;Add pasta&#10;Drain and serve" className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none outline-none" rows={8}/>
                     </div>
                     <div className="mb-4">
-                      <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Notes</div>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Notes</div>
+                        <button
+                          onClick={() => aiAssist("notes")}
+                          disabled={aiLoading === "notes"}
+                          className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1">
+                          {aiLoading === "notes" ? "✨ Generating..." : "✨ AI generate"}
+                        </button>
+                      </div>
                       <textarea value={edited.notes || ""} onChange={e => updateEdited("notes", e.target.value)} placeholder="Tips, variations, substitutions..." className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none outline-none" rows={3}/>
                     </div>
                   </>
