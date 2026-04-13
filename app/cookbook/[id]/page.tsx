@@ -143,12 +143,19 @@ export default function CookbookPage() {
   }, [activeCategory])
 
   async function fetchRecipes() {
-    const res = await fetch(`/api/recipes?cookbook_id=${params.id}`)
-    const data = await res.json()
-    const sorted = (data.recipes || []).sort((a: any, b: any) => a.sort_order - b.sort_order)
-    setRecipes(sorted)
-    if (sorted.length > 0 && !selectedRecipe) setSelectedRecipe(sorted[0])
+  const res = await fetch(`/api/recipes?cookbook_id=${params.id}`)
+  const data = await res.json()
+  const sorted = (data.recipes || []).sort((a: any, b: any) => a.sort_order - b.sort_order)
+  setRecipes(sorted)
+  const urlParams = new URLSearchParams(window.location.search)
+  const recipeId = urlParams.get("recipe")
+  if (recipeId) {
+    const target = sorted.find((r: any) => r.id == recipeId)
+    if (target) setSelectedRecipe(target)
+  } else if (sorted.length > 0 && !selectedRecipe) {
+    setSelectedRecipe(sorted[0])
   }
+}
 
   async function fetchCategories() {
     const res = await fetch(`/api/categories?cookbook_id=${params.id}`)
