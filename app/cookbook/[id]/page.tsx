@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react"
 import { useRouter, useParams } from "next/navigation"
 import Navbar from "@/app/components/Navbar"
 import CollaboratorModal from "@/app/components/CollaboratorModal"
+import NutritionPanel from "@/app/components/NutritionPanel"
 import { db } from "@/lib/firebase"
 import { ref, onValue, set, off } from "firebase/database"
 import {
@@ -579,7 +580,8 @@ export default function CookbookPage() {
                       💡 {r.notes}
                     </div>
                   )}
-                  <hr className="border-gray-100"/>
+                  <NutritionPanel recipe={r}/>
+                  <hr className="border-gray-100 mt-6"/>
                 </div>
               ))
             ) : recipe ? (
@@ -630,6 +632,7 @@ export default function CookbookPage() {
                         <div className="bg-amber-50 rounded-xl p-4 text-sm text-amber-800 leading-relaxed">💡 {recipe.notes}</div>
                       </div>
                     )}
+                    <NutritionPanel recipe={recipe}/>
                     <div className="flex items-center gap-3 mt-4">
                       <button
                         onClick={() => {

@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { auth } from "@/auth"
+import NutritionPanel from "@/app/components/NutritionPanel"
 
 export default async function ShareRecipePage({
   params
@@ -111,6 +112,8 @@ export default async function ShareRecipePage({
               💡 {recipe.notes}
             </div>
           )}
+
+          <NutritionPanel recipe={recipe}/>
         </div>
 
         <div className="bg-orange-50 border border-orange-100 rounded-2xl p-5 flex items-center justify-between gap-4">
