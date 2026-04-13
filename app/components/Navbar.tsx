@@ -9,6 +9,7 @@ export default function Navbar() {
   const [showMenu, setShowMenu] = useState(false)
   const [username, setUsername] = useState("")
   const [profileImage, setProfileImage] = useState("")
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
     if (session?.user?.email) {
@@ -17,6 +18,7 @@ export default function Navbar() {
         .then(data => {
           if (data.user?.username) setUsername(data.user.username)
           if (data.user?.profile_image) setProfileImage(data.user.profile_image)
+          if (data.user?.is_admin) setIsAdmin(data.user.is_admin === 1)
         })
     }
   }, [session])
@@ -66,6 +68,14 @@ export default function Navbar() {
                 className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
                 Settings
               </Link>
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  onClick={() => setShowMenu(false)}
+                  className="block px-4 py-2 text-sm text-orange-500 font-medium hover:bg-gray-50">
+                  Admin Panel
+                </Link>
+              )}
               <div className="border-t border-gray-100 my-1"/>
               <button
                 onClick={() => signOut({ callbackUrl: "/login?code=returning" })}
