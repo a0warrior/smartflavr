@@ -117,7 +117,7 @@ function PostCard({ post, currentUserId, onDelete }: any) {
         )}
 
         {post.type === "recipe" && post.recipe_id && (
-          <Link href={`/share/cookbook/${post.cookbook_id}?recipe=${post.recipe_id}`} className="block border border-gray-100 rounded-xl overflow-hidden mb-3 hover:shadow-sm transition">
+            <Link href={`/cookbook/${post.cookbook_id}?recipe=${post.recipe_id}`} className="block border border-gray-100 rounded-xl overflow-hidden mb-3 hover:shadow-sm transition">
             {post.image_url ? (
               <img src={post.image_url} className="w-full object-contain rounded-t-xl"/>
             ) : post.recipe_image ? (
