@@ -19,7 +19,8 @@ export async function GET(req: Request) {
 
   const [meals] = await pool.query(
     `SELECT meal_plans.*, recipes.title as recipe_title, recipes.image_url as recipe_image,
-     recipes.prep_time, recipes.servings, recipes.nutrition,
+     recipes.prep_time, recipes.servings, recipes.nutrition, recipes.ingredients,
+     recipes.description as recipe_description,
      cookbooks.id as cookbook_id
      FROM meal_plans
      LEFT JOIN recipes ON meal_plans.recipe_id = recipes.id

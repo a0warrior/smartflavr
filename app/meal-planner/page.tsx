@@ -46,6 +46,7 @@ export default function MealPlannerPage() {
   const [newCategoryName, setNewCategoryName] = useState("")
   const [groceryList, setGroceryList] = useState<any>({})
   const [generatingGrocery, setGeneratingGrocery] = useState(false)
+  const [generatingNutrition, setGeneratingNutrition] = useState(false)
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set())
   const [liveSync, setLiveSync] = useState(false)
   const [syncing, setSyncing] = useState(false)
@@ -103,6 +104,28 @@ export default function MealPlannerPage() {
     setAllRecipes(data.recipes || [])
   }
 
+  async function generateMissingNutrition() {
+    const missingNutrition = meals.filter(m => !m.nutrition && m.ingredients)
+    if (missingNutrition.length === 0) {
+      alert("All recipes already have nutrition data!")
+      return
+    }
+    setGeneratingNutrition(true)
+    for (const meal of missingNutrition) {
+      await fetch("/api/nutrition", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipe_id: meal.recipe_id,
+          ingredients: meal.ingredients,
+          servings: parseInt(meal.servings) || 1,
+        }),
+      })
+    }
+    await fetchMeals()
+    setGeneratingNutrition(false)
+  }
+
   async function syncMealsToCalendar(mealsToSync: any[]) {
     const unsynced = mealsToSync.filter(m => !m.synced_to_calendar)
     if (unsynced.length === 0) return
@@ -156,7 +179,7 @@ export default function MealPlannerPage() {
   }
 
   async function addMeal(recipeId: string) {
-    const res = await fetch("/api/meal-plans", {
+    await fetch("/api/meal-plans", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -305,6 +328,7 @@ export default function MealPlannerPage() {
 
   const weekAvg = getWeekAverages()
   const totalMealsPlanned = meals.length
+  const hasMissingNutrition = meals.some(m => !m.nutrition && m.ingredients)
 
   const filteredRecipes = allRecipes.filter((r: any) => {
     const matchesSearch = r.title.toLowerCase().includes(recipeSearch.toLowerCase())
@@ -334,12 +358,20 @@ export default function MealPlannerPage() {
             </div>
             <button onClick={nextWeek} className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 bg-white">→</button>
           </div>
-          <div className="flex gap-3 items-center">
+          <div className="flex gap-3 items-center flex-wrap justify-end">
             <button
               onClick={() => setShowCategoryModal(true)}
               className="border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 bg-white">
               + Category
             </button>
+            {hasMissingNutrition && (
+              <button
+                onClick={generateMissingNutrition}
+                disabled={generatingNutrition}
+                className="border border-orange-200 text-orange-500 px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-50 disabled:opacity-50 transition bg-white">
+                {generatingNutrition ? "Generating..." : "✨ Generate missing nutrition"}
+              </button>
+            )}
             <button
               onClick={generateGroceryList}
               disabled={generatingGrocery || meals.length === 0}
