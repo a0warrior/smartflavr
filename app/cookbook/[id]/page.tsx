@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter, useParams } from "next/navigation"
 import Navbar from "@/app/components/Navbar"
+import CollaboratorModal from "@/app/components/CollaboratorModal"
 import { db } from "@/lib/firebase"
 import { ref, onValue, set, off } from "firebase/database"
 import {
@@ -61,9 +62,6 @@ export default function CookbookPage() {
   const [isCollaborator, setIsCollaborator] = useState(false)
   const [collaborators, setCollaborators] = useState<any[]>([])
   const [showCollaboratorModal, setShowCollaboratorModal] = useState(false)
-  const [inviteUsername, setInviteUsername] = useState("")
-  const [inviteError, setInviteError] = useState("")
-  const [inviteSuccess, setInviteSuccess] = useState("")
   const [activeUsers, setActiveUsers] = useState<any[]>([])
   const [aiLoading, setAiLoading] = useState<string | null>(null)
   const recipeRefs = useRef<any>({})
@@ -299,33 +297,6 @@ export default function CookbookPage() {
       })
     ))
     await notifyFirebase()
-  }
-
-  async function inviteCollaborator() {
-    setInviteError("")
-    setInviteSuccess("")
-    const res = await fetch("/api/collaborators", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cookbook_id: params.id, username: inviteUsername }),
-    })
-    const data = await res.json()
-    if (data.error) {
-      setInviteError(data.error)
-    } else {
-      setInviteSuccess(`${inviteUsername} invited!`)
-      setInviteUsername("")
-      fetchCookbookInfo()
-    }
-  }
-
-  async function removeCollaborator(userId: string) {
-    await fetch("/api/collaborators", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cookbook_id: params.id, user_id: userId }),
-    })
-    fetchCookbookInfo()
   }
 
   async function aiAssist(type: string) {
@@ -806,71 +777,14 @@ export default function CookbookPage() {
       )}
 
       {showCollaboratorModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm mx-4">
-            <h2 className="text-lg font-medium mb-4">Collaborators</h2>
-            <p className="text-xs text-gray-400 mb-4">Only mutual friends can be invited as collaborators.</p>
-            <div className="mb-4">
-              <label className="text-sm text-gray-500 mb-1 block">Invite a friend</label>
-              <div className="flex gap-2">
-                <input
-                  value={inviteUsername}
-                  onChange={e => setInviteUsername(e.target.value)}
-                  placeholder="username"
-                  className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none"
-                />
-                <button
-                  onClick={inviteCollaborator}
-                  className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600">
-                  Invite
-                </button>
-              </div>
-              {inviteError && <p className="text-xs text-red-500 mt-1">{inviteError}</p>}
-              {inviteSuccess && <p className="text-xs text-green-600 mt-1">{inviteSuccess}</p>}
-            </div>
-            {collaborators.length > 0 && (
-              <div className="mb-4">
-                <label className="text-sm text-gray-500 mb-2 block">Current collaborators</label>
-                <div className="space-y-2">
-                  {collaborators.map((c: any) => (
-                    <div key={c.id} className="flex items-center justify-between py-2 border-b border-gray-50">
-                      <div className="flex items-center gap-2">
-                        {c.profile_image ? (
-                          <img src={c.profile_image} className="w-7 h-7 rounded-full object-cover"/>
-                        ) : (
-                          <div className="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs">
-                            {c.name?.charAt(0)}
-                          </div>
-                        )}
-                        <div>
-                          <div className="text-sm font-medium">{c.name}</div>
-                          <div className="text-xs text-gray-400">
-                            @{c.username} · {c.status === "pending" ? "⏳ Pending" : c.status === "accepted" ? "✓ Accepted" : "✗ Declined"}
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => removeCollaborator(c.id)}
-                        className="text-xs text-red-400 hover:text-red-600">
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            <button
-              onClick={() => {
-                setShowCollaboratorModal(false)
-                setInviteError("")
-                setInviteSuccess("")
-                setInviteUsername("")
-              }}
-              className="w-full border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">
-              Done
-            </button>
-          </div>
-        </div>
+        <CollaboratorModal
+          cookbookId={params.id as string}
+          collaborators={collaborators}
+          onClose={() => {
+            setShowCollaboratorModal(false)
+            fetchCookbookInfo()
+          }}
+        />
       )}
     </div>
   )
