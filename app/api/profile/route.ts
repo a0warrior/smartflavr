@@ -9,7 +9,7 @@ export async function GET(req: Request) {
   }
 
   const [users]: any = await pool.query(
-    "SELECT id, name, email, image, username, bio FROM users WHERE email = ?",
+    "SELECT id, name, email, image, username, bio, profile_image FROM users WHERE email = ?",
     [session.user.email]
   )
 
@@ -26,7 +26,7 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const { username, bio } = await req.json()
+  const { username, bio, profile_image } = await req.json()
 
   const [existing]: any = await pool.query(
     "SELECT id FROM users WHERE username = ? AND email != ?",
@@ -38,8 +38,8 @@ export async function PUT(req: Request) {
   }
 
   await pool.query(
-    "UPDATE users SET username = ?, bio = ? WHERE email = ?",
-    [username, bio, session.user.email]
+    "UPDATE users SET username = ?, bio = ?, profile_image = ? WHERE email = ?",
+    [username, bio, profile_image || null, session.user.email]
   )
 
   return NextResponse.json({ success: true })

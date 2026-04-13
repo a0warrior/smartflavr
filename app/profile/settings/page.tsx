@@ -2,14 +2,16 @@
 import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import Navbar from "../../components/Navbar"
+import Navbar from "@/app/components/Navbar"
 
 export default function ProfileSettings() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [username, setUsername] = useState("")
   const [bio, setBio] = useState("")
+  const [profileImage, setProfileImage] = useState("")
   const [loading, setLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
 
@@ -24,7 +26,28 @@ export default function ProfileSettings() {
     if (data.user) {
       setUsername(data.user.username || "")
       setBio(data.user.bio || "")
+      setProfileImage(data.user.profile_image || "")
     }
+  }
+
+  async function uploadProfilePhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    const reader = new FileReader()
+    reader.onloadend = async () => {
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: reader.result }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setProfileImage(data.url)
+      }
+      setUploading(false)
+    }
+    reader.readAsDataURL(file)
   }
 
   async function saveProfile() {
@@ -42,7 +65,7 @@ export default function ProfileSettings() {
     const res = await fetch("/api/profile", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, bio }),
+      body: JSON.stringify({ username, bio, profile_image: profileImage }),
     })
     const data = await res.json()
     if (data.error) {
@@ -57,14 +80,23 @@ export default function ProfileSettings() {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>
   }
 
+  const displayName = session?.user?.name || ""
+  const initials = displayName.charAt(0).toUpperCase()
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <div className="max-w-lg mx-auto px-6 py-12">
         <div className="flex items-center gap-4 mb-8">
-          {session?.user?.image && (
-            <img src={session.user.image} className="w-16 h-16 rounded-full"/>
-          )}
+          <div className="relative">
+            {profileImage ? (
+              <img src={profileImage} className="w-16 h-16 rounded-full object-cover"/>
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-orange-500 flex items-center justify-center text-white text-2xl font-medium">
+                {initials}
+              </div>
+            )}
+          </div>
           <div>
             <h1 className="text-xl font-medium">{session?.user?.name}</h1>
             <p className="text-sm text-gray-400">{session?.user?.email}</p>
@@ -73,6 +105,37 @@ export default function ProfileSettings() {
 
         <div className="bg-white border border-gray-100 rounded-2xl p-6">
           <h2 className="text-lg font-medium mb-6">Profile Settings</h2>
+
+          <div className="mb-6">
+            <label className="text-sm text-gray-500 mb-2 block">Profile photo</label>
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                {profileImage ? (
+                  <img src={profileImage} className="w-20 h-20 rounded-full object-cover"/>
+                ) : (
+                  <div className="w-20 h-20 rounded-full bg-orange-500 flex items-center justify-center text-white text-3xl font-medium">
+                    {initials}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => document.getElementById("profile-photo-upload")?.click()}
+                  disabled={uploading}
+                  className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+                  {uploading ? "Uploading..." : "Upload photo"}
+                </button>
+                {profileImage && (
+                  <button
+                    onClick={() => setProfileImage("")}
+                    className="px-4 py-2 border border-red-200 rounded-lg text-sm text-red-400 hover:bg-red-50">
+                    Remove photo
+                  </button>
+                )}
+                <input type="file" id="profile-photo-upload" accept="image/*" onChange={uploadProfilePhoto} className="hidden"/>
+              </div>
+            </div>
+          </div>
 
           <div className="mb-4">
             <label className="text-sm text-gray-500 mb-1 block">Username</label>
@@ -114,11 +177,21 @@ export default function ProfileSettings() {
           </div>
 
           {username && (
-            <div className="mt-4 p-3 bg-gray-50 rounded-xl">
-              <p className="text-xs text-gray-400 mb-1">Your public profile</p>
-              <a href={`/u/${username}`} target="_blank" className="text-sm text-orange-500">
-                smartflavr.com/u/{username} ↗
-              </a>
+            <div className="mt-4 p-3 bg-gray-50 rounded-xl flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-400 mb-1">Your public profile</p>
+                <a href={`/u/${username}`} target="_blank" className="text-sm text-orange-500">
+                  smartflavr.com/u/{username} ↗
+                </a>
+              </div>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(`${window.location.origin}/u/${username}`)
+                  setSuccess("Link copied!")
+                }}
+                className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-500 hover:bg-gray-50">
+                Copy link
+              </button>
             </div>
           )}
         </div>

@@ -8,6 +8,7 @@ export default function Navbar() {
   const { data: session } = useSession()
   const [showMenu, setShowMenu] = useState(false)
   const [username, setUsername] = useState("")
+  const [profileImage, setProfileImage] = useState("")
 
   useEffect(() => {
     if (session?.user?.email) {
@@ -15,9 +16,12 @@ export default function Navbar() {
         .then(res => res.json())
         .then(data => {
           if (data.user?.username) setUsername(data.user.username)
+          if (data.user?.profile_image) setProfileImage(data.user.profile_image)
         })
     }
   }, [session])
+
+  const initials = session?.user?.name?.charAt(0).toUpperCase() || "?"
 
   return (
     <nav className="bg-white border-b border-gray-100 px-6 py-2 flex items-center justify-between">
@@ -29,8 +33,12 @@ export default function Navbar() {
         <span className="text-sm text-gray-600">{session?.user?.name}</span>
         <div className="relative">
           <button onClick={() => setShowMenu(!showMenu)}>
-            {session?.user?.image && (
-              <img src={session.user.image} width={32} height={32} className="rounded-full cursor-pointer"/>
+            {profileImage ? (
+              <img src={profileImage} width={32} height={32} className="rounded-full cursor-pointer object-cover"/>
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white text-sm font-medium cursor-pointer">
+                {initials}
+              </div>
             )}
           </button>
           {showMenu && (
