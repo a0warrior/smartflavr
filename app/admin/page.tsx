@@ -87,6 +87,17 @@ export default function AdminPage() {
     fetchData()
   }
 
+  async function updateUserStatus(userId: string, status: string) {
+    const action = status === "banned" ? "ban" : status === "suspended" ? "suspend" : "reactivate"
+    if (!confirm(`Are you sure you want to ${action} this user?`)) return
+    await fetch("/api/admin/users", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: userId, status }),
+    })
+    fetchData()
+  }
+
   if (status === "loading") {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>
   }
@@ -248,13 +259,19 @@ export default function AdminPage() {
                           {user.is_admin === 1 && (
                             <span className="text-xs bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full">Admin</span>
                           )}
+                          {user.status === "suspended" && (
+                            <span className="text-xs bg-yellow-50 text-yellow-600 px-2 py-0.5 rounded-full">Suspended</span>
+                          )}
+                          {user.status === "banned" && (
+                            <span className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded-full">Banned</span>
+                          )}
                         </div>
                         <div className="text-xs text-gray-400">
                           {user.username ? `@${user.username}` : "No username set"} · {user.email}
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
                       <div className="flex gap-4 text-xs text-gray-400">
                         <div className="text-center">
                           <div className="font-medium text-gray-900">{user.cookbook_count}</div>
@@ -266,11 +283,33 @@ export default function AdminPage() {
                         </div>
                       </div>
                       {user.email !== session?.user?.email && (
-                        <button
-                          onClick={() => toggleAdmin(user.id, user.is_admin)}
-                          className={`px-3 py-1 rounded-lg text-xs border transition ${user.is_admin === 1 ? "border-red-200 text-red-400 hover:bg-red-50" : "border-orange-200 text-orange-500 hover:bg-orange-50"}`}>
-                          {user.is_admin === 1 ? "Remove admin" : "Make admin"}
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => toggleAdmin(user.id, user.is_admin)}
+                            className={`px-3 py-1 rounded-lg text-xs border transition ${user.is_admin === 1 ? "border-red-200 text-red-400 hover:bg-red-50" : "border-orange-200 text-orange-500 hover:bg-orange-50"}`}>
+                            {user.is_admin === 1 ? "Remove admin" : "Make admin"}
+                          </button>
+                          {user.status === "active" || !user.status ? (
+                            <>
+                              <button
+                                onClick={() => updateUserStatus(user.id, "suspended")}
+                                className="px-3 py-1 rounded-lg text-xs border border-yellow-200 text-yellow-600 hover:bg-yellow-50 transition">
+                                Suspend
+                              </button>
+                              <button
+                                onClick={() => updateUserStatus(user.id, "banned")}
+                                className="px-3 py-1 rounded-lg text-xs border border-red-200 text-red-500 hover:bg-red-50 transition">
+                                Ban
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => updateUserStatus(user.id, "active")}
+                              className="px-3 py-1 rounded-lg text-xs border border-green-200 text-green-600 hover:bg-green-50 transition">
+                              Reactivate
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
