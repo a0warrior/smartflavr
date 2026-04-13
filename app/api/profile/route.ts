@@ -26,7 +26,7 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const { username, bio, profile_image } = await req.json()
+  const { username, bio, profile_image, name } = await req.json()
 
   const [existing]: any = await pool.query(
     "SELECT id FROM users WHERE username = ? AND email != ?",
@@ -38,8 +38,8 @@ export async function PUT(req: Request) {
   }
 
   await pool.query(
-    "UPDATE users SET username = ?, bio = ?, profile_image = ? WHERE email = ?",
-    [username, bio, profile_image || null, session.user.email]
+    "UPDATE users SET username = ?, bio = ?, profile_image = ?, name = ? WHERE email = ?",
+    [username, bio, profile_image || null, name, session.user.email]
   )
 
   return NextResponse.json({ success: true })

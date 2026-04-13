@@ -2,6 +2,8 @@ import pool from "@/lib/db"
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
+import { auth } from "@/auth"
+import FollowButton from "@/app/components/FollowButton"
 
 export default async function ProfilePage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params
@@ -17,6 +19,9 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const displayImage = user.profile_image || null
   const initials = user.name?.charAt(0).toUpperCase() || "?"
 
+  const session = await auth()
+  const isOwnProfile = session?.user?.email && user.email === session.user.email
+
   const [cookbooks]: any = await pool.query(
     "SELECT * FROM cookbooks WHERE user_id = ? AND is_public = 1 ORDER BY created_at DESC",
     [user.id]
@@ -24,6 +29,16 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
   const [recipeCount]: any = await pool.query(
     "SELECT COUNT(*) as count FROM recipes WHERE user_id = ?",
+    [user.id]
+  )
+
+  const [followerCount]: any = await pool.query(
+    "SELECT COUNT(*) as count FROM follows WHERE following_id = ?",
+    [user.id]
+  )
+
+  const [followingCount]: any = await pool.query(
+    "SELECT COUNT(*) as count FROM follows WHERE follower_id = ?",
     [user.id]
   )
 
@@ -38,28 +53,47 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
       </nav>
 
       <div className="max-w-3xl mx-auto px-6 py-12">
-        <div className="flex items-start gap-6 mb-10">
-          {displayImage ? (
-            <img src={displayImage} className="w-20 h-20 rounded-full object-cover flex-shrink-0"/>
-          ) : (
-            <div className="w-20 h-20 rounded-full bg-orange-500 flex items-center justify-center text-white text-3xl font-medium flex-shrink-0">
-              {initials}
-            </div>
-          )}
-          <div>
-            <h1 className="text-2xl font-medium text-gray-900 mb-1">{user.name}</h1>
-            <p className="text-sm text-gray-400 mb-3">@{user.username}</p>
-            {user.bio && <p className="text-sm text-gray-600 leading-relaxed max-w-md">{user.bio}</p>}
-            <div className="flex gap-6 mt-4">
-              <div className="text-center">
-                <div className="text-lg font-medium text-gray-900">{cookbooks.length}</div>
-                <div className="text-xs text-gray-400">Cookbooks</div>
+        <div className="flex items-start justify-between mb-10">
+          <div className="flex items-start gap-6">
+            {displayImage ? (
+              <img src={displayImage} className="w-20 h-20 rounded-full object-cover flex-shrink-0"/>
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-orange-500 flex items-center justify-center text-white text-3xl font-medium flex-shrink-0">
+                {initials}
               </div>
-              <div className="text-center">
-                <div className="text-lg font-medium text-gray-900">{recipeCount[0].count}</div>
-                <div className="text-xs text-gray-400">Recipes</div>
+            )}
+            <div>
+              <h1 className="text-2xl font-medium text-gray-900 mb-1">{user.name}</h1>
+              <p className="text-sm text-gray-400 mb-3">@{user.username}</p>
+              {user.bio && <p className="text-sm text-gray-600 leading-relaxed max-w-md mb-4">{user.bio}</p>}
+              <div className="flex gap-6">
+                <div>
+                  <div className="text-lg font-medium text-gray-900">{cookbooks.length}</div>
+                  <div className="text-xs text-gray-400">Cookbooks</div>
+                </div>
+                <div>
+                  <div className="text-lg font-medium text-gray-900">{recipeCount[0].count}</div>
+                  <div className="text-xs text-gray-400">Recipes</div>
+                </div>
+                <div>
+                  <div className="text-lg font-medium text-gray-900">{followerCount[0].count}</div>
+                  <div className="text-xs text-gray-400">Followers</div>
+                </div>
+                <div>
+                  <div className="text-lg font-medium text-gray-900">{followingCount[0].count}</div>
+                  <div className="text-xs text-gray-400">Following</div>
+                </div>
               </div>
             </div>
+          </div>
+          <div className="flex gap-2">
+            {isOwnProfile ? (
+              <Link href="/profile/settings" className="px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">
+                Edit profile
+              </Link>
+            ) : session?.user ? (
+              <FollowButton username={username} />
+            ) : null}
           </div>
         </div>
 

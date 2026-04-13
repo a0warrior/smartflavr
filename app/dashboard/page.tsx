@@ -34,7 +34,6 @@ export default function Dashboard() {
     if (status === "unauthenticated") router.push("/login?code=returning")
     if (status === "authenticated") {
       registerUser()
-      fetchCookbooks()
     }
   }, [status])
 
@@ -58,7 +57,18 @@ export default function Dashboard() {
         }),
       })
       localStorage.removeItem("pendingInviteCode")
+      router.push("/profile/settings?new=true")
+      return
     }
+
+    const res = await fetch("/api/profile")
+    const data = await res.json()
+    if (!data.user?.username) {
+      router.push("/profile/settings?new=true")
+      return
+    }
+
+    fetchCookbooks()
   }
 
   async function fetchCookbooks() {

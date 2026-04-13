@@ -1,12 +1,16 @@
 "use client"
 import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Suspense } from "react"
 import Navbar from "@/app/components/Navbar"
 
-export default function ProfileSettings() {
+function ProfileSettingsContent() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const isNew = searchParams.get("new") === "true"
+  const [name, setName] = useState("")
   const [username, setUsername] = useState("")
   const [bio, setBio] = useState("")
   const [profileImage, setProfileImage] = useState("")
@@ -24,6 +28,7 @@ export default function ProfileSettings() {
     const res = await fetch("/api/profile")
     const data = await res.json()
     if (data.user) {
+      setName(data.user.name || "")
       setUsername(data.user.username || "")
       setBio(data.user.bio || "")
       setProfileImage(data.user.profile_image || "")
@@ -42,9 +47,7 @@ export default function ProfileSettings() {
         body: JSON.stringify({ image: reader.result }),
       })
       const data = await res.json()
-      if (data.success) {
-        setProfileImage(data.url)
-      }
+      if (data.success) setProfileImage(data.url)
       setUploading(false)
     }
     reader.readAsDataURL(file)
@@ -59,19 +62,27 @@ export default function ProfileSettings() {
       setError("Username cannot contain spaces")
       return
     }
+    if (!name) {
+      setError("Name is required")
+      return
+    }
     setLoading(true)
     setError("")
     setSuccess("")
     const res = await fetch("/api/profile", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, bio, profile_image: profileImage }),
+      body: JSON.stringify({ username, bio, profile_image: profileImage, name }),
     })
     const data = await res.json()
     if (data.error) {
       setError(data.error)
     } else {
-      setSuccess("Profile saved!")
+      if (isNew) {
+        router.push("/dashboard")
+      } else {
+        setSuccess("Profile saved!")
+      }
     }
     setLoading(false)
   }
@@ -80,44 +91,43 @@ export default function ProfileSettings() {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>
   }
 
-  const displayName = session?.user?.name || ""
-  const initials = displayName.charAt(0).toUpperCase()
+  const initials = name.charAt(0).toUpperCase() || session?.user?.name?.charAt(0).toUpperCase() || "?"
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <div className="max-w-lg mx-auto px-6 py-12">
         <div className="flex items-center gap-4 mb-8">
-          <div className="relative">
-            {profileImage ? (
-              <img src={profileImage} className="w-16 h-16 rounded-full object-cover"/>
-            ) : (
-              <div className="w-16 h-16 rounded-full bg-orange-500 flex items-center justify-center text-white text-2xl font-medium">
-                {initials}
-              </div>
-            )}
-          </div>
+          {profileImage ? (
+            <img src={profileImage} className="w-16 h-16 rounded-full object-cover"/>
+          ) : (
+            <div className="w-16 h-16 rounded-full bg-orange-500 flex items-center justify-center text-white text-2xl font-medium">
+              {initials}
+            </div>
+          )}
           <div>
-            <h1 className="text-xl font-medium">{session?.user?.name}</h1>
-            <p className="text-sm text-gray-400">{session?.user?.email}</p>
+            <h1 className="text-xl font-medium">{name || session?.user?.name}</h1>
           </div>
         </div>
 
         <div className="bg-white border border-gray-100 rounded-2xl p-6">
-          <h2 className="text-lg font-medium mb-6">Profile Settings</h2>
+          <h2 className="text-lg font-medium mb-2">
+            {isNew ? "Welcome to SmartFlavr! 🎉" : "Profile Settings"}
+          </h2>
+          {isNew && (
+            <p className="text-sm text-gray-500 mb-6">Set up your profile to get started.</p>
+          )}
 
           <div className="mb-6">
             <label className="text-sm text-gray-500 mb-2 block">Profile photo</label>
             <div className="flex items-center gap-4">
-              <div className="relative">
-                {profileImage ? (
-                  <img src={profileImage} className="w-20 h-20 rounded-full object-cover"/>
-                ) : (
-                  <div className="w-20 h-20 rounded-full bg-orange-500 flex items-center justify-center text-white text-3xl font-medium">
-                    {initials}
-                  </div>
-                )}
-              </div>
+              {profileImage ? (
+                <img src={profileImage} className="w-20 h-20 rounded-full object-cover"/>
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-orange-500 flex items-center justify-center text-white text-3xl font-medium">
+                  {initials}
+                </div>
+              )}
               <div className="flex flex-col gap-2">
                 <button
                   onClick={() => document.getElementById("profile-photo-upload")?.click()}
@@ -135,6 +145,16 @@ export default function ProfileSettings() {
                 <input type="file" id="profile-photo-upload" accept="image/*" onChange={uploadProfilePhoto} className="hidden"/>
               </div>
             </div>
+          </div>
+
+          <div className="mb-4">
+            <label className="text-sm text-gray-500 mb-1 block">Display name</label>
+            <input
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="Your name"
+              className="border border-gray-200 rounded-lg px-3 py-2 w-full text-sm outline-none"
+            />
           </div>
 
           <div className="mb-4">
@@ -168,15 +188,17 @@ export default function ProfileSettings() {
           {success && <p className="text-sm text-green-600 mb-4">{success}</p>}
 
           <div className="flex gap-3">
-            <button onClick={() => router.push("/dashboard")} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">
-              Cancel
-            </button>
+            {!isNew && (
+              <button onClick={() => router.push("/dashboard")} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">
+                Cancel
+              </button>
+            )}
             <button onClick={saveProfile} disabled={loading} className="flex-1 bg-orange-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-orange-600">
-              {loading ? "Saving..." : "Save profile"}
+              {loading ? "Saving..." : isNew ? "Get started →" : "Save profile"}
             </button>
           </div>
 
-          {username && (
+          {!isNew && username && (
             <div className="mt-4 p-3 bg-gray-50 rounded-xl flex items-center justify-between">
               <div>
                 <p className="text-xs text-gray-400 mb-1">Your public profile</p>
@@ -197,5 +219,13 @@ export default function ProfileSettings() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ProfileSettings() {
+  return (
+    <Suspense>
+      <ProfileSettingsContent />
+    </Suspense>
   )
 }
