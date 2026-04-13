@@ -133,20 +133,25 @@ export default function Navbar() {
                             ✕
                           </button>
                         </div>
-                        {n.type === "collab_invite" && (
-                          <div className="flex gap-2 mt-2">
-                            <button
-                              onClick={() => respondToInvite(n, "accept")}
-                              className="flex-1 bg-orange-500 text-white rounded-lg py-1 text-xs font-medium hover:bg-orange-600">
-                              Accept
-                            </button>
-                            <button
-                              onClick={() => respondToInvite(n, "decline")}
-                              className="flex-1 border border-gray-200 text-gray-500 rounded-lg py-1 text-xs hover:bg-gray-50">
-                              Decline
-                            </button>
-                          </div>
-                        )}
+                        {n.type === "collab_invite" && !n.read_at && (
+  <div className="flex gap-2 mt-2">
+    <button
+      onClick={() => respondToInvite(n, "accept")}
+      className="flex-1 bg-orange-500 text-white rounded-lg py-1 text-xs font-medium hover:bg-orange-600">
+      Accept
+    </button>
+    <button
+      onClick={() => respondToInvite(n, "decline")}
+      className="flex-1 border border-gray-200 text-gray-500 rounded-lg py-1 text-xs hover:bg-gray-50">
+      Decline
+    </button>
+  </div>
+)}
+{n.type === "collab_invite" && n.read_at && (
+  <p className="text-xs text-gray-400 mt-1 italic">
+    {n.message.includes("accepted") ? "✓ Accepted" : "✓ Responded"}
+  </p>
+)}
                         <p className="text-xs text-gray-400 mt-1">
                           {new Date(n.created_at).toLocaleDateString()}
                         </p>

@@ -425,8 +425,20 @@ export default function CookbookPage() {
               {editMode ? "Edit mode" : "Read mode"}
             </span>
             {isCollaborator && !isOwner && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium">Collaborator</span>
-            )}
+  <button
+    onClick={async () => {
+      if (!confirm("Leave this cookbook? You will lose access.")) return
+      await fetch("/api/collaborators", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cookbook_id: params.id, user_id: "self" }),
+      })
+      router.push("/dashboard")
+    }}
+    className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium hover:bg-red-50 hover:text-red-500 transition">
+    Collaborator · Leave
+  </button>
+)}
             <div className="w-px h-4 bg-gray-100 mx-1"/>
             {!editMode && (
               <>

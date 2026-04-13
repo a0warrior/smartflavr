@@ -106,6 +106,15 @@ export async function DELETE(req: Request) {
 
   const { cookbook_id, user_id } = await req.json()
 
+  // Allow leaving yourself or owner removing someone
+  if (user_id === "self") {
+    await pool.query(
+      "DELETE FROM cookbook_collaborators WHERE cookbook_id = ? AND user_id = ?",
+      [cookbook_id, currentUser[0].id]
+    )
+    return NextResponse.json({ success: true })
+  }
+
   const [cookbook] = await pool.query(
     "SELECT id FROM cookbooks WHERE id = ? AND user_id = ?",
     [cookbook_id, currentUser[0].id]
