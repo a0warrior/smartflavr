@@ -93,7 +93,7 @@ export default function CookbookPage() {
       timestamp: Date.now()
     })
 
-    const unsubscribe = onValue(allPresenceRef, (snapshot) => {
+    onValue(allPresenceRef, (snapshot) => {
       const data = snapshot.val()
       if (data) {
         const users = Object.values(data).filter((u: any) =>
@@ -124,8 +124,13 @@ export default function CookbookPage() {
     if (!params.id) return
 
     const recipesRef = ref(db, `cookbooks/${params.id}/lastUpdate`)
+    let initialized = false
 
-    const unsubscribe = onValue(recipesRef, (snapshot) => {
+    onValue(recipesRef, (snapshot) => {
+      if (!initialized) {
+        initialized = true
+        return
+      }
       const data = snapshot.val()
       if (data && data.updatedBy !== session?.user?.email) {
         fetchRecipes()
