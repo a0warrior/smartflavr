@@ -44,6 +44,7 @@ export async function GET(req: Request) {
   LEFT JOIN post_likes ON post_likes.post_id = posts.id
   LEFT JOIN post_comments ON post_comments.post_id = posts.id
   WHERE users.username IS NOT NULL
+  AND posts.visibility = 'everyone'
   GROUP BY posts.id
   ORDER BY posts.created_at DESC
   LIMIT 50`
@@ -71,10 +72,12 @@ export async function GET(req: Request) {
   LEFT JOIN cookbooks ON posts.cookbook_id = cookbooks.id
   LEFT JOIN post_likes ON post_likes.post_id = posts.id
   LEFT JOIN post_comments ON post_comments.post_id = posts.id
-  WHERE posts.user_id = ?
+  WHERE (
+    posts.user_id = ?
     OR posts.user_id IN (
       SELECT following_id FROM follows WHERE follower_id = ?
     )
+  )
   GROUP BY posts.id
   ORDER BY posts.created_at DESC
   LIMIT 50`
@@ -104,11 +107,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "User not found" }, { status: 404 })
   }
 
-  const { type, content, image_url, recipe_id, cookbook_id } = await req.json()
+  const { type, content, image_url, recipe_id, cookbook_id, visibility } = await req.json()
 
   await pool.query(
-    "INSERT INTO posts (user_id, type, content, image_url, recipe_id, cookbook_id) VALUES (?, ?, ?, ?, ?, ?)",
-    [currentUser[0].id, type, content || null, image_url || null, recipe_id || null, cookbook_id || null]
+    "INSERT INTO posts (user_id, type, content, image_url, recipe_id, cookbook_id, visibility) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    [currentUser[0].id, type, content || null, image_url || null, recipe_id || null, cookbook_id || null, visibility || "everyone"]
   )
 
   return NextResponse.json({ success: true })
