@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter, useParams } from "next/navigation"
-import Navbar from "../../components/Navbar"
+import Navbar from "@/app/components/Navbar"
 import {
   DndContext,
   closestCenter,
@@ -20,13 +20,13 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 
-function SortableRecipeItem({ recipe, isSelected, onClick }: any) {
+function SortableRecipeItem({ recipe, isSelected, onClick, isOwner }: any) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: recipe.id })
   const style = { transform: CSS.Transform.toString(transform), transition }
 
   return (
     <div ref={setNodeRef} style={style} className={`mx-1 px-2 py-1.5 rounded-lg text-xs cursor-pointer flex items-center gap-1 ${isSelected ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-500 hover:bg-gray-50"}`}>
-      <span {...attributes} {...listeners} className="text-gray-300 cursor-grab text-xs mr-1">⠿</span>
+      {isOwner && <span {...attributes} {...listeners} className="text-gray-300 cursor-grab text-xs mr-1">⠿</span>}
       <span onClick={onClick} className="flex-1 truncate">{recipe.title}</span>
     </div>
   )
@@ -54,6 +54,7 @@ export default function CookbookPage() {
   const [recipeToDelete, setRecipeToDelete] = useState<string | null>(null)
   const [isPublic, setIsPublic] = useState(false)
   const [cookbookInfo, setCookbookInfo] = useState<any>(null)
+  const [isOwner, setIsOwner] = useState(false)
   const recipeRefs = useRef<any>({})
 
   const sensors = useSensors(
@@ -93,28 +94,20 @@ export default function CookbookPage() {
   }
 
   async function fetchCookbookInfo() {
-    const res = await fetch(`/api/cookbooks/${params.id}`)
-    const data = await res.json()
-    if (data.cookbook) {
-      setCookbookInfo(data.cookbook)
-      setIsPublic(data.cookbook.is_public === 1)
-    }
-  }
+    const [cookbookRes, profileRes] = await Promise.all([
+      fetch(`/api/cookbooks/${params.id}`),
+      fetch("/api/profile")
+    ])
+    const cookbookData = await cookbookRes.json()
+    const profileData = await profileRes.json()
 
-  async function togglePublic() {
-    const newValue = !isPublic
-    setIsPublic(newValue)
-    await fetch(`/api/cookbooks/${params.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: cookbookInfo?.title,
-        cover_emoji: cookbookInfo?.cover_emoji,
-        cover_color: cookbookInfo?.cover_color,
-        cover_image: cookbookInfo?.cover_image || "",
-        is_public: newValue ? 1 : 0,
-      }),
-    })
+    if (cookbookData.cookbook) {
+      setCookbookInfo(cookbookData.cookbook)
+      setIsPublic(cookbookData.cookbook.is_public === 1)
+      if (profileData.user) {
+        setIsOwner(cookbookData.cookbook.user_id === profileData.user.id)
+      }
+    }
   }
 
   async function saveRecipe() {
@@ -198,6 +191,7 @@ export default function CookbookPage() {
   }
 
   async function handleDragEnd(event: any) {
+    if (!isOwner) return
     const { active, over } = event
     if (!over || active.id === over.id) return
     const oldIndex = recipes.findIndex(r => r.id === active.id)
@@ -255,7 +249,7 @@ export default function CookbookPage() {
         <div className="w-52 bg-white border-r border-gray-100 flex flex-col overflow-hidden flex-shrink-0">
           <div className="p-3 border-b border-gray-100">
             <button onClick={() => router.push("/dashboard")} className="text-xs text-orange-500 mb-2 block">← Dashboard</button>
-            <div className="text-sm font-medium">{cookbookInfo?.title || "My Cookbook"}</div>
+            <div className="text-sm font-medium">{cookbookInfo?.title || "Cookbook"}</div>
             <div className="text-xs text-gray-400">{recipes.length} recipes</div>
           </div>
           <div className="p-2 border-b border-gray-100">
@@ -263,7 +257,9 @@ export default function CookbookPage() {
           </div>
           <div className="px-2 pt-2 pb-1 text-xs font-medium text-gray-400 uppercase tracking-wide flex items-center justify-between">
             Categories
-            <button onClick={() => setShowCategoryModal(true)} className="text-orange-400 font-normal normal-case text-xs">+ Add</button>
+            {isOwner && (
+              <button onClick={() => setShowCategoryModal(true)} className="text-orange-400 font-normal normal-case text-xs">+ Add</button>
+            )}
           </div>
           <div
             onClick={() => { setActiveCategory("all"); setSelectedRecipe(recipes[0] || null) }}
@@ -291,16 +287,19 @@ export default function CookbookPage() {
                     recipe={r}
                     isSelected={selectedRecipe?.id === r.id}
                     onClick={() => scrollToRecipe(r.id)}
+                    isOwner={isOwner}
                   />
                 ))}
               </SortableContext>
             </DndContext>
           </div>
-          <div className="p-2 border-t border-gray-100">
-            <button onClick={createRecipe} className="w-full bg-orange-500 text-white rounded-lg py-1.5 text-xs font-medium hover:bg-orange-600 transition">
-              + Add Recipe
-            </button>
-          </div>
+          {isOwner && (
+            <div className="p-2 border-t border-gray-100">
+              <button onClick={createRecipe} className="w-full bg-orange-500 text-white rounded-lg py-1.5 text-xs font-medium hover:bg-orange-600 transition">
+                + Add Recipe
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
@@ -317,11 +316,12 @@ export default function CookbookPage() {
                 <button onClick={() => setScrollMode(!scrollMode)} className={`px-3 py-1 border rounded-lg text-xs ${scrollMode ? "bg-orange-500 text-white border-orange-500" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
                   {scrollMode ? "✓ Scroll mode" : "Scroll mode"}
                 </button>
+                {isOwner && (
+                  <button onClick={startEdit} className="px-3 py-1 border border-orange-300 text-orange-500 rounded-lg text-xs hover:bg-orange-50">Edit</button>
+                )}
               </>
             )}
-            {!editMode ? (
-              <button onClick={startEdit} className="px-3 py-1 border border-orange-300 text-orange-500 rounded-lg text-xs hover:bg-orange-50">Edit</button>
-            ) : (
+            {isOwner && editMode && (
               <>
                 <button onClick={cancelEdit} className="px-3 py-1 border border-gray-200 text-gray-500 rounded-lg text-xs hover:bg-gray-50">Cancel</button>
                 <button onClick={saveRecipe} disabled={saving} className="px-3 py-1 bg-orange-500 text-white rounded-lg text-xs font-medium hover:bg-orange-600">
@@ -329,22 +329,22 @@ export default function CookbookPage() {
                 </button>
               </>
             )}
-            {selectedRecipe && !editMode && (
+            {isOwner && selectedRecipe && !editMode && (
               <button onClick={() => deleteRecipe(selectedRecipe.id)} className="px-3 py-1 border border-red-200 text-red-400 rounded-lg text-xs hover:bg-red-50 ml-1">Delete</button>
             )}
             <div className="ml-auto flex items-center gap-2">
-  {isPublic && (
-    <button
-      onClick={() => {
-        navigator.clipboard.writeText(`${window.location.origin}/share/cookbook/${params.id}`)
-        alert("Link copied to clipboard!")
-      }}
-      className="px-3 py-1 border border-orange-200 text-orange-500 rounded-lg text-xs hover:bg-orange-50">
-      Share ↗
-    </button>
-  )}
-  <span className="text-xs text-gray-400">{lastSaved}</span>
-</div>
+              {isPublic && isOwner && (
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/share/cookbook/${params.id}`)
+                    alert("Link copied to clipboard!")
+                  }}
+                  className="px-3 py-1 border border-orange-200 text-orange-500 rounded-lg text-xs hover:bg-orange-50">
+                  Share ↗
+                </button>
+              )}
+              <span className="text-xs text-gray-400">{lastSaved}</span>
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto px-8 py-6" id="recipe-content">
@@ -412,8 +412,8 @@ export default function CookbookPage() {
                       {recipe.image_url ? (
                         <img src={recipe.image_url} className="w-full object-contain rounded-xl"/>
                       ) : (
-                        <div className="border-2 border-dashed border-gray-100 rounded-xl h-48 flex items-center justify-center cursor-pointer hover:bg-gray-50">
-                          <span className="text-xs text-gray-400">📷 No photo yet — click Edit to add one</span>
+                        <div className="border-2 border-dashed border-gray-100 rounded-xl h-48 flex items-center justify-center">
+                          <span className="text-xs text-gray-400">📷 No photo yet</span>
                         </div>
                       )}
                     </div>

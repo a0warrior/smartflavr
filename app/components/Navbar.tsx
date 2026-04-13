@@ -32,6 +32,9 @@ export default function Navbar() {
         <span className="text-xl font-medium text-gray-900">Smart<span className="text-orange-500">Flavr</span></span>
       </Link>
       <div className="flex items-center gap-6 relative">
+        <Link href="/feed" className="text-sm text-gray-500 hover:text-gray-900 transition">
+          Feed
+        </Link>
         <Link href="/explore" className="text-sm text-gray-500 hover:text-gray-900 transition">
           Explore
         </Link>
@@ -56,6 +59,12 @@ export default function Navbar() {
                   Profile
                 </Link>
               )}
+              <Link
+                href="/feed"
+                onClick={() => setShowMenu(false)}
+                className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
+                Feed
+              </Link>
               <Link
                 href="/explore"
                 onClick={() => setShowMenu(false)}

@@ -1,5 +1,5 @@
 "use client"
-import { useSession } from "next-auth/react"
+import { useSession, signOut } from "next-auth/react"
 import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Suspense } from "react"
@@ -18,6 +18,8 @@ function ProfileSettingsContent() {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login?code=returning")
@@ -87,6 +89,19 @@ function ProfileSettingsContent() {
     setLoading(false)
   }
 
+  async function deleteAccount() {
+    setDeleting(true)
+    const res = await fetch("/api/profile", { method: "DELETE" })
+    const data = await res.json()
+    if (data.success) {
+      await signOut({ callbackUrl: "/" })
+    } else {
+      setError("Failed to delete account. Please try again.")
+      setDeleting(false)
+      setShowDeleteModal(false)
+    }
+  }
+
   if (status === "loading") {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>
   }
@@ -110,7 +125,7 @@ function ProfileSettingsContent() {
           </div>
         </div>
 
-        <div className="bg-white border border-gray-100 rounded-2xl p-6">
+        <div className="bg-white border border-gray-100 rounded-2xl p-6 mb-4">
           <h2 className="text-lg font-medium mb-2">
             {isNew ? "Welcome to SmartFlavr! 🎉" : "Profile Settings"}
           </h2>
@@ -155,6 +170,16 @@ function ProfileSettingsContent() {
               placeholder="Your name"
               className="border border-gray-200 rounded-lg px-3 py-2 w-full text-sm outline-none"
             />
+          </div>
+
+          <div className="mb-4">
+            <label className="text-sm text-gray-500 mb-1 block">Email</label>
+            <input
+              value={session?.user?.email || ""}
+              disabled
+              className="border border-gray-100 rounded-lg px-3 py-2 w-full text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
+            />
+            <p className="text-xs text-gray-400 mt-1">Email is tied to your Google account and cannot be changed here.</p>
           </div>
 
           <div className="mb-4">
@@ -217,7 +242,48 @@ function ProfileSettingsContent() {
             </div>
           )}
         </div>
+
+        {!isNew && (
+          <div className="bg-white border border-red-100 rounded-2xl p-6">
+            <h2 className="text-sm font-medium text-red-500 mb-1">Danger Zone</h2>
+            <p className="text-xs text-gray-400 mb-4">Permanently delete your account and all your data including cookbooks, recipes, and posts. This cannot be undone.</p>
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="px-4 py-2 border border-red-200 text-red-400 rounded-xl text-sm hover:bg-red-50 transition">
+              Delete my account
+            </button>
+          </div>
+        )}
       </div>
+
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm mx-4">
+            <div className="text-3xl mb-3 text-center">⚠️</div>
+            <h2 className="text-lg font-medium text-center mb-2">Delete your account?</h2>
+            <p className="text-sm text-gray-500 text-center mb-1">This will permanently delete:</p>
+            <ul className="text-sm text-gray-500 mb-6 space-y-1 text-center">
+              <li>All your cookbooks and recipes</li>
+              <li>All your posts and comments</li>
+              <li>Your profile and followers</li>
+            </ul>
+            <p className="text-sm font-medium text-red-500 text-center mb-6">This cannot be undone.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">
+                Cancel
+              </button>
+              <button
+                onClick={deleteAccount}
+                disabled={deleting}
+                className="flex-1 bg-red-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-red-600">
+                {deleting ? "Deleting..." : "Yes, delete everything"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
