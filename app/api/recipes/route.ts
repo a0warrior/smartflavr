@@ -8,7 +8,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const { title, description, ingredients, instructions, source_url, prep_time, servings, cookbook_id } = await req.json()
+  const { title, description, ingredients, instructions, source_url, prep_time, servings, cookbook_id, notes, difficulty, category_id, sort_order, image_url, nutrition } = await req.json()
 
   const [users]: any = await pool.query(
     "SELECT id FROM users WHERE email = ?",
@@ -20,8 +20,8 @@ export async function POST(req: Request) {
   }
 
   await pool.query(
-    "INSERT INTO recipes (cookbook_id, user_id, title, description, ingredients, instructions, source_url, prep_time, servings) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    [cookbook_id, users[0].id, title, description, ingredients, instructions, source_url, prep_time, servings]
+    "INSERT INTO recipes (cookbook_id, user_id, title, description, ingredients, instructions, source_url, prep_time, servings, notes, difficulty, category_id, sort_order, image_url, nutrition) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    [cookbook_id, users[0].id, title, description, ingredients, instructions, source_url, prep_time, servings, notes || null, difficulty || null, category_id || null, sort_order || 0, image_url || null, nutrition ? JSON.stringify(nutrition) : null]
   )
 
   return NextResponse.json({ success: true })
@@ -37,7 +37,11 @@ export async function GET(req: Request) {
   const cookbook_id = searchParams.get("cookbook_id")
 
   const [recipes]: any = await pool.query(
-    "SELECT * FROM recipes WHERE cookbook_id = ? ORDER BY created_at DESC",
+    `SELECT recipes.*, categories.name as category_name
+     FROM recipes
+     LEFT JOIN categories ON recipes.category_id = categories.id
+     WHERE recipes.cookbook_id = ?
+     ORDER BY recipes.sort_order ASC`,
     [cookbook_id]
   )
 

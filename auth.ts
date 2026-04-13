@@ -6,11 +6,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [Google({
     clientId: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    authorization: {
+      params: {
+        scope: "openid email profile https://www.googleapis.com/auth/calendar.events",
+        access_type: "offline",
+        prompt: "consent",
+      }
+    }
   })],
   pages: {
     signIn: "/login",
   },
   callbacks: {
+    async jwt({ token, account }) {
+      if (account) {
+        token.access_token = account.access_token
+        token.refresh_token = account.refresh_token
+      }
+      return token
+    },
+    async session({ session, token }) {
+      session.access_token = token.access_token as string
+      return session
+    },
     async signIn({ user }) {
       const email = user.email
       if (!email) return false
@@ -21,12 +39,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       )
 
       if (existing.length > 0) {
-        if (existing[0].status === "banned") {
-          return "/banned"
-        }
-        if (existing[0].status === "suspended") {
-          return "/suspended"
-        }
+        if (existing[0].status === "banned") return "/banned"
+        if (existing[0].status === "suspended") return "/suspended"
         await pool.query(
           "UPDATE users SET name = ?, image = ? WHERE email = ?",
           [user.name, user.image, email]

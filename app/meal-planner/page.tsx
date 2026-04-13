@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useState } from "react"
+import React, { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Navbar from "@/app/components/Navbar"
@@ -47,6 +47,10 @@ export default function MealPlannerPage() {
   const [groceryList, setGroceryList] = useState<any>({})
   const [generatingGrocery, setGeneratingGrocery] = useState(false)
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set())
+  const [liveSync, setLiveSync] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [recipeSearch, setRecipeSearch] = useState("")
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("")
 
   const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
@@ -55,6 +59,8 @@ export default function MealPlannerPage() {
     if (status === "authenticated") {
       fetchCategories()
       fetchCookbooks()
+      const saved = localStorage.getItem("smartflavr_live_sync")
+      if (saved === "true") setLiveSync(true)
     }
   }, [status])
 
@@ -97,8 +103,60 @@ export default function MealPlannerPage() {
     setAllRecipes(data.recipes || [])
   }
 
+  async function syncMealsToCalendar(mealsToSync: any[]) {
+    const unsynced = mealsToSync.filter(m => !m.synced_to_calendar)
+    if (unsynced.length === 0) return
+    await fetch("/api/google-calendar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ meals: unsynced }),
+    })
+  }
+
+  async function deleteMealFromCalendar(meal: any) {
+    if (!meal.gcal_event_id) return
+    await fetch("/api/google-calendar/event", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event_id: meal.gcal_event_id, meal_id: meal.id }),
+    })
+  }
+
+  async function clearAllCalendarEvents() {
+    if (weekDates.length === 0) return
+    const start = formatDate(weekDates[0])
+    const end = formatDate(weekDates[6])
+    await fetch("/api/google-calendar", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ start, end }),
+    })
+  }
+
+  async function toggleLiveSync() {
+    const next = !liveSync
+    setSyncing(true)
+
+    if (next) {
+      const start = formatDate(weekDates[0])
+      const end = formatDate(weekDates[6])
+      const res = await fetch(`/api/meal-plans?start=${start}&end=${end}`)
+      const data = await res.json()
+      const currentMeals = data.meals || []
+      await syncMealsToCalendar(currentMeals)
+      await fetchMeals()
+    } else {
+      await clearAllCalendarEvents()
+      await fetchMeals()
+    }
+
+    setLiveSync(next)
+    localStorage.setItem("smartflavr_live_sync", String(next))
+    setSyncing(false)
+  }
+
   async function addMeal(recipeId: string) {
-    await fetch("/api/meal-plans", {
+    const res = await fetch("/api/meal-plans", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -107,18 +165,35 @@ export default function MealPlannerPage() {
         meal_type: selectedCategory,
       }),
     })
+
     setShowAddModal(false)
     setSelectedCookbook("")
     setAllRecipes([])
+    setRecipeSearch("")
+    setSelectedCategoryFilter("")
+
+    if (liveSync) {
+      const start = formatDate(weekDates[0])
+      const end = formatDate(weekDates[6])
+      const mealsRes = await fetch(`/api/meal-plans?start=${start}&end=${end}`)
+      const mealsData = await mealsRes.json()
+      await syncMealsToCalendar(mealsData.meals || [])
+    }
+
     fetchMeals()
   }
 
-  async function removeMeal(id: string) {
+  async function removeMeal(meal: any) {
+    if (liveSync && meal.gcal_event_id) {
+      await deleteMealFromCalendar(meal)
+    }
+
     await fetch("/api/meal-plans", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
+      body: JSON.stringify({ id: meal.id }),
     })
+
     fetchMeals()
   }
 
@@ -231,6 +306,14 @@ export default function MealPlannerPage() {
   const weekAvg = getWeekAverages()
   const totalMealsPlanned = meals.length
 
+  const filteredRecipes = allRecipes.filter((r: any) => {
+    const matchesSearch = r.title.toLowerCase().includes(recipeSearch.toLowerCase())
+    const matchesCategory = !selectedCategoryFilter || r.category_name === selectedCategoryFilter
+    return matchesSearch && matchesCategory
+  })
+
+  const recipeCategories = Array.from(new Set(allRecipes.map((r: any) => r.category_name).filter(Boolean)))
+
   if (status === "loading") {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>
   }
@@ -251,7 +334,7 @@ export default function MealPlannerPage() {
             </div>
             <button onClick={nextWeek} className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 bg-white">→</button>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 items-center">
             <button
               onClick={() => setShowCategoryModal(true)}
               className="border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 bg-white">
@@ -262,6 +345,13 @@ export default function MealPlannerPage() {
               disabled={generatingGrocery || meals.length === 0}
               className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 disabled:opacity-50 transition">
               {generatingGrocery ? "Generating..." : "Grocery list"}
+            </button>
+            <button
+              onClick={toggleLiveSync}
+              disabled={syncing}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition border ${liveSync ? "bg-blue-500 text-white border-blue-500 hover:bg-blue-600" : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"}`}>
+              <div className={`w-3 h-3 rounded-full ${liveSync ? "bg-white" : "bg-gray-300"}`}/>
+              {syncing ? "Syncing..." : liveSync ? "Google Calendar: On" : "Google Calendar: Off"}
             </button>
           </div>
         </div>
@@ -295,8 +385,8 @@ export default function MealPlannerPage() {
             ))}
 
             {categories.map((cat: any) => (
-              <>
-                <div key={`label-${cat.id}`} className="p-3 border-b border-r border-gray-100 flex items-center justify-between group">
+              <React.Fragment key={cat.id}>
+                <div className="p-3 border-b border-r border-gray-100 flex items-center justify-between group">
                   <span className="text-xs font-medium text-gray-600">{cat.name}</span>
                   <button
                     onClick={() => deleteCategory(cat.id)}
@@ -318,8 +408,11 @@ export default function MealPlannerPage() {
                               const n = typeof meal.nutrition === "string" ? JSON.parse(meal.nutrition) : meal.nutrition
                               return <div className="text-xs text-orange-500 mt-0.5">{Math.round(n.calories)} cal</div>
                             })()}
+                            {meal.synced_to_calendar === 1 && (
+                              <div className="text-xs text-blue-400 mt-0.5">📅 Synced</div>
+                            )}
                             <button
-                              onClick={() => removeMeal(meal.id)}
+                              onClick={() => removeMeal(meal)}
                               className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-orange-300 hover:text-red-400 text-xs transition">
                               ✕
                             </button>
@@ -338,7 +431,7 @@ export default function MealPlannerPage() {
                     </div>
                   )
                 })}
-              </>
+              </React.Fragment>
             ))}
 
             <div className="p-3 border-r border-gray-100">
@@ -365,14 +458,15 @@ export default function MealPlannerPage() {
 
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4 max-h-[80vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4 max-h-[85vh] overflow-y-auto">
             <h2 className="text-lg font-medium mb-1">Add recipe</h2>
             <p className="text-sm text-gray-400 mb-4">{selectedCategory} · {selectedDate}</p>
-            <div className="mb-4">
-              <label className="text-sm text-gray-500 mb-1 block">Select cookbook</label>
+
+            <div className="mb-3">
+              <label className="text-sm text-gray-500 mb-1 block">Cookbook</label>
               <select
                 value={selectedCookbook}
-                onChange={e => setSelectedCookbook(e.target.value)}
+                onChange={e => { setSelectedCookbook(e.target.value); setRecipeSearch(""); setSelectedCategoryFilter("") }}
                 className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none">
                 <option value="">Choose a cookbook...</option>
                 {cookbooks.map((b: any) => (
@@ -380,9 +474,32 @@ export default function MealPlannerPage() {
                 ))}
               </select>
             </div>
-            {allRecipes.length > 0 && (
+
+            {selectedCookbook && (
+              <div className="flex gap-2 mb-3">
+                <input
+                  value={recipeSearch}
+                  onChange={e => setRecipeSearch(e.target.value)}
+                  placeholder="Search recipes..."
+                  className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none"
+                />
+                {recipeCategories.length > 0 && (
+                  <select
+                    value={selectedCategoryFilter}
+                    onChange={e => setSelectedCategoryFilter(e.target.value)}
+                    className="border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none">
+                    <option value="">All</option>
+                    {recipeCategories.map((cat: any) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            )}
+
+            {filteredRecipes.length > 0 && (
               <div className="space-y-2">
-                {allRecipes.map((r: any) => (
+                {filteredRecipes.map((r: any) => (
                   <div
                     key={r.id}
                     onClick={() => addMeal(r.id)}
@@ -396,7 +513,10 @@ export default function MealPlannerPage() {
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-gray-900 truncate">{r.title}</div>
-                      <div className="flex gap-2 text-xs text-gray-400 mt-0.5">
+                      <div className="flex gap-2 text-xs text-gray-400 mt-0.5 flex-wrap">
+                        {r.category_name && (
+                          <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">{r.category_name}</span>
+                        )}
                         {r.prep_time && <span>⏱ {r.prep_time}</span>}
                         {r.servings && <span>👤 {r.servings}</span>}
                         {r.nutrition && (() => {
@@ -409,11 +529,23 @@ export default function MealPlannerPage() {
                 ))}
               </div>
             )}
+
+            {selectedCookbook && filteredRecipes.length === 0 && allRecipes.length > 0 && (
+              <div className="text-center py-8 text-sm text-gray-400">No recipes match your search</div>
+            )}
+
             {selectedCookbook && allRecipes.length === 0 && (
               <div className="text-center py-8 text-sm text-gray-400">No recipes in this cookbook</div>
             )}
+
             <button
-              onClick={() => { setShowAddModal(false); setSelectedCookbook(""); setAllRecipes([]) }}
+              onClick={() => {
+                setShowAddModal(false)
+                setSelectedCookbook("")
+                setAllRecipes([])
+                setRecipeSearch("")
+                setSelectedCategoryFilter("")
+              }}
               className="w-full border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50 mt-4">
               Cancel
             </button>
