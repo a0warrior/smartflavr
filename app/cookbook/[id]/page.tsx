@@ -3,6 +3,8 @@ import { useEffect, useState, useRef } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter, useParams } from "next/navigation"
 import Navbar from "@/app/components/Navbar"
+import { db } from "@/lib/firebase"
+import { ref, onValue, set, off } from "firebase/database"
 import {
   DndContext,
   closestCenter,
@@ -55,6 +57,13 @@ export default function CookbookPage() {
   const [isPublic, setIsPublic] = useState(false)
   const [cookbookInfo, setCookbookInfo] = useState<any>(null)
   const [isOwner, setIsOwner] = useState(false)
+  const [isCollaborator, setIsCollaborator] = useState(false)
+  const [collaborators, setCollaborators] = useState<any[]>([])
+  const [showCollaboratorModal, setShowCollaboratorModal] = useState(false)
+  const [inviteUsername, setInviteUsername] = useState("")
+  const [inviteError, setInviteError] = useState("")
+  const [inviteSuccess, setInviteSuccess] = useState("")
+  const [activeUsers, setActiveUsers] = useState<any[]>([])
   const recipeRefs = useRef<any>({})
 
   const sensors = useSensors(
@@ -71,11 +80,65 @@ export default function CookbookPage() {
     }
   }, [status])
 
+  // Firebase presence tracking
   useEffect(() => {
-    if (filteredRecipes.length > 0) {
+    if (!session?.user?.email || !params.id) return
+
+    const presenceRef = ref(db, `cookbooks/${params.id}/presence/${session.user.email.replace(/\./g, "_")}`)
+    const allPresenceRef = ref(db, `cookbooks/${params.id}/presence`)
+
+    set(presenceRef, {
+      name: session.user.name,
+      email: session.user.email,
+      timestamp: Date.now()
+    })
+
+    const unsubscribe = onValue(allPresenceRef, (snapshot) => {
+      const data = snapshot.val()
+      if (data) {
+        const users = Object.values(data).filter((u: any) => 
+          Date.now() - u.timestamp < 30000 && u.email !== session.user?.email
+        )
+        setActiveUsers(users as any[])
+      } else {
+        setActiveUsers([])
+      }
+    })
+
+    const interval = setInterval(() => {
+      set(presenceRef, {
+        name: session.user?.name,
+        email: session.user?.email,
+        timestamp: Date.now()
+      })
+    }, 10000)
+
+    return () => {
+      off(allPresenceRef)
+      clearInterval(interval)
+      set(presenceRef, null)
+    }
+  }, [session, params.id])
+
+  // Firebase recipe sync
+  useEffect(() => {
+    if (!params.id) return
+
+    const recipesRef = ref(db, `cookbooks/${params.id}/lastUpdate`)
+
+    const unsubscribe = onValue(recipesRef, (snapshot) => {
+      const data = snapshot.val()
+      if (data && data.updatedBy !== session?.user?.email) {
+        fetchRecipes()
+      }
+    })
+
+    return () => off(recipesRef)
+  }, [params.id, session])
+
+  useEffect(() => {
+    if (filteredRecipes.length > 0 && !selectedRecipe) {
       setSelectedRecipe(filteredRecipes[0])
-    } else {
-      setSelectedRecipe(null)
     }
   }, [activeCategory])
 
@@ -84,7 +147,7 @@ export default function CookbookPage() {
     const data = await res.json()
     const sorted = (data.recipes || []).sort((a: any, b: any) => a.sort_order - b.sort_order)
     setRecipes(sorted)
-    if (sorted.length > 0) setSelectedRecipe(sorted[0])
+    if (sorted.length > 0 && !selectedRecipe) setSelectedRecipe(sorted[0])
   }
 
   async function fetchCategories() {
@@ -94,20 +157,37 @@ export default function CookbookPage() {
   }
 
   async function fetchCookbookInfo() {
-    const [cookbookRes, profileRes] = await Promise.all([
+    const [cookbookRes, profileRes, collaboratorsRes] = await Promise.all([
       fetch(`/api/cookbooks/${params.id}`),
-      fetch("/api/profile")
+      fetch("/api/profile"),
+      fetch(`/api/collaborators?cookbook_id=${params.id}`)
     ])
     const cookbookData = await cookbookRes.json()
     const profileData = await profileRes.json()
+    const collaboratorsData = await collaboratorsRes.json()
 
     if (cookbookData.cookbook) {
       setCookbookInfo(cookbookData.cookbook)
       setIsPublic(cookbookData.cookbook.is_public === 1)
       if (profileData.user) {
-        setIsOwner(cookbookData.cookbook.user_id === profileData.user.id)
+        const owner = cookbookData.cookbook.user_id === profileData.user.id
+        setIsOwner(owner)
+        if (!owner) {
+          const isCollab = (collaboratorsData.collaborators || []).some(
+            (c: any) => c.id === profileData.user.id
+          )
+          setIsCollaborator(isCollab)
+        }
       }
     }
+    setCollaborators(collaboratorsData.collaborators || [])
+  }
+
+  async function notifyFirebase() {
+    await set(ref(db, `cookbooks/${params.id}/lastUpdate`), {
+      updatedBy: session?.user?.email,
+      timestamp: Date.now()
+    })
   }
 
   async function saveRecipe() {
@@ -123,6 +203,7 @@ export default function CookbookPage() {
     setSaving(false)
     setLastSaved("Saved just now")
     setEditMode(false)
+    await notifyFirebase()
   }
 
   async function createRecipe() {
@@ -142,6 +223,7 @@ export default function CookbookPage() {
       }),
     })
     await fetchRecipes()
+    await notifyFirebase()
   }
 
   async function deleteRecipe(id: string) {
@@ -157,6 +239,7 @@ export default function CookbookPage() {
     setSelectedRecipe(null)
     setEditMode(false)
     await fetchRecipes()
+    await notifyFirebase()
   }
 
   async function createCategory() {
@@ -183,15 +266,13 @@ export default function CookbookPage() {
         body: JSON.stringify({ image: reader.result }),
       })
       const data = await res.json()
-      if (data.success) {
-        updateEdited("image_url", data.url)
-      }
+      if (data.success) updateEdited("image_url", data.url)
     }
     reader.readAsDataURL(file)
   }
 
   async function handleDragEnd(event: any) {
-    if (!isOwner) return
+    if (!isOwner && !isCollaborator) return
     const { active, over } = event
     if (!over || active.id === over.id) return
     const oldIndex = recipes.findIndex(r => r.id === active.id)
@@ -205,6 +286,34 @@ export default function CookbookPage() {
         body: JSON.stringify({ ...r, sort_order: i }),
       })
     ))
+    await notifyFirebase()
+  }
+
+  async function inviteCollaborator() {
+    setInviteError("")
+    setInviteSuccess("")
+    const res = await fetch("/api/collaborators", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cookbook_id: params.id, username: inviteUsername }),
+    })
+    const data = await res.json()
+    if (data.error) {
+      setInviteError(data.error)
+    } else {
+      setInviteSuccess(`${inviteUsername} added as collaborator!`)
+      setInviteUsername("")
+      fetchCookbookInfo()
+    }
+  }
+
+  async function removeCollaborator(userId: string) {
+    await fetch("/api/collaborators", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cookbook_id: params.id, user_id: userId }),
+    })
+    fetchCookbookInfo()
   }
 
   function startEdit() {
@@ -235,6 +344,8 @@ export default function CookbookPage() {
     return matchesSearch && matchesCategory
   })
 
+  const canEdit = isOwner || isCollaborator
+
   if (status === "loading") {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>
   }
@@ -251,6 +362,12 @@ export default function CookbookPage() {
             <button onClick={() => router.push("/dashboard")} className="text-xs text-orange-500 mb-2 block">← Dashboard</button>
             <div className="text-sm font-medium">{cookbookInfo?.title || "Cookbook"}</div>
             <div className="text-xs text-gray-400">{recipes.length} recipes</div>
+            {activeUsers.length > 0 && (
+              <div className="flex items-center gap-1 mt-2">
+                <div className="w-2 h-2 rounded-full bg-green-400"/>
+                <span className="text-xs text-gray-400">{activeUsers.length} also viewing</span>
+              </div>
+            )}
           </div>
           <div className="p-2 border-b border-gray-100">
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search recipes..." className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2 py-1.5 text-xs"/>
@@ -287,13 +404,13 @@ export default function CookbookPage() {
                     recipe={r}
                     isSelected={selectedRecipe?.id === r.id}
                     onClick={() => scrollToRecipe(r.id)}
-                    isOwner={isOwner}
+                    isOwner={canEdit}
                   />
                 ))}
               </SortableContext>
             </DndContext>
           </div>
-          {isOwner && (
+          {canEdit && (
             <div className="p-2 border-t border-gray-100">
               <button onClick={createRecipe} className="w-full bg-orange-500 text-white rounded-lg py-1.5 text-xs font-medium hover:bg-orange-600 transition">
                 + Add Recipe
@@ -307,6 +424,9 @@ export default function CookbookPage() {
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${editMode ? "bg-orange-50 text-orange-700" : "bg-green-50 text-green-700"}`}>
               {editMode ? "Edit mode" : "Read mode"}
             </span>
+            {isCollaborator && !isOwner && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium">Collaborator</span>
+            )}
             <div className="w-px h-4 bg-gray-100 mx-1"/>
             {!editMode && (
               <>
@@ -316,12 +436,12 @@ export default function CookbookPage() {
                 <button onClick={() => setScrollMode(!scrollMode)} className={`px-3 py-1 border rounded-lg text-xs ${scrollMode ? "bg-orange-500 text-white border-orange-500" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
                   {scrollMode ? "✓ Scroll mode" : "Scroll mode"}
                 </button>
-                {isOwner && (
+                {canEdit && (
                   <button onClick={startEdit} className="px-3 py-1 border border-orange-300 text-orange-500 rounded-lg text-xs hover:bg-orange-50">Edit</button>
                 )}
               </>
             )}
-            {isOwner && editMode && (
+            {canEdit && editMode && (
               <>
                 <button onClick={cancelEdit} className="px-3 py-1 border border-gray-200 text-gray-500 rounded-lg text-xs hover:bg-gray-50">Cancel</button>
                 <button onClick={saveRecipe} disabled={saving} className="px-3 py-1 bg-orange-500 text-white rounded-lg text-xs font-medium hover:bg-orange-600">
@@ -333,6 +453,22 @@ export default function CookbookPage() {
               <button onClick={() => deleteRecipe(selectedRecipe.id)} className="px-3 py-1 border border-red-200 text-red-400 rounded-lg text-xs hover:bg-red-50 ml-1">Delete</button>
             )}
             <div className="ml-auto flex items-center gap-2">
+              {activeUsers.length > 0 && (
+                <div className="flex items-center gap-1">
+                  {activeUsers.slice(0, 3).map((u: any, i: number) => (
+                    <div key={i} className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs border-2 border-white" title={u.name}>
+                      {u.name?.charAt(0)}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {isOwner && (
+                <button
+                  onClick={() => setShowCollaboratorModal(true)}
+                  className="px-3 py-1 border border-blue-200 text-blue-500 rounded-lg text-xs hover:bg-blue-50">
+                  👥 Collaborators
+                </button>
+              )}
               {isPublic && isOwner && (
                 <button
                   onClick={() => {
@@ -530,7 +666,7 @@ export default function CookbookPage() {
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm mx-4">
             <h2 className="text-lg font-medium mb-2">Delete Recipe?</h2>
-            <p className="text-sm text-gray-500 mb-6">This can't be undone. Are you sure you want to delete this recipe?</p>
+            <p className="text-sm text-gray-500 mb-6">This can't be undone. Are you sure?</p>
             <div className="flex gap-3">
               <button onClick={() => { setShowDeleteModal(false); setRecipeToDelete(null) }} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Cancel</button>
               <button onClick={confirmDelete} className="flex-1 bg-red-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-red-600">Delete</button>
@@ -555,6 +691,75 @@ export default function CookbookPage() {
               <button onClick={() => setShowCategoryModal(false)} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Cancel</button>
               <button onClick={createCategory} className="flex-1 bg-orange-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-orange-600">Create</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showCollaboratorModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm mx-4">
+            <h2 className="text-lg font-medium mb-4">Collaborators</h2>
+            <p className="text-xs text-gray-400 mb-4">Only mutual friends can be invited as collaborators.</p>
+
+            <div className="mb-4">
+              <label className="text-sm text-gray-500 mb-1 block">Invite a friend</label>
+              <div className="flex gap-2">
+                <input
+                  value={inviteUsername}
+                  onChange={e => setInviteUsername(e.target.value)}
+                  placeholder="username"
+                  className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none"
+                />
+                <button
+                  onClick={inviteCollaborator}
+                  className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600">
+                  Invite
+                </button>
+              </div>
+              {inviteError && <p className="text-xs text-red-500 mt-1">{inviteError}</p>}
+              {inviteSuccess && <p className="text-xs text-green-600 mt-1">{inviteSuccess}</p>}
+            </div>
+
+            {collaborators.length > 0 && (
+              <div className="mb-4">
+                <label className="text-sm text-gray-500 mb-2 block">Current collaborators</label>
+                <div className="space-y-2">
+                  {collaborators.map((c: any) => (
+                    <div key={c.id} className="flex items-center justify-between py-2 border-b border-gray-50">
+                      <div className="flex items-center gap-2">
+                        {c.profile_image ? (
+                          <img src={c.profile_image} className="w-7 h-7 rounded-full object-cover"/>
+                        ) : (
+                          <div className="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs">
+                            {c.name?.charAt(0)}
+                          </div>
+                        )}
+                        <div>
+                          <div className="text-sm font-medium">{c.name}</div>
+                          <div className="text-xs text-gray-400">@{c.username}</div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => removeCollaborator(c.id)}
+                        className="text-xs text-red-400 hover:text-red-600">
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={() => {
+                setShowCollaboratorModal(false)
+                setInviteError("")
+                setInviteSuccess("")
+                setInviteUsername("")
+              }}
+              className="w-full border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">
+              Done
+            </button>
           </div>
         </div>
       )}

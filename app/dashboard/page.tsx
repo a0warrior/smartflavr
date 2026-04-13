@@ -15,6 +15,7 @@ export default function Dashboard() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [cookbooks, setCookbooks] = useState([])
+  const [collaboratedCookbooks, setCollaboratedCookbooks] = useState([])
   const [showModal, setShowModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingCookbook, setEditingCookbook] = useState<any>(null)
@@ -75,6 +76,7 @@ export default function Dashboard() {
     const res = await fetch("/api/cookbooks")
     const data = await res.json()
     setCookbooks(data.cookbooks || [])
+    setCollaboratedCookbooks(data.collaborated || [])
   }
 
   async function uploadCoverImage(e: React.ChangeEvent<HTMLInputElement>, isEdit = false) {
@@ -259,6 +261,43 @@ export default function Dashboard() {
             <span className="text-sm text-gray-400">New cookbook</span>
           </div>
         </div>
+
+        {collaboratedCookbooks.length > 0 && (
+          <div className="mt-10">
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Shared with me</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {collaboratedCookbooks.map((book: any) => (
+                <div
+                  key={book.id}
+                  onClick={() => router.push(`/cookbook/${book.id}`)}
+                  className="bg-white border border-gray-100 rounded-2xl overflow-hidden cursor-pointer hover:shadow-sm transition">
+                  <div
+                    className="h-24 flex items-center justify-center overflow-hidden"
+                    style={{ backgroundColor: book.cover_image ? "transparent" : book.cover_color + "22" }}>
+                    {book.cover_image ? (
+                      <img src={book.cover_image} className="w-full h-full object-cover"/>
+                    ) : (
+                      <span className="text-4xl">{book.cover_emoji}</span>
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <div className="font-medium text-sm text-gray-900 truncate">{book.title}</div>
+                    <div className="flex items-center gap-1 mt-1">
+                      {book.owner_image ? (
+                        <img src={book.owner_image} className="w-4 h-4 rounded-full object-cover"/>
+                      ) : (
+                        <div className="w-4 h-4 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs">
+                          {book.owner_name?.charAt(0)}
+                        </div>
+                      )}
+                      <span className="text-xs text-gray-400">{book.owner_name}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {showModal && (
