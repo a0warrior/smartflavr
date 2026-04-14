@@ -52,6 +52,9 @@ export default function MealPlannerPage() {
   const [syncing, setSyncing] = useState(false)
   const [recipeSearch, setRecipeSearch] = useState("")
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("")
+  const [groceryListName, setGroceryListName] = useState("")
+  const [savingGroceryList, setSavingGroceryList] = useState(false)
+  const [grocerySaved, setGrocerySaved] = useState(false)
 
   const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
@@ -245,6 +248,13 @@ export default function MealPlannerPage() {
 
   async function generateGroceryList() {
     setGeneratingGrocery(true)
+    setGrocerySaved(false)
+
+    // Auto-name based on week
+    const weekStart = weekDates[0]
+    const autoName = `Week of ${weekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+    setGroceryListName(autoName)
+
     const start = formatDate(weekDates[0])
     const end = formatDate(weekDates[6])
     const res = await fetch(`/api/meal-plans?start=${start}&end=${end}`)
@@ -269,6 +279,27 @@ export default function MealPlannerPage() {
     if (aiData.success) setGroceryList(aiData.list)
     setGeneratingGrocery(false)
     setShowGroceryModal(true)
+  }
+
+  async function saveGroceryList() {
+    if (!groceryListName.trim()) return
+    setSavingGroceryList(true)
+
+    const items: string[] = []
+    Object.entries(groceryList).forEach(([, groceryItems]: any) => {
+      groceryItems.forEach((item: any) => {
+        items.push(`${item.amount} ${item.item}`.trim())
+      })
+    })
+
+    await fetch("/api/grocery-lists", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: groceryListName, items }),
+    })
+
+    setSavingGroceryList(false)
+    setGrocerySaved(true)
   }
 
   function getMealsForCell(date: Date, category: string) {
@@ -642,6 +673,7 @@ export default function MealPlannerPage() {
               </button>
             </div>
             <p className="text-xs text-gray-400 mb-4">Based on your meal plan for this week</p>
+
             {Object.entries(groceryList).map(([category, items]: any) => (
               <div key={category} className="mb-4">
                 <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">{category}</div>
@@ -671,9 +703,28 @@ export default function MealPlannerPage() {
                 </div>
               </div>
             ))}
+
+            <div className="border-t border-gray-100 pt-4 mt-2">
+              <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Save to My Grocery Lists</div>
+              <div className="flex gap-2">
+                <input
+                  value={groceryListName}
+                  onChange={e => setGroceryListName(e.target.value)}
+                  placeholder="List name..."
+                  className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none"
+                />
+                <button
+                  onClick={saveGroceryList}
+                  disabled={savingGroceryList || grocerySaved || !groceryListName.trim()}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition ${grocerySaved ? "bg-green-500 text-white" : "bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50"}`}>
+                  {savingGroceryList ? "Saving..." : grocerySaved ? "✓ Saved!" : "Save"}
+                </button>
+              </div>
+            </div>
+
             <button
               onClick={() => setShowGroceryModal(false)}
-              className="w-full border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50 mt-2">
+              className="w-full border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50 mt-4">
               Done
             </button>
           </div>
