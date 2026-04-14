@@ -65,6 +65,8 @@ export default function CookbookPage() {
   const [showCollaboratorModal, setShowCollaboratorModal] = useState(false)
   const [activeUsers, setActiveUsers] = useState<any[]>([])
   const [aiLoading, setAiLoading] = useState<string | null>(null)
+  const [showUnsavedModal, setShowUnsavedModal] = useState(false)
+  const [pendingRecipe, setPendingRecipe] = useState<any>(null)
   const recipeRefs = useRef<any>({})
 
   const sensors = useSensors(
@@ -336,9 +338,36 @@ export default function CookbookPage() {
   }
 
   function scrollToRecipe(id: string) {
-    setSelectedRecipe(recipes.find(r => r.id === id))
+    const target = recipes.find(r => r.id === id)
+    if (editMode) {
+      setPendingRecipe(target)
+      setShowUnsavedModal(true)
+      return
+    }
+    setSelectedRecipe(target)
     if (scrollMode && recipeRefs.current[id]) {
       recipeRefs.current[id].scrollIntoView({ behavior: "smooth" })
+    }
+  }
+
+  async function handleUnsavedSave() {
+    await saveRecipe()
+    setShowUnsavedModal(false)
+    setSelectedRecipe(pendingRecipe)
+    setPendingRecipe(null)
+    if (scrollMode && pendingRecipe && recipeRefs.current[pendingRecipe.id]) {
+      recipeRefs.current[pendingRecipe.id].scrollIntoView({ behavior: "smooth" })
+    }
+  }
+
+  function handleUnsavedDiscard() {
+    setEditMode(false)
+    setEdited(null)
+    setShowUnsavedModal(false)
+    setSelectedRecipe(pendingRecipe)
+    setPendingRecipe(null)
+    if (scrollMode && pendingRecipe && recipeRefs.current[pendingRecipe.id]) {
+      recipeRefs.current[pendingRecipe.id].scrollIntoView({ behavior: "smooth" })
     }
   }
 
@@ -755,6 +784,21 @@ export default function CookbookPage() {
           </div>
         </div>
       </div>
+
+      {showUnsavedModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm mx-4">
+            <h2 className="text-lg font-medium mb-2">Unsaved Changes</h2>
+            <p className="text-sm text-gray-500 mb-6">You have unsaved changes to <span className="font-medium text-gray-700">{edited?.title}</span>. Would you like to save before switching recipes?</p>
+            <div className="flex gap-3">
+              <button onClick={handleUnsavedDiscard} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Discard</button>
+              <button onClick={handleUnsavedSave} disabled={saving} className="flex-1 bg-orange-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-orange-600">
+                {saving ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
