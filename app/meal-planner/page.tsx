@@ -55,6 +55,9 @@ export default function MealPlannerPage() {
   const [groceryListName, setGroceryListName] = useState("")
   const [savingGroceryList, setSavingGroceryList] = useState(false)
   const [grocerySaved, setGrocerySaved] = useState(false)
+  const [saveMode, setSaveMode] = useState<"new" | "existing">("new")
+  const [existingLists, setExistingLists] = useState<any[]>([])
+  const [selectedExistingList, setSelectedExistingList] = useState("")
 
   const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
@@ -63,6 +66,7 @@ export default function MealPlannerPage() {
     if (status === "authenticated") {
       fetchCategories()
       fetchCookbooks()
+      fetchExistingLists()
       const saved = localStorage.getItem("smartflavr_live_sync")
       if (saved === "true") setLiveSync(true)
     }
@@ -99,6 +103,12 @@ export default function MealPlannerPage() {
     const res = await fetch("/api/cookbooks")
     const data = await res.json()
     setCookbooks(data.cookbooks || [])
+  }
+
+  async function fetchExistingLists() {
+    const res = await fetch("/api/grocery-lists")
+    const data = await res.json()
+    setExistingLists(data.lists || [])
   }
 
   async function fetchRecipesForCookbook(cookbookId: string) {
@@ -162,7 +172,6 @@ export default function MealPlannerPage() {
   async function toggleLiveSync() {
     const next = !liveSync
     setSyncing(true)
-
     if (next) {
       const start = formatDate(weekDates[0])
       const end = formatDate(weekDates[6])
@@ -175,7 +184,6 @@ export default function MealPlannerPage() {
       await clearAllCalendarEvents()
       await fetchMeals()
     }
-
     setLiveSync(next)
     localStorage.setItem("smartflavr_live_sync", String(next))
     setSyncing(false)
@@ -191,13 +199,11 @@ export default function MealPlannerPage() {
         meal_type: selectedCategory,
       }),
     })
-
     setShowAddModal(false)
     setSelectedCookbook("")
     setAllRecipes([])
     setRecipeSearch("")
     setSelectedCategoryFilter("")
-
     if (liveSync) {
       const start = formatDate(weekDates[0])
       const end = formatDate(weekDates[6])
@@ -205,7 +211,6 @@ export default function MealPlannerPage() {
       const mealsData = await mealsRes.json()
       await syncMealsToCalendar(mealsData.meals || [])
     }
-
     fetchMeals()
   }
 
@@ -213,13 +218,11 @@ export default function MealPlannerPage() {
     if (liveSync && meal.gcal_event_id) {
       await deleteMealFromCalendar(meal)
     }
-
     await fetch("/api/meal-plans", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: meal.id }),
     })
-
     fetchMeals()
   }
 
@@ -249,8 +252,9 @@ export default function MealPlannerPage() {
   async function generateGroceryList() {
     setGeneratingGrocery(true)
     setGrocerySaved(false)
+    setSaveMode("new")
+    setSelectedExistingList("")
 
-    // Auto-name based on week
     const weekStart = weekDates[0]
     const autoName = `Week of ${weekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
     setGroceryListName(autoName)
@@ -278,11 +282,11 @@ export default function MealPlannerPage() {
     const aiData = await aiRes.json()
     if (aiData.success) setGroceryList(aiData.list)
     setGeneratingGrocery(false)
+    await fetchExistingLists()
     setShowGroceryModal(true)
   }
 
   async function saveGroceryList() {
-    if (!groceryListName.trim()) return
     setSavingGroceryList(true)
 
     const items: string[] = []
@@ -292,14 +296,25 @@ export default function MealPlannerPage() {
       })
     })
 
-    await fetch("/api/grocery-lists", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: groceryListName, items }),
-    })
+    if (saveMode === "new") {
+      if (!groceryListName.trim()) { setSavingGroceryList(false); return }
+      await fetch("/api/grocery-lists", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: groceryListName, items }),
+      })
+    } else {
+      if (!selectedExistingList) { setSavingGroceryList(false); return }
+      await fetch("/api/grocery-lists", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: parseInt(selectedExistingList), addItems: items }),
+      })
+    }
 
     setSavingGroceryList(false)
     setGrocerySaved(true)
+    await fetchExistingLists()
   }
 
   function getMealsForCell(date: Date, category: string) {
@@ -524,7 +539,6 @@ export default function MealPlannerPage() {
           <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4 max-h-[85vh] overflow-y-auto">
             <h2 className="text-lg font-medium mb-1">Add recipe</h2>
             <p className="text-sm text-gray-400 mb-4">{selectedCategory} · {selectedDate}</p>
-
             <div className="mb-3">
               <label className="text-sm text-gray-500 mb-1 block">Cookbook</label>
               <select
@@ -537,7 +551,6 @@ export default function MealPlannerPage() {
                 ))}
               </select>
             </div>
-
             {selectedCookbook && (
               <div className="flex gap-2 mb-3">
                 <input
@@ -559,7 +572,6 @@ export default function MealPlannerPage() {
                 )}
               </div>
             )}
-
             {filteredRecipes.length > 0 && (
               <div className="space-y-2">
                 {filteredRecipes.map((r: any) => (
@@ -592,23 +604,14 @@ export default function MealPlannerPage() {
                 ))}
               </div>
             )}
-
             {selectedCookbook && filteredRecipes.length === 0 && allRecipes.length > 0 && (
               <div className="text-center py-8 text-sm text-gray-400">No recipes match your search</div>
             )}
-
             {selectedCookbook && allRecipes.length === 0 && (
               <div className="text-center py-8 text-sm text-gray-400">No recipes in this cookbook</div>
             )}
-
             <button
-              onClick={() => {
-                setShowAddModal(false)
-                setSelectedCookbook("")
-                setAllRecipes([])
-                setRecipeSearch("")
-                setSelectedCategoryFilter("")
-              }}
+              onClick={() => { setShowAddModal(false); setSelectedCookbook(""); setAllRecipes([]); setRecipeSearch(""); setSelectedCategoryFilter("") }}
               className="w-full border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50 mt-4">
               Cancel
             </button>
@@ -624,11 +627,7 @@ export default function MealPlannerPage() {
               {categories.map((cat: any) => (
                 <div key={cat.id} className="flex items-center justify-between py-2 border-b border-gray-50">
                   <span className="text-sm text-gray-700">{cat.name}</span>
-                  <button
-                    onClick={() => deleteCategory(cat.id)}
-                    className="text-xs text-red-400 hover:text-red-600">
-                    Remove
-                  </button>
+                  <button onClick={() => deleteCategory(cat.id)} className="text-xs text-red-400 hover:text-red-600">Remove</button>
                 </div>
               ))}
             </div>
@@ -640,17 +639,9 @@ export default function MealPlannerPage() {
                 placeholder="New category name..."
                 className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none"
               />
-              <button
-                onClick={addCategory}
-                className="px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-medium hover:bg-orange-600">
-                Add
-              </button>
+              <button onClick={addCategory} className="px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-medium hover:bg-orange-600">Add</button>
             </div>
-            <button
-              onClick={() => setShowCategoryModal(false)}
-              className="w-full border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">
-              Done
-            </button>
+            <button onClick={() => setShowCategoryModal(false)} className="w-full border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Done</button>
           </div>
         </div>
       )}
@@ -705,28 +696,58 @@ export default function MealPlannerPage() {
             ))}
 
             <div className="border-t border-gray-100 pt-4 mt-2">
-              <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Save to My Grocery Lists</div>
-              <div className="flex gap-2">
-                <input
-                  value={groceryListName}
-                  onChange={e => setGroceryListName(e.target.value)}
-                  placeholder="List name..."
-                  className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none"
-                />
+              <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Save to Grocery Lists</div>
+              <div className="flex gap-2 mb-3">
                 <button
-                  onClick={saveGroceryList}
-                  disabled={savingGroceryList || grocerySaved || !groceryListName.trim()}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition ${grocerySaved ? "bg-green-500 text-white" : "bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50"}`}>
-                  {savingGroceryList ? "Saving..." : grocerySaved ? "✓ Saved!" : "Save"}
+                  onClick={() => { setSaveMode("new"); setGrocerySaved(false) }}
+                  className={`flex-1 py-2 rounded-xl text-sm border transition ${saveMode === "new" ? "bg-orange-500 text-white border-orange-500" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
+                  New list
+                </button>
+                <button
+                  onClick={() => { setSaveMode("existing"); setGrocerySaved(false) }}
+                  disabled={existingLists.length === 0}
+                  className={`flex-1 py-2 rounded-xl text-sm border transition ${saveMode === "existing" ? "bg-orange-500 text-white border-orange-500" : "border-gray-200 text-gray-500 hover:bg-gray-50"} disabled:opacity-40`}>
+                  Add to existing
                 </button>
               </div>
+
+              {saveMode === "new" ? (
+                <div className="flex gap-2">
+                  <input
+                    value={groceryListName}
+                    onChange={e => setGroceryListName(e.target.value)}
+                    placeholder="List name..."
+                    className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none"
+                  />
+                  <button
+                    onClick={saveGroceryList}
+                    disabled={savingGroceryList || grocerySaved || !groceryListName.trim()}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition ${grocerySaved ? "bg-green-500 text-white" : "bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50"}`}>
+                    {savingGroceryList ? "Saving..." : grocerySaved ? "✓ Saved!" : "Save"}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <select
+                    value={selectedExistingList}
+                    onChange={e => { setSelectedExistingList(e.target.value); setGrocerySaved(false) }}
+                    className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none">
+                    <option value="">Choose a list...</option>
+                    {existingLists.map((list: any) => (
+                      <option key={list.id} value={list.id}>{list.name}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={saveGroceryList}
+                    disabled={savingGroceryList || grocerySaved || !selectedExistingList}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition ${grocerySaved ? "bg-green-500 text-white" : "bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50"}`}>
+                    {savingGroceryList ? "Adding..." : grocerySaved ? "✓ Added!" : "Add"}
+                  </button>
+                </div>
+              )}
             </div>
 
-            <button
-              onClick={() => setShowGroceryModal(false)}
-              className="w-full border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50 mt-4">
-              Done
-            </button>
+            <button onClick={() => setShowGroceryModal(false)} className="w-full border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50 mt-4">Done</button>
           </div>
         </div>
       )}
