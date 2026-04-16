@@ -5,6 +5,7 @@ import Image from "next/image"
 import { auth } from "@/auth"
 import FollowButton from "@/app/components/FollowButton"
 import FollowersModal from "../../components/FollowersModal"
+import CopyProfileLink from "@/app/components/CopyProfileLink"
 
 export default async function ProfilePage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params
@@ -90,6 +91,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
             </div>
           </div>
           <div className="flex gap-2">
+            <CopyProfileLink username={username} />
             {isOwnProfile ? (
               <Link href="/profile/settings" className="px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">
                 Edit profile

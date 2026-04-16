@@ -495,24 +495,54 @@ export default function Dashboard() {
       <Navbar />
       <div className="max-w-4xl mx-auto px-6 py-10">
 
-        <div className="bg-white border border-gray-100 rounded-2xl p-4 mb-8">
-          <p className="text-sm text-gray-500 mb-3">Extract a recipe from any URL or file</p>
-          <div className="flex gap-3">
-            <input
-              value={url}
-              onChange={e => setUrl(e.target.value)}
-              placeholder="Paste a Pinterest or recipe URL..."
-              className="flex-1 border border-gray-200 rounded-xl px-4 py-2 text-sm"
-            />
-            <button onClick={extractRecipe} disabled={extracting}
-              className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 transition">
-              {extracting ? "Extracting..." : "Extract"}
-            </button>
-            <button onClick={() => document.getElementById("file-import")?.click()}
-              className="border border-gray-200 text-gray-500 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition">
-              📷 Import file
-            </button>
-            <input type="file" id="file-import" accept="image/*,.pdf,.txt" onChange={handleFileImport} className="hidden"/>
+        <div className="mb-8">
+          <h2 className="text-lg font-medium text-gray-900 mb-1">Import a Recipe</h2>
+          <p className="text-sm text-gray-400 mb-4">SmartFlavr can read recipes from the web or your files and save them straight to your cookbooks.</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            <div className="bg-white border border-gray-100 rounded-2xl p-5">
+              <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-lg mb-3">🔗</div>
+              <h3 className="text-sm font-medium text-gray-900 mb-1">Extract from URL</h3>
+              <p className="text-xs text-gray-400 mb-4 leading-relaxed">Paste a link from any recipe site and we'll pull out the ingredients, steps, and details automatically.</p>
+              <div className="flex gap-2 mb-3">
+                <input
+                  value={url}
+                  onChange={e => setUrl(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && extractRecipe()}
+                  placeholder="https://allrecipes.com/recipe/..."
+                  className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none bg-gray-50"
+                />
+                <button onClick={extractRecipe} disabled={extracting}
+                  className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 transition whitespace-nowrap">
+                  {extracting ? "Extracting..." : "Extract"}
+                </button>
+              </div>
+              <p className="text-xs text-gray-400 mb-2">Works with</p>
+              <div className="flex flex-wrap gap-1.5">
+                {["AllRecipes", "Pinterest", "Food Network", "Tasty", "NYT Cooking", "+ most recipe sites"].map(s => (
+                  <span key={s} className="text-xs px-2.5 py-1 rounded-full border border-gray-100 text-gray-400 bg-gray-50">{s}</span>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white border border-gray-100 rounded-2xl p-5">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-lg mb-3">📄</div>
+              <h3 className="text-sm font-medium text-gray-900 mb-1">Import from file</h3>
+              <p className="text-xs text-gray-400 mb-4 leading-relaxed">Upload a photo of a recipe card, a PDF cookbook page, or a text file — AI will do the reading.</p>
+              <p className="text-xs text-gray-400 mb-2">Supported formats</p>
+              <div className="flex flex-wrap gap-1.5 mb-4">
+                <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">📷 Photo</span>
+                <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">📄 PDF</span>
+                <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">📝 Text file</span>
+              </div>
+              <button
+                onClick={() => document.getElementById("file-import")?.click()}
+                className="w-full border border-gray-200 text-gray-600 px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 transition text-center">
+                Choose a file to import
+              </button>
+              <input type="file" id="file-import" accept="image/*,.pdf,.txt" onChange={handleFileImport} className="hidden"/>
+            </div>
+
           </div>
         </div>
 
