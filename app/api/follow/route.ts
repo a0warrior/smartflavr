@@ -54,12 +54,12 @@ export async function DELETE(req: Request) {
   const { username } = await req.json()
 
   const [currentUser] = await pool.query(
-    "SELECT id FROM users WHERE email = ?",
+    "SELECT id, name FROM users WHERE email = ?",
     [session.user.email]
   ) as any[]
 
   const [targetUser] = await pool.query(
-    "SELECT id FROM users WHERE username = ?",
+    "SELECT id, name FROM users WHERE username = ?",
     [username]
   ) as any[]
 
@@ -67,10 +67,76 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ error: "User not found" }, { status: 404 })
   }
 
+  const currentId = currentUser[0].id
+  const targetId = targetUser[0].id
+
+  // Check if they were mutual friends before unfollowing
+  const [followedBack] = await pool.query(
+    "SELECT id FROM follows WHERE follower_id = ? AND following_id = ?",
+    [targetId, currentId]
+  ) as any[]
+
+  const wasFriend = followedBack.length > 0
+
+  // Remove the follow
   await pool.query(
     "DELETE FROM follows WHERE follower_id = ? AND following_id = ?",
-    [currentUser[0].id, targetUser[0].id]
+    [currentId, targetId]
   )
+
+  if (wasFriend) {
+    // Find all cookbooks owned by currentUser where targetUser is a collaborator
+    const [collabsAsOwner] = await pool.query(
+      `SELECT cc.id as collab_id, cc.cookbook_id, c.title as cookbook_title
+       FROM cookbook_collaborators cc
+       JOIN cookbooks c ON cc.cookbook_id = c.id
+       WHERE c.user_id = ? AND cc.user_id = ? AND cc.status = 'accepted'`,
+      [currentId, targetId]
+    ) as any[]
+
+    // Find all cookbooks owned by targetUser where currentUser is a collaborator
+    const [collabsAsGuest] = await pool.query(
+      `SELECT cc.id as collab_id, cc.cookbook_id, c.title as cookbook_title, c.user_id as owner_id
+       FROM cookbook_collaborators cc
+       JOIN cookbooks c ON cc.cookbook_id = c.id
+       WHERE c.user_id = ? AND cc.user_id = ? AND cc.status = 'accepted'`,
+      [targetId, currentId]
+    ) as any[]
+
+    // Remove targetUser from currentUser's cookbooks
+    for (const collab of collabsAsOwner) {
+      await pool.query(
+        "DELETE FROM cookbook_collaborators WHERE id = ?",
+        [collab.collab_id]
+      )
+      // Notify targetUser they were removed
+      await pool.query(
+        "INSERT INTO notifications (user_id, type, message, data) VALUES (?, 'collab_removed', ?, ?)",
+        [
+          targetId,
+          `You were removed from "${collab.cookbook_title}" because you are no longer friends with the owner`,
+          JSON.stringify({ cookbook_id: collab.cookbook_id })
+        ]
+      )
+    }
+
+    // Remove currentUser from targetUser's cookbooks
+    for (const collab of collabsAsGuest) {
+      await pool.query(
+        "DELETE FROM cookbook_collaborators WHERE id = ?",
+        [collab.collab_id]
+      )
+      // Notify targetUser (owner) that currentUser was removed
+      await pool.query(
+        "INSERT INTO notifications (user_id, type, message, data) VALUES (?, 'collab_removed', ?, ?)",
+        [
+          collab.owner_id,
+          `${currentUser[0].name} was removed from "${collab.cookbook_title}" because they are no longer friends`,
+          JSON.stringify({ cookbook_id: collab.cookbook_id })
+        ]
+      )
+    }
+  }
 
   return NextResponse.json({ success: true })
 }
