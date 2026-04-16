@@ -86,11 +86,14 @@ export default function Navbar() {
         <Link href="/feed" className="text-sm text-gray-500 hover:text-gray-900 transition">
           Feed
         </Link>
+        <Link href="/explore" className="text-sm text-gray-500 hover:text-gray-900 transition">
+          Explore
+        </Link>
         <Link href="/favorites" className="text-sm text-gray-500 hover:text-gray-900 transition">
           Favorites
         </Link>
-        <Link href="/explore" className="text-sm text-gray-500 hover:text-gray-900 transition">
-          Explore
+        <Link href="/inventory" className="text-sm text-gray-500 hover:text-gray-900 transition">
+          Inventory
         </Link>
         <Link href="/meal-planner" className="text-sm text-gray-500 hover:text-gray-900 transition">
           Meal Plan
@@ -200,6 +203,18 @@ export default function Navbar() {
                 onClick={() => setShowMenu(false)}
                 className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
                 Explore
+              </Link>
+              <Link
+                href="/favorites"
+                onClick={() => setShowMenu(false)}
+                className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
+                Favorites
+              </Link>
+              <Link
+                href="/inventory"
+                onClick={() => setShowMenu(false)}
+                className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
+                Inventory
               </Link>
               <Link
                 href="/meal-planner"
