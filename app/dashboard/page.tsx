@@ -459,130 +459,132 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      <div className="max-w-4xl mx-auto px-6 py-10">
+
+      {/* Learn panel — lives outside the scrollable container, fixed to viewport */}
+      <div className="fixed top-16 right-0 w-72 overflow-y-auto px-4 pt-6 pb-10 bg-gray-50 border-l border-gray-100" style={{ zIndex: 10, height: "calc(100vh - 64px)" }}>
+        <LearnPanel />
+      </div>
+
+      <div className="max-w-4xl mx-auto px-6 py-10 mr-72">
 
         <div className="mb-8">
-              <h2 className="text-lg font-medium text-gray-900 mb-1">Import a Recipe</h2>
-              <p className="text-sm text-gray-400 mb-4">SmartFlavr can read recipes from the web or your files and save them straight to your cookbooks.</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white border border-gray-100 rounded-2xl p-5">
-                  <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-lg mb-3">🔗</div>
-                  <h3 className="text-sm font-medium text-gray-900 mb-1">Extract from URL</h3>
-                  <p className="text-xs text-gray-400 mb-4 leading-relaxed">Paste a link from any recipe site and we'll pull out the ingredients, steps, and details automatically.</p>
-                  <div className="flex gap-2 mb-3">
-                    <input value={url} onChange={e => setUrl(e.target.value)} onKeyDown={e => e.key === "Enter" && extractRecipe()} placeholder="https://allrecipes.com/recipe/..." className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none bg-gray-50"/>
-                    <button onClick={extractRecipe} disabled={extracting} className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 transition whitespace-nowrap">{extracting ? "Extracting..." : "Extract"}</button>
-                  </div>
-                  <p className="text-xs text-gray-400 mb-2">Works with</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {["AllRecipes", "Pinterest", "Food Network", "Tasty", "NYT Cooking", "+ most recipe sites"].map(s => (
-                      <span key={s} className="text-xs px-2.5 py-1 rounded-full border border-gray-100 text-gray-400 bg-gray-50">{s}</span>
-                    ))}
-                  </div>
-                </div>
-                <div className="bg-white border border-gray-100 rounded-2xl p-5">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-lg mb-3">📄</div>
-                  <h3 className="text-sm font-medium text-gray-900 mb-1">Import from file</h3>
-                  <p className="text-xs text-gray-400 mb-4 leading-relaxed">Upload a photo of a recipe card, a PDF cookbook page, or a text file — AI will do the reading.</p>
-                  <p className="text-xs text-gray-400 mb-2">Supported formats</p>
-                  <div className="flex flex-wrap gap-1.5 mb-4">
-                    <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">📷 Photo</span>
-                    <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">📄 PDF</span>
-                    <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">📝 Text file</span>
-                  </div>
-                  <button onClick={() => document.getElementById("file-import")?.click()} className="w-full border border-gray-200 text-gray-600 px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 transition text-center">Choose a file to import</button>
-                  <input type="file" id="file-import" accept="image/*,.pdf,.txt" onChange={handleFileImport} className="hidden"/>
+          <h2 className="text-lg font-medium text-gray-900 mb-1">Import a Recipe</h2>
+          <p className="text-sm text-gray-400 mb-4">SmartFlavr can read recipes from the web or your files and save them straight to your cookbooks.</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white border border-gray-100 rounded-2xl p-5">
+              <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-lg mb-3">🔗</div>
+              <h3 className="text-sm font-medium text-gray-900 mb-1">Extract from URL</h3>
+              <p className="text-xs text-gray-400 mb-4 leading-relaxed">Paste a link from any recipe site and we'll pull out the ingredients, steps, and details automatically.</p>
+              <div className="flex gap-2 mb-3">
+                <input value={url} onChange={e => setUrl(e.target.value)} onKeyDown={e => e.key === "Enter" && extractRecipe()} placeholder="https://allrecipes.com/recipe/..." className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none bg-gray-50"/>
+                <button onClick={extractRecipe} disabled={extracting} className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 transition whitespace-nowrap">{extracting ? "Extracting..." : "Extract"}</button>
+              </div>
+              <p className="text-xs text-gray-400 mb-2">Works with</p>
+              <div className="flex flex-wrap gap-1.5">
+                {["AllRecipes", "Pinterest", "Food Network", "Tasty", "NYT Cooking", "+ most recipe sites"].map(s => (
+                  <span key={s} className="text-xs px-2.5 py-1 rounded-full border border-gray-100 text-gray-400 bg-gray-50">{s}</span>
+                ))}
+              </div>
+            </div>
+            <div className="bg-white border border-gray-100 rounded-2xl p-5">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-lg mb-3">📄</div>
+              <h3 className="text-sm font-medium text-gray-900 mb-1">Import from file</h3>
+              <p className="text-xs text-gray-400 mb-4 leading-relaxed">Upload a photo of a recipe card, a PDF cookbook page, or a text file — AI will do the reading.</p>
+              <p className="text-xs text-gray-400 mb-2">Supported formats</p>
+              <div className="flex flex-wrap gap-1.5 mb-4">
+                <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">📷 Photo</span>
+                <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">📄 PDF</span>
+                <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">📝 Text file</span>
+              </div>
+              <button onClick={() => document.getElementById("file-import")?.click()} className="w-full border border-gray-200 text-gray-600 px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 transition text-center">Choose a file to import</button>
+              <input type="file" id="file-import" accept="image/*,.pdf,.txt" onChange={handleFileImport} className="hidden"/>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-medium text-gray-900">My Cookbooks</h1>
+            <p className="text-gray-500 text-sm mt-1">Welcome back, {session?.user?.name?.split(" ")[0]}!</p>
+          </div>
+          <button onClick={() => setShowModal(true)} className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 transition">+ New Cookbook</button>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-10">
+          {cookbooks.map((book: any) => (
+            <div key={book.id} className="bg-white border border-gray-100 rounded-2xl overflow-hidden cursor-pointer hover:shadow-sm transition group relative">
+              <div onClick={() => router.push(`/cookbook/${book.id}`)} className="h-24 flex items-center justify-center overflow-hidden" style={{ backgroundColor: book.cover_image ? "transparent" : book.cover_color + "22" }}>
+                {book.cover_image ? <img src={book.cover_image} className="w-full h-full object-cover"/> : <span className="text-4xl">{book.cover_emoji}</span>}
+              </div>
+              <div className="p-3 flex items-center justify-between">
+                <div onClick={() => router.push(`/cookbook/${book.id}`)} className="font-medium text-sm text-gray-900 flex-1 truncate">{book.title}</div>
+                <div className="flex items-center gap-1">
+                  {book.is_public === 1 && <span className="text-xs text-green-500 font-medium">Public</span>}
+                  <button onClick={e => { e.stopPropagation(); setEditingCookbook({ ...book }); setShowEditModal(true) }} className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 text-xs px-2 transition">✏️</button>
                 </div>
               </div>
             </div>
+          ))}
+          <div onClick={() => setShowModal(true)} className="bg-white border border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center p-8 cursor-pointer hover:bg-gray-50 transition">
+            <span className="text-3xl text-gray-300 mb-2">+</span>
+            <span className="text-sm text-gray-400">New cookbook</span>
+          </div>
+        </div>
 
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h1 className="text-2xl font-medium text-gray-900">My Cookbooks</h1>
-                <p className="text-gray-500 text-sm mt-1">Welcome back, {session?.user?.name?.split(" ")[0]}!</p>
-              </div>
-              <button onClick={() => setShowModal(true)} className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 transition">+ New Cookbook</button>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-10">
-              {cookbooks.map((book: any) => (
-                <div key={book.id} className="bg-white border border-gray-100 rounded-2xl overflow-hidden cursor-pointer hover:shadow-sm transition group relative">
-                  <div onClick={() => router.push(`/cookbook/${book.id}`)} className="h-24 flex items-center justify-center overflow-hidden" style={{ backgroundColor: book.cover_image ? "transparent" : book.cover_color + "22" }}>
+        {collaboratedCookbooks.length > 0 && (
+          <div className="mb-10">
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Shared with me</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {collaboratedCookbooks.map((book: any) => (
+                <div key={book.id} onClick={() => router.push(`/cookbook/${book.id}`)} className="bg-white border border-gray-100 rounded-2xl overflow-hidden cursor-pointer hover:shadow-sm transition">
+                  <div className="h-24 flex items-center justify-center overflow-hidden" style={{ backgroundColor: book.cover_image ? "transparent" : book.cover_color + "22" }}>
                     {book.cover_image ? <img src={book.cover_image} className="w-full h-full object-cover"/> : <span className="text-4xl">{book.cover_emoji}</span>}
                   </div>
-                  <div className="p-3 flex items-center justify-between">
-                    <div onClick={() => router.push(`/cookbook/${book.id}`)} className="font-medium text-sm text-gray-900 flex-1 truncate">{book.title}</div>
-                    <div className="flex items-center gap-1">
-                      {book.is_public === 1 && <span className="text-xs text-green-500 font-medium">Public</span>}
-                      <button onClick={e => { e.stopPropagation(); setEditingCookbook({ ...book }); setShowEditModal(true) }} className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 text-xs px-2 transition">✏️</button>
+                  <div className="p-3">
+                    <div className="font-medium text-sm text-gray-900 truncate">{book.title}</div>
+                    <div className="flex items-center gap-1 mt-1">
+                      {book.owner_image ? <img src={book.owner_image} className="w-4 h-4 rounded-full object-cover"/> : <div className="w-4 h-4 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs">{book.owner_name?.charAt(0)}</div>}
+                      <span className="text-xs text-gray-400">{book.owner_name}</span>
                     </div>
                   </div>
                 </div>
               ))}
-              <div onClick={() => setShowModal(true)} className="bg-white border border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center p-8 cursor-pointer hover:bg-gray-50 transition">
-                <span className="text-3xl text-gray-300 mb-2">+</span>
-                <span className="text-sm text-gray-400">New cookbook</span>
-              </div>
             </div>
+          </div>
+        )}
 
-            {collaboratedCookbooks.length > 0 && (
-              <div className="mb-10">
-                <h2 className="text-lg font-medium text-gray-900 mb-4">Shared with me</h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {collaboratedCookbooks.map((book: any) => (
-                    <div key={book.id} onClick={() => router.push(`/cookbook/${book.id}`)} className="bg-white border border-gray-100 rounded-2xl overflow-hidden cursor-pointer hover:shadow-sm transition">
-                      <div className="h-24 flex items-center justify-center overflow-hidden" style={{ backgroundColor: book.cover_image ? "transparent" : book.cover_color + "22" }}>
-                        {book.cover_image ? <img src={book.cover_image} className="w-full h-full object-cover"/> : <span className="text-4xl">{book.cover_emoji}</span>}
-                      </div>
-                      <div className="p-3">
-                        <div className="font-medium text-sm text-gray-900 truncate">{book.title}</div>
-                        <div className="flex items-center gap-1 mt-1">
-                          {book.owner_image ? <img src={book.owner_image} className="w-4 h-4 rounded-full object-cover"/> : <div className="w-4 h-4 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs">{book.owner_name?.charAt(0)}</div>}
-                          <span className="text-xs text-gray-400">{book.owner_name}</span>
-                        </div>
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-medium text-gray-900">My Grocery Lists</h2>
+            <button onClick={() => { setShowNewGroceryModal(true); setNewListName(""); setNewListItems([]); setNewListItem("") }} className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 transition">+ New List</button>
+          </div>
+          {groceryLists.length === 0 ? (
+            <div className="bg-white border border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center p-10 text-center">
+              <span className="text-3xl mb-2">🛒</span>
+              <p className="text-sm text-gray-400">No grocery lists yet</p>
+              <p className="text-xs text-gray-300 mt-1">Create one manually or generate from your meal plan</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4">
+              {groceryLists.map((list: any) => {
+                const total = list.items?.length || 0
+                const checkedCount = list.items?.filter((i: any) => i.checked).length || 0
+                const pct = total > 0 ? Math.round((checkedCount / total) * 100) : 0
+                return (
+                  <div key={list.id} className="bg-white border border-gray-100 rounded-2xl p-4 flex items-center justify-between gap-4 hover:shadow-sm transition">
+                    <div className="flex-1 cursor-pointer min-w-0" onClick={() => { setActiveGroceryList(list); setShowGroceryListModal(true) }}>
+                      <div className="font-medium text-sm text-gray-900 truncate">🛒 {list.name}</div>
+                      <div className="text-xs text-gray-400 mt-1">{total} items · {pct}% done</div>
+                      <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2">
+                        <div className="bg-orange-400 h-1.5 rounded-full transition-all" style={{ width: `${pct}%` }}/>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-medium text-gray-900">My Grocery Lists</h2>
-                <button onClick={() => { setShowNewGroceryModal(true); setNewListName(""); setNewListItems([]); setNewListItem("") }} className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 transition">+ New List</button>
-              </div>
-              {groceryLists.length === 0 ? (
-                <div className="bg-white border border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center p-10 text-center">
-                  <span className="text-3xl mb-2">🛒</span>
-                  <p className="text-sm text-gray-400">No grocery lists yet</p>
-                  <p className="text-xs text-gray-300 mt-1">Create one manually or generate from your meal plan</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-4">
-                  {groceryLists.map((list: any) => {
-                    const total = list.items?.length || 0
-                    const checkedCount = list.items?.filter((i: any) => i.checked).length || 0
-                    const pct = total > 0 ? Math.round((checkedCount / total) * 100) : 0
-                    return (
-                      <div key={list.id} className="bg-white border border-gray-100 rounded-2xl p-4 flex items-center justify-between gap-4 hover:shadow-sm transition">
-                        <div className="flex-1 cursor-pointer min-w-0" onClick={() => { setActiveGroceryList(list); setShowGroceryListModal(true) }}>
-                          <div className="font-medium text-sm text-gray-900 truncate">🛒 {list.name}</div>
-                          <div className="text-xs text-gray-400 mt-1">{total} items · {pct}% done</div>
-                          <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2">
-                            <div className="bg-orange-400 h-1.5 rounded-full transition-all" style={{ width: `${pct}%` }}/>
-                          </div>
-                        </div>
-                        <button onClick={() => deleteGroceryList(list.id)} className="text-xs text-red-400 hover:text-red-600 border border-red-100 hover:border-red-300 rounded-lg px-3 py-1.5 transition flex-shrink-0">Delete</button>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
+                    <button onClick={() => deleteGroceryList(list.id)} className="text-xs text-red-400 hover:text-red-600 border border-red-100 hover:border-red-300 rounded-lg px-3 py-1.5 transition flex-shrink-0">Delete</button>
+                  </div>
+                )
+              })}
             </div>
-
-        <div className="fixed top-16 right-0 w-72 h-screen overflow-y-auto pb-10 pt-6 px-4" style={{ zIndex: 10 }}>
-          <LearnPanel />
+          )}
         </div>
 
       </div>
