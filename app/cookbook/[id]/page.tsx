@@ -24,7 +24,7 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 
-function SortableRecipeItem({ recipe, isSelected, onClick, isOwner }: any) {
+function SortableRecipeItem({ recipe, isSelected, onClick, isOwner, isFavorited, onToggleFavorite }: any) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: recipe.id })
   const style = { transform: CSS.Transform.toString(transform), transition }
 
@@ -32,6 +32,11 @@ function SortableRecipeItem({ recipe, isSelected, onClick, isOwner }: any) {
     <div ref={setNodeRef} style={style} className={`mx-1 px-2 py-1.5 rounded-lg text-xs cursor-pointer flex items-center gap-1 ${isSelected ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-500 hover:bg-gray-50"}`}>
       {isOwner && <span {...attributes} {...listeners} className="text-gray-300 cursor-grab text-xs mr-1">⠿</span>}
       <span onClick={onClick} className="flex-1 truncate">{recipe.title}</span>
+      <button
+        onClick={e => { e.stopPropagation(); onToggleFavorite(recipe.id) }}
+        className={`flex-shrink-0 text-xs transition ${isFavorited ? "text-red-400" : "text-gray-300 hover:text-red-300"}`}>
+        {isFavorited ? "♥" : "♡"}
+      </button>
     </div>
   )
 }
@@ -67,6 +72,8 @@ export default function CookbookPage() {
   const [aiLoading, setAiLoading] = useState<string | null>(null)
   const [showUnsavedModal, setShowUnsavedModal] = useState(false)
   const [pendingRecipe, setPendingRecipe] = useState<any>(null)
+  const [favorites, setFavorites] = useState<Set<number>>(new Set())
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
   const recipeRefs = useRef<any>({})
 
   const sensors = useSensors(
@@ -80,6 +87,7 @@ export default function CookbookPage() {
       fetchRecipes()
       fetchCategories()
       fetchCookbookInfo()
+      fetchFavorites()
     }
   }, [status])
 
@@ -194,6 +202,32 @@ export default function CookbookPage() {
       }
     }
     setCollaborators(collaboratorsData.collaborators || [])
+  }
+
+  async function fetchFavorites() {
+    const res = await fetch("/api/favorites")
+    const data = await res.json()
+    const ids = new Set<number>((data.favorites || []).map((f: any) => f.id))
+    setFavorites(ids)
+  }
+
+  async function toggleFavorite(recipeId: number) {
+    const isFav = favorites.has(recipeId)
+    if (isFav) {
+      await fetch("/api/favorites", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recipe_id: recipeId }),
+      })
+      setFavorites(prev => { const next = new Set(prev); next.delete(recipeId); return next })
+    } else {
+      await fetch("/api/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recipe_id: recipeId }),
+      })
+      setFavorites(prev => new Set([...prev, recipeId]))
+    }
   }
 
   async function notifyFirebase() {
@@ -375,7 +409,8 @@ export default function CookbookPage() {
     .filter(r => {
       const matchesSearch = r.title.toLowerCase().includes(search.toLowerCase())
       const matchesCategory = activeCategory === "all" || r.category_id == activeCategory
-      return matchesSearch && matchesCategory
+      const matchesFavorites = !showFavoritesOnly || favorites.has(r.id)
+      return matchesSearch && matchesCategory && matchesFavorites
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -398,6 +433,7 @@ export default function CookbookPage() {
     })
 
   const canEdit = isOwner || isCollaborator
+  const favCount = recipes.filter(r => favorites.has(r.id)).length
 
   if (status === "loading") {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>
@@ -446,17 +482,22 @@ export default function CookbookPage() {
             )}
           </div>
           <div
-            onClick={() => { setActiveCategory("all"); setSelectedRecipe(recipes[0] || null) }}
-            className={`mx-1 px-2 py-1.5 rounded-lg text-xs cursor-pointer flex items-center gap-2 ${activeCategory === "all" ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-500 hover:bg-gray-50"}`}>
+            onClick={() => { setActiveCategory("all"); setShowFavoritesOnly(false); setSelectedRecipe(recipes[0] || null) }}
+            className={`mx-1 px-2 py-1.5 rounded-lg text-xs cursor-pointer flex items-center gap-2 ${activeCategory === "all" && !showFavoritesOnly ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-500 hover:bg-gray-50"}`}>
             📋 All <span className="ml-auto text-gray-400">{recipes.length}</span>
+          </div>
+          <div
+            onClick={() => { setActiveCategory("all"); setShowFavoritesOnly(!showFavoritesOnly); setSelectedRecipe(null) }}
+            className={`mx-1 px-2 py-1.5 rounded-lg text-xs cursor-pointer flex items-center gap-2 ${showFavoritesOnly ? "bg-red-50 text-red-500 font-medium" : "text-gray-500 hover:bg-gray-50"}`}>
+            ♥ Favorites <span className="ml-auto text-gray-400">{favCount}</span>
           </div>
           {categories.map((cat: any) => {
             const count = recipes.filter(r => r.category_id == cat.id).length
             return (
               <div
                 key={cat.id}
-                onClick={() => { setActiveCategory(cat.id); setSelectedRecipe(null) }}
-                className={`mx-1 px-2 py-1.5 rounded-lg text-xs cursor-pointer flex items-center gap-2 ${activeCategory === cat.id ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-500 hover:bg-gray-50"}`}>
+                onClick={() => { setActiveCategory(cat.id); setShowFavoritesOnly(false); setSelectedRecipe(null) }}
+                className={`mx-1 px-2 py-1.5 rounded-lg text-xs cursor-pointer flex items-center gap-2 ${activeCategory === cat.id && !showFavoritesOnly ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-500 hover:bg-gray-50"}`}>
                 {cat.emoji} {cat.name} <span className="ml-auto text-gray-400">{count}</span>
               </div>
             )
@@ -472,6 +513,8 @@ export default function CookbookPage() {
                     isSelected={selectedRecipe?.id === r.id}
                     onClick={() => scrollToRecipe(r.id)}
                     isOwner={canEdit}
+                    isFavorited={favorites.has(r.id)}
+                    onToggleFavorite={toggleFavorite}
                   />
                 ))}
               </SortableContext>
@@ -566,7 +609,14 @@ export default function CookbookPage() {
             {scrollMode ? (
               filteredRecipes.map((r: any) => (
                 <div key={r.id} ref={(el: any) => { recipeRefs.current[r.id] = el }} className="mb-16">
-                  <h2 className="text-2xl font-medium mb-3">{r.title}</h2>
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-2xl font-medium">{r.title}</h2>
+                    <button
+                      onClick={() => toggleFavorite(r.id)}
+                      className={`text-2xl transition ${favorites.has(r.id) ? "text-red-400" : "text-gray-300 hover:text-red-300"}`}>
+                      {favorites.has(r.id) ? "♥" : "♡"}
+                    </button>
+                  </div>
                   <div className="flex gap-2 mb-3 flex-wrap">
                     {r.prep_time && <span className="bg-gray-100 rounded-full px-3 py-1 text-xs text-gray-500">⏱ {r.prep_time}</span>}
                     {r.servings && <span className="bg-gray-100 rounded-full px-3 py-1 text-xs text-gray-500">👤 {r.servings}</span>}
@@ -617,7 +667,14 @@ export default function CookbookPage() {
               <>
                 {!editMode ? (
                   <>
-                    <h1 className="text-2xl font-medium mb-3">{recipe.title}</h1>
+                    <div className="flex items-center justify-between mb-3">
+                      <h1 className="text-2xl font-medium">{recipe.title}</h1>
+                      <button
+                        onClick={() => toggleFavorite(recipe.id)}
+                        className={`text-2xl transition ${favorites.has(recipe.id) ? "text-red-400" : "text-gray-300 hover:text-red-300"}`}>
+                        {favorites.has(recipe.id) ? "♥" : "♡"}
+                      </button>
+                    </div>
                     <div className="flex gap-2 mb-3 flex-wrap">
                       {recipe.prep_time && <span className="bg-gray-100 rounded-full px-3 py-1 text-xs text-gray-500">⏱ {recipe.prep_time}</span>}
                       {recipe.servings && <span className="bg-gray-100 rounded-full px-3 py-1 text-xs text-gray-500">👤 {recipe.servings}</span>}
@@ -714,10 +771,7 @@ export default function CookbookPage() {
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Description</div>
-                        <button
-                          onClick={() => aiAssist("description")}
-                          disabled={aiLoading === "description"}
-                          className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1">
+                        <button onClick={() => aiAssist("description")} disabled={aiLoading === "description"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1">
                           {aiLoading === "description" ? "✨ Writing..." : "✨ AI write"}
                         </button>
                       </div>
@@ -726,10 +780,7 @@ export default function CookbookPage() {
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Ingredients <span className="text-gray-300 font-normal normal-case">(one per line)</span></div>
-                        <button
-                          onClick={() => aiAssist("ingredients")}
-                          disabled={aiLoading === "ingredients"}
-                          className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1">
+                        <button onClick={() => aiAssist("ingredients")} disabled={aiLoading === "ingredients"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1">
                           {aiLoading === "ingredients" ? "✨ Suggesting..." : "✨ AI suggest"}
                         </button>
                       </div>
@@ -738,10 +789,7 @@ export default function CookbookPage() {
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Instructions <span className="text-gray-300 font-normal normal-case">(one step per line)</span></div>
-                        <button
-                          onClick={() => aiAssist("instructions")}
-                          disabled={aiLoading === "instructions"}
-                          className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1">
+                        <button onClick={() => aiAssist("instructions")} disabled={aiLoading === "instructions"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1">
                           {aiLoading === "instructions" ? "✨ Improving..." : "✨ AI improve"}
                         </button>
                       </div>
@@ -750,10 +798,7 @@ export default function CookbookPage() {
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Notes</div>
-                        <button
-                          onClick={() => aiAssist("notes")}
-                          disabled={aiLoading === "notes"}
-                          className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1">
+                        <button onClick={() => aiAssist("notes")} disabled={aiLoading === "notes"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1">
                           {aiLoading === "notes" ? "✨ Generating..." : "✨ AI generate"}
                         </button>
                       </div>

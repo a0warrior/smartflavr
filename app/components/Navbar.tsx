@@ -86,6 +86,9 @@ export default function Navbar() {
         <Link href="/feed" className="text-sm text-gray-500 hover:text-gray-900 transition">
           Feed
         </Link>
+        <Link href="/favorites" className="text-sm text-gray-500 hover:text-gray-900 transition">
+          Favorites
+        </Link>
         <Link href="/explore" className="text-sm text-gray-500 hover:text-gray-900 transition">
           Explore
         </Link>
