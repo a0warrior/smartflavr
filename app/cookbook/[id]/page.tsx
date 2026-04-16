@@ -93,60 +93,33 @@ export default function CookbookPage() {
 
   useEffect(() => {
     if (!session?.user?.email || !params.id) return
-
     const presenceRef = ref(db, `cookbooks/${params.id}/presence/${session.user.email.replace(/\./g, "_")}`)
     const allPresenceRef = ref(db, `cookbooks/${params.id}/presence`)
-
-    set(presenceRef, {
-      name: session.user.name,
-      email: session.user.email,
-      timestamp: Date.now()
-    })
-
+    set(presenceRef, { name: session.user.name, email: session.user.email, timestamp: Date.now() })
     onValue(allPresenceRef, (snapshot) => {
       const data = snapshot.val()
       if (data) {
-        const users = Object.values(data).filter((u: any) =>
-          Date.now() - u.timestamp < 30000 && u.email !== session.user?.email
-        )
+        const users = Object.values(data).filter((u: any) => Date.now() - u.timestamp < 30000 && u.email !== session.user?.email)
         setActiveUsers(users as any[])
       } else {
         setActiveUsers([])
       }
     })
-
     const interval = setInterval(() => {
-      set(presenceRef, {
-        name: session.user?.name,
-        email: session.user?.email,
-        timestamp: Date.now()
-      })
+      set(presenceRef, { name: session.user?.name, email: session.user?.email, timestamp: Date.now() })
     }, 10000)
-
-    return () => {
-      off(allPresenceRef)
-      clearInterval(interval)
-      set(presenceRef, null)
-    }
+    return () => { off(allPresenceRef); clearInterval(interval); set(presenceRef, null) }
   }, [session, params.id])
 
   useEffect(() => {
     if (!params.id) return
-
     const recipesRef = ref(db, `cookbooks/${params.id}/lastUpdate`)
     let initialized = false
-
     onValue(recipesRef, (snapshot) => {
-      if (!initialized) {
-        initialized = true
-        return
-      }
+      if (!initialized) { initialized = true; return }
       const data = snapshot.val()
-      if (data && data.updatedBy !== session?.user?.email) {
-        fetchRecipes()
-      }
+      if (data && data.updatedBy !== session?.user?.email) fetchRecipes()
     })
-
     return () => off(recipesRef)
   }, [params.id, session])
 
@@ -186,7 +159,6 @@ export default function CookbookPage() {
     const cookbookData = await cookbookRes.json()
     const profileData = await profileRes.json()
     const collaboratorsData = await collaboratorsRes.json()
-
     if (cookbookData.cookbook) {
       setCookbookInfo(cookbookData.cookbook)
       setIsPublic(cookbookData.cookbook.is_public === 1)
@@ -254,7 +226,7 @@ export default function CookbookPage() {
   }
 
   async function createRecipe() {
-    await fetch("/api/recipes", {
+    const res = await fetch("/api/recipes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -266,10 +238,21 @@ export default function CookbookPage() {
         prep_time: "",
         servings: "",
         notes: "",
+        source_url: "",
         sort_order: recipes.length,
       }),
     })
-    await fetchRecipes()
+    const data = await res.json()
+    const recipesRes = await fetch(`/api/recipes?cookbook_id=${params.id}`)
+    const recipesData = await recipesRes.json()
+    const sorted = (recipesData.recipes || []).sort((a: any, b: any) => a.sort_order - b.sort_order)
+    setRecipes(sorted)
+    const newRecipe = sorted.find((r: any) => r.id === data.id) || sorted[sorted.length - 1]
+    if (newRecipe) {
+      setSelectedRecipe(newRecipe)
+      setEdited({ ...newRecipe })
+      setEditMode(true)
+    }
     await notifyFirebase()
   }
 
@@ -446,8 +429,8 @@ export default function CookbookPage() {
       <Navbar />
       <div className="flex flex-1 overflow-hidden" style={{ height: "calc(100vh - 57px)" }}>
 
-        <div className="w-52 bg-white border-r border-gray-100 flex flex-col overflow-hidden flex-shrink-0">
-          <div className="p-3 border-b border-gray-100">
+        <div className="w-52 bg-white border-r border-gray-100 flex flex-col overflow-hidden flex-shrink-0" style={{ height: "calc(100vh - 57px)" }}>
+          <div className="p-3 border-b border-gray-100 flex-shrink-0">
             <button onClick={() => router.push("/dashboard")} className="text-xs text-orange-500 mb-2 block">← Dashboard</button>
             <div className="text-sm font-medium">{cookbookInfo?.title || "Cookbook"}</div>
             <div className="text-xs text-gray-400">{recipes.length} recipes</div>
@@ -458,12 +441,9 @@ export default function CookbookPage() {
               </div>
             )}
           </div>
-          <div className="p-2 border-b border-gray-100 space-y-2">
+          <div className="p-2 border-b border-gray-100 space-y-2 flex-shrink-0">
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search recipes..." className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2 py-1.5 text-xs"/>
-            <select
-              value={sortBy}
-              onChange={e => setSortBy(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2 py-1.5 text-xs outline-none">
+            <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2 py-1.5 text-xs outline-none">
               <option value="default">Sort: Default</option>
               <option value="az">A → Z</option>
               <option value="za">Z → A</option>
@@ -475,35 +455,37 @@ export default function CookbookPage() {
               <option value="difficulty_desc">Difficulty: Hardest first</option>
             </select>
           </div>
-          <div className="px-2 pt-2 pb-1 text-xs font-medium text-gray-400 uppercase tracking-wide flex items-center justify-between">
+          <div className="px-2 pt-2 pb-1 text-xs font-medium text-gray-400 uppercase tracking-wide flex items-center justify-between flex-shrink-0">
             Categories
             {isOwner && (
               <button onClick={() => setShowCategoryModal(true)} className="text-orange-400 font-normal normal-case text-xs">+ Add</button>
             )}
           </div>
-          <div
-            onClick={() => { setActiveCategory("all"); setShowFavoritesOnly(false); setSelectedRecipe(recipes[0] || null) }}
-            className={`mx-1 px-2 py-1.5 rounded-lg text-xs cursor-pointer flex items-center gap-2 ${activeCategory === "all" && !showFavoritesOnly ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-500 hover:bg-gray-50"}`}>
-            📋 All <span className="ml-auto text-gray-400">{recipes.length}</span>
+          <div className="flex-shrink-0">
+            <div
+              onClick={() => { setActiveCategory("all"); setShowFavoritesOnly(false); setSelectedRecipe(recipes[0] || null) }}
+              className={`mx-1 px-2 py-1.5 rounded-lg text-xs cursor-pointer flex items-center gap-2 ${activeCategory === "all" && !showFavoritesOnly ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-500 hover:bg-gray-50"}`}>
+              📋 All <span className="ml-auto text-gray-400">{recipes.length}</span>
+            </div>
+            <div
+              onClick={() => { setActiveCategory("all"); setShowFavoritesOnly(!showFavoritesOnly); setSelectedRecipe(null) }}
+              className={`mx-1 px-2 py-1.5 rounded-lg text-xs cursor-pointer flex items-center gap-2 ${showFavoritesOnly ? "bg-red-50 text-red-500 font-medium" : "text-gray-500 hover:bg-gray-50"}`}>
+              ♥ Favorites <span className="ml-auto text-gray-400">{favCount}</span>
+            </div>
+            {categories.map((cat: any) => {
+              const count = recipes.filter(r => r.category_id == cat.id).length
+              return (
+                <div
+                  key={cat.id}
+                  onClick={() => { setActiveCategory(cat.id); setShowFavoritesOnly(false); setSelectedRecipe(null) }}
+                  className={`mx-1 px-2 py-1.5 rounded-lg text-xs cursor-pointer flex items-center gap-2 ${activeCategory === cat.id && !showFavoritesOnly ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-500 hover:bg-gray-50"}`}>
+                  {cat.emoji} {cat.name} <span className="ml-auto text-gray-400">{count}</span>
+                </div>
+              )
+            })}
           </div>
-          <div
-            onClick={() => { setActiveCategory("all"); setShowFavoritesOnly(!showFavoritesOnly); setSelectedRecipe(null) }}
-            className={`mx-1 px-2 py-1.5 rounded-lg text-xs cursor-pointer flex items-center gap-2 ${showFavoritesOnly ? "bg-red-50 text-red-500 font-medium" : "text-gray-500 hover:bg-gray-50"}`}>
-            ♥ Favorites <span className="ml-auto text-gray-400">{favCount}</span>
-          </div>
-          {categories.map((cat: any) => {
-            const count = recipes.filter(r => r.category_id == cat.id).length
-            return (
-              <div
-                key={cat.id}
-                onClick={() => { setActiveCategory(cat.id); setShowFavoritesOnly(false); setSelectedRecipe(null) }}
-                className={`mx-1 px-2 py-1.5 rounded-lg text-xs cursor-pointer flex items-center gap-2 ${activeCategory === cat.id && !showFavoritesOnly ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-500 hover:bg-gray-50"}`}>
-                {cat.emoji} {cat.name} <span className="ml-auto text-gray-400">{count}</span>
-              </div>
-            )
-          })}
-          <div className="px-2 pt-3 pb-1 text-xs font-medium text-gray-400 uppercase tracking-wide">Recipes</div>
-          <div className="flex-1 overflow-y-auto">
+          <div className="px-2 pt-3 pb-1 text-xs font-medium text-gray-400 uppercase tracking-wide flex-shrink-0">Recipes</div>
+          <div className="flex-1 overflow-y-auto min-h-0">
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={filteredRecipes.map(r => r.id)} strategy={verticalListSortingStrategy}>
                 {filteredRecipes.map((r: any) => (
@@ -521,7 +503,7 @@ export default function CookbookPage() {
             </DndContext>
           </div>
           {canEdit && (
-            <div className="p-2 border-t border-gray-100">
+            <div className="p-2 border-t border-gray-100 flex-shrink-0">
               <button onClick={createRecipe} className="w-full bg-orange-500 text-white rounded-lg py-1.5 text-xs font-medium hover:bg-orange-600 transition">
                 + Add Recipe
               </button>
@@ -585,9 +567,7 @@ export default function CookbookPage() {
                 </div>
               )}
               {isOwner && (
-                <button
-                  onClick={() => setShowCollaboratorModal(true)}
-                  className="px-3 py-1 border border-blue-200 text-blue-500 rounded-lg text-xs hover:bg-blue-50">
+                <button onClick={() => setShowCollaboratorModal(true)} className="px-3 py-1 border border-blue-200 text-blue-500 rounded-lg text-xs hover:bg-blue-50">
                   👥 Collaborators
                 </button>
               )}
@@ -611,9 +591,7 @@ export default function CookbookPage() {
                 <div key={r.id} ref={(el: any) => { recipeRefs.current[r.id] = el }} className="mb-16">
                   <div className="flex items-center justify-between mb-3">
                     <h2 className="text-2xl font-medium">{r.title}</h2>
-                    <button
-                      onClick={() => toggleFavorite(r.id)}
-                      className={`text-2xl transition ${favorites.has(r.id) ? "text-red-400" : "text-gray-300 hover:text-red-300"}`}>
+                    <button onClick={() => toggleFavorite(r.id)} className={`text-2xl transition ${favorites.has(r.id) ? "text-red-400" : "text-gray-300 hover:text-red-300"}`}>
                       {favorites.has(r.id) ? "♥" : "♡"}
                     </button>
                   </div>
@@ -624,9 +602,7 @@ export default function CookbookPage() {
                   </div>
                   {r.description && <p className="text-sm text-gray-500 mb-4 leading-relaxed">{r.description}</p>}
                   <div className="rounded-xl mb-5 overflow-hidden">
-                    {r.image_url ? (
-                      <img src={r.image_url} className="w-full object-contain rounded-xl"/>
-                    ) : (
+                    {r.image_url ? <img src={r.image_url} className="w-full object-contain rounded-xl"/> : (
                       <div className="border-2 border-dashed border-gray-100 rounded-xl h-32 flex items-center justify-center">
                         <span className="text-xs text-gray-400">📷 No photo</span>
                       </div>
@@ -654,11 +630,7 @@ export default function CookbookPage() {
                       ))}
                     </div>
                   )}
-                  {r.notes && (
-                    <div className="bg-amber-50 rounded-xl p-4 text-sm text-amber-800 leading-relaxed mb-4">
-                      💡 {r.notes}
-                    </div>
-                  )}
+                  {r.notes && <div className="bg-amber-50 rounded-xl p-4 text-sm text-amber-800 leading-relaxed mb-4">💡 {r.notes}</div>}
                   <NutritionPanel recipe={r}/>
                   <hr className="border-gray-100 mt-6"/>
                 </div>
@@ -669,9 +641,7 @@ export default function CookbookPage() {
                   <>
                     <div className="flex items-center justify-between mb-3">
                       <h1 className="text-2xl font-medium">{recipe.title}</h1>
-                      <button
-                        onClick={() => toggleFavorite(recipe.id)}
-                        className={`text-2xl transition ${favorites.has(recipe.id) ? "text-red-400" : "text-gray-300 hover:text-red-300"}`}>
+                      <button onClick={() => toggleFavorite(recipe.id)} className={`text-2xl transition ${favorites.has(recipe.id) ? "text-red-400" : "text-gray-300 hover:text-red-300"}`}>
                         {favorites.has(recipe.id) ? "♥" : "♡"}
                       </button>
                     </div>
@@ -682,9 +652,7 @@ export default function CookbookPage() {
                     </div>
                     {recipe.description && <p className="text-sm text-gray-500 mb-5 leading-relaxed">{recipe.description}</p>}
                     <div className="rounded-xl mb-6 overflow-hidden">
-                      {recipe.image_url ? (
-                        <img src={recipe.image_url} className="w-full object-contain rounded-xl"/>
-                      ) : (
+                      {recipe.image_url ? <img src={recipe.image_url} className="w-full object-contain rounded-xl"/> : (
                         <div className="border-2 border-dashed border-gray-100 rounded-xl h-48 flex items-center justify-center">
                           <span className="text-xs text-gray-400">📷 No photo yet</span>
                         </div>
@@ -803,6 +771,10 @@ export default function CookbookPage() {
                         </button>
                       </div>
                       <textarea value={edited.notes || ""} onChange={e => updateEdited("notes", e.target.value)} placeholder="Tips, variations, substitutions..." className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none outline-none" rows={3}/>
+                    </div>
+                    <div className="mb-4">
+                      <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Source URL</div>
+                      <input value={edited.source_url || ""} onChange={e => updateEdited("source_url", e.target.value)} placeholder="https://..." className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none"/>
                     </div>
                   </>
                 )}
