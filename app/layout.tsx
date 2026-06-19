@@ -1,4 +1,3 @@
-"use client"
 import { SessionProvider } from "next-auth/react"
 import { Geist } from "next/font/google"
 import "./globals.css"
