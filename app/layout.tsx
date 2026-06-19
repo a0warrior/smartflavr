@@ -1,8 +1,13 @@
-import { SessionProvider } from "next-auth/react"
 import { Geist } from "next/font/google"
 import "./globals.css"
+import Providers from "./Providers"
 
 const geist = Geist({ subsets: ["latin"] })
+
+export const metadata = {
+  title: "SmartFlavr",
+  description: "Your AI-powered recipe cookbook",
+}
 
 export default function RootLayout({
   children,
@@ -12,9 +17,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={geist.className}>
-        <SessionProvider>
+        <Providers>
           {children}
-        </SessionProvider>
+        </Providers>
       </body>
     </html>
   )
