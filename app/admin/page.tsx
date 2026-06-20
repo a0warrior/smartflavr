@@ -72,6 +72,18 @@ export default function AdminPage() {
     fetchData()
   }
 
+  async function revokeCode(code: string) {
+    if (!confirm(`Revoke code ${code}? This will make it available again.`)) return
+    await fetch("/api/admin", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    })
+    setSuccess(`Code ${code} revoked!`)
+    setTimeout(() => setSuccess(""), 2000)
+    fetchData()
+  }
+
   function copyCode(code: string) {
     navigator.clipboard.writeText(code)
     setSuccess(`Copied ${code}!`)
@@ -219,7 +231,14 @@ export default function AdminPage() {
                         <span className="font-mono text-sm font-medium text-gray-900">{c.code}</span>
                         <span className="text-xs text-gray-400 ml-3">Used by {c.used_by_name || c.used_by_email}</span>
                       </div>
-                      <span className="text-xs text-green-500 font-medium">Used ✓</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-green-500 font-medium">Used ✓</span>
+                        <button
+                          onClick={() => revokeCode(c.code)}
+                          className="px-3 py-1 border border-yellow-200 rounded-lg text-xs text-yellow-600 hover:bg-yellow-50">
+                          Revoke
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

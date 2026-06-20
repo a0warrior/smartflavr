@@ -70,6 +70,26 @@ export async function POST(req: Request) {
   return NextResponse.json({ success: true })
 }
 
+export async function PATCH(req: Request) {
+  const session = await auth()
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  if (!await isAdmin(session.user.email)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
+
+  const { code } = await req.json()
+
+  await pool.query(
+    "UPDATE invite_codes SET used_by = NULL WHERE code = ?",
+    [code.toUpperCase()]
+  )
+
+  return NextResponse.json({ success: true })
+}
+
 export async function DELETE(req: Request) {
   const session = await auth()
   if (!session?.user?.email) {
