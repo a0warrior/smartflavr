@@ -24,6 +24,8 @@ export default function AdminPage() {
   const [success, setSuccess] = useState("")
   const [activeTab, setActiveTab] = useState<"codes" | "users">("codes")
   const [userSearch, setUserSearch] = useState("")
+  const [deleteUserTarget, setDeleteUserTarget] = useState<any>(null)
+  const [deletingUser, setDeletingUser] = useState(false)
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login?code=returning")
@@ -107,6 +109,23 @@ export default function AdminPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ user_id: userId, status }),
     })
+    fetchData()
+  }
+
+  async function confirmDeleteUser() {
+    if (!deleteUserTarget) return
+    setDeletingUser(true)
+    const res = await fetch("/api/admin/users", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: deleteUserTarget.id }),
+    })
+    const data = await res.json()
+    if (data.error) {
+      setError(data.error)
+    }
+    setDeletingUser(false)
+    setDeleteUserTarget(null)
     fetchData()
   }
 
@@ -328,6 +347,11 @@ export default function AdminPage() {
                               Reactivate
                             </button>
                           )}
+                          <button
+                            onClick={() => setDeleteUserTarget(user)}
+                            className="px-3 py-1 rounded-lg text-xs border border-red-300 text-red-600 hover:bg-red-50 transition">
+                            Delete
+                          </button>
                         </div>
                       )}
                     </div>
@@ -338,6 +362,30 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+
+      {deleteUserTarget && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm mx-4">
+            <div className="text-3xl mb-3 text-center">⚠️</div>
+            <h2 className="text-lg font-medium text-center mb-2">Delete {deleteUserTarget.name}?</h2>
+            <p className="text-sm text-gray-500 text-center mb-1">This will permanently delete:</p>
+            <ul className="text-sm text-gray-500 mb-4 space-y-1 text-center">
+              <li>Their account and profile</li>
+              <li>All their cookbooks and recipes</li>
+              <li>All their posts, comments, and follows</li>
+              <li>Their meal plans, grocery lists, and inventory</li>
+            </ul>
+            <p className="text-sm text-gray-500 text-center mb-1">Their invite code will be freed up for reuse.</p>
+            <p className="text-sm font-medium text-red-500 text-center mb-6">This cannot be undone.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setDeleteUserTarget(null)} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Cancel</button>
+              <button onClick={confirmDeleteUser} disabled={deletingUser} className="flex-1 bg-red-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-red-600 disabled:opacity-50">
+                {deletingUser ? "Deleting..." : "Yes, delete user"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

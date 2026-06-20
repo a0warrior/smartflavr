@@ -53,27 +53,21 @@ export async function POST(req: Request) {
 
   const { code } = await req.json()
 
-  try {
-    const [existing]: any = await pool.query(
-      "SELECT id FROM invite_codes WHERE code = ?",
-      [code.toUpperCase()]
-    )
+  const [existing]: any = await pool.query(
+    "SELECT id FROM invite_codes WHERE code = ?",
+    [code.toUpperCase()]
+  )
 
-    if (existing.length > 0) {
-      return NextResponse.json({ error: "Code already exists" }, { status: 400 })
-    }
-
-    const [result]: any = await pool.query(
-      "INSERT INTO invite_codes (code) VALUES (?)",
-      [code.toUpperCase()]
-    )
-
-    console.log("Insert result:", JSON.stringify(result))
-    return NextResponse.json({ success: true, insertId: result.insertId })
-  } catch (err) {
-    console.error("Create code error:", err)
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+  if (existing.length > 0) {
+    return NextResponse.json({ error: "Code already exists" }, { status: 400 })
   }
+
+  await pool.query(
+    "INSERT INTO invite_codes (code) VALUES (?)",
+    [code.toUpperCase()]
+  )
+
+  return NextResponse.json({ success: true })
 }
 
 export async function PATCH(req: Request) {
