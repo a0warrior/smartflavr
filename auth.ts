@@ -58,27 +58,32 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const email = user.email
       if (!email) return false
 
-      const [existing]: any = await pool.query(
-        "SELECT id, status FROM users WHERE email = ?",
-        [email]
-      )
-
-      if (existing.length > 0) {
-        if (existing[0].status === "banned") return "/banned"
-        if (existing[0].status === "suspended") return "/suspended"
-        await pool.query(
-          "UPDATE users SET name = ?, image = ? WHERE email = ?",
-          [user.name, user.image, email]
+      try {
+        const [existing]: any = await pool.query(
+          "SELECT id, status FROM users WHERE email = ?",
+          [email]
         )
+
+        if (existing.length > 0) {
+          if (existing[0].status === "banned") return "/banned"
+          if (existing[0].status === "suspended") return "/suspended"
+          await pool.query(
+            "UPDATE users SET name = ?, image = ? WHERE email = ?",
+            [user.name, user.image, email]
+          )
+          return true
+        }
+
+        await pool.query(
+          "INSERT INTO users (name, email, image) VALUES (?, ?, ?)",
+          [user.name, email, user.image]
+        )
+
         return true
+      } catch (err) {
+        console.error("SignIn DB error:", err)
+        return false
       }
-
-      await pool.query(
-        "INSERT INTO users (name, email, image) VALUES (?, ?, ?)",
-        [user.name, email, user.image]
-      )
-
-      return true
     }
   }
 })
