@@ -4,6 +4,12 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Navbar from "@/app/components/Navbar"
 
+function formatCode(val: string) {
+  const clean = val.replace(/[^A-Za-z0-9]/g, "").toUpperCase()
+  if (clean.length > 4) return clean.slice(0, 4) + "-" + clean.slice(4, 8)
+  return clean
+}
+
 function generateCode() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
   let code = ""
@@ -186,7 +192,7 @@ export default function AdminPage() {
               <div className="flex gap-3">
                 <input
                   value={newCode}
-                  onChange={e => setNewCode(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ""))}
+                  onChange={e => setNewCode(formatCode(e.target.value))}
                   placeholder="Leave blank to auto-generate"
                   className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none font-mono"
                   maxLength={9}
