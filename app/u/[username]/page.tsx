@@ -1,11 +1,11 @@
 import pool from "@/lib/db"
 import { notFound } from "next/navigation"
 import Link from "next/link"
-import Image from "next/image"
 import { auth } from "@/auth"
 import FollowButton from "@/app/components/FollowButton"
 import FollowersModal from "../../components/FollowersModal"
 import CopyProfileLink from "@/app/components/CopyProfileLink"
+import Navbar from "@/app/components/Navbar"
 
 export default async function ProfilePage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params
@@ -46,13 +46,12 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <Image src="/logo.svg" alt="SmartFlavr" width={36} height={36}/>
-          <span className="text-lg font-medium">Smart<span className="text-orange-500">Flavr</span></span>
-        </Link>
-        <Link href="/dashboard" className="text-sm text-orange-500 hover:text-orange-600">My cookbooks →</Link>
-      </nav>
+      <Navbar />
+      {session?.user && (
+        <div className="hidden md:block max-w-3xl mx-auto px-4 sm:px-6 pt-6">
+          <Link href="/dashboard" className="text-sm text-gray-400 hover:text-gray-600 transition">← Back to Dashboard</Link>
+        </div>
+      )}
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5 mb-8">

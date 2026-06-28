@@ -260,13 +260,13 @@ export default function Navbar() {
       <div className={`fixed top-0 right-0 h-full w-72 bg-white z-50 shadow-2xl md:hidden flex flex-col transform transition-transform duration-300 ease-in-out ${showSidebar ? "translate-x-0" : "translate-x-full"}`}>
         {/* Sidebar header: avatar + name + close */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <div className="flex items-center gap-3">
+          <Link href={username ? `/u/${username}` : "#"} onClick={() => setShowSidebar(false)} className="flex items-center gap-3 min-w-0">
             <Avatar size={40} />
             <div className="min-w-0">
               <p className="text-sm font-semibold text-gray-900 truncate">{session?.user?.name}</p>
               {username && <p className="text-xs text-gray-400">@{username}</p>}
             </div>
-          </div>
+          </Link>
           <button onClick={() => setShowSidebar(false)} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-50 transition" aria-label="Close menu">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />
