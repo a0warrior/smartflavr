@@ -476,27 +476,27 @@ export default function CookbookPage() {
               )}
             </div>
           </div>
-          <div className="p-3 md:p-2 border-b border-gray-100 space-y-2 flex-shrink-0">
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search recipes..." className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-2.5 md:px-2 md:py-1.5 text-sm md:text-xs"/>
-            <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-2.5 md:px-2 md:py-1.5 text-sm md:text-xs outline-none">
-              <option value="default">Sort: Default</option>
-              <option value="az">A → Z</option>
-              <option value="za">Z → A</option>
-              <option value="time_asc">Time: Shortest first</option>
-              <option value="time_desc">Time: Longest first</option>
-              <option value="servings_asc">Servings: Least first</option>
-              <option value="servings_desc">Servings: Most first</option>
-              <option value="difficulty_asc">Difficulty: Easiest first</option>
-              <option value="difficulty_desc">Difficulty: Hardest first</option>
-            </select>
-          </div>
-          <div className="px-3 md:px-2 pt-3 md:pt-2 pb-1 text-xs font-medium text-gray-400 uppercase tracking-wide flex items-center justify-between flex-shrink-0">
-            Categories
-            {isOwner && (
-              <button onClick={() => setShowCategoryModal(true)} className="text-orange-400 font-normal normal-case text-xs">+ Add</button>
-            )}
-          </div>
-          <div className="flex-shrink-0">
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="p-3 md:p-2 border-b border-gray-100 space-y-2">
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search recipes..." className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-2.5 md:px-2 md:py-1.5 text-sm md:text-xs"/>
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-2.5 md:px-2 md:py-1.5 text-sm md:text-xs outline-none">
+                <option value="default">Sort: Default</option>
+                <option value="az">A → Z</option>
+                <option value="za">Z → A</option>
+                <option value="time_asc">Time: Shortest first</option>
+                <option value="time_desc">Time: Longest first</option>
+                <option value="servings_asc">Servings: Least first</option>
+                <option value="servings_desc">Servings: Most first</option>
+                <option value="difficulty_asc">Difficulty: Easiest first</option>
+                <option value="difficulty_desc">Difficulty: Hardest first</option>
+              </select>
+            </div>
+            <div className="px-3 md:px-2 pt-3 md:pt-2 pb-1 text-xs font-medium text-gray-400 uppercase tracking-wide flex items-center justify-between">
+              Categories
+              {isOwner && (
+                <button onClick={() => setShowCategoryModal(true)} className="text-orange-400 font-normal normal-case text-xs">+ Add</button>
+              )}
+            </div>
             <div
               onClick={() => { setActiveCategory("all"); setShowFavoritesOnly(false); setSelectedRecipe(recipes[0] || null) }}
               className={`mx-1 px-3 py-3 md:px-2 md:py-1.5 rounded-lg text-sm md:text-xs cursor-pointer flex items-center gap-2 ${activeCategory === "all" && !showFavoritesOnly ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-600 md:text-gray-500 hover:bg-gray-50"}`}>
@@ -518,9 +518,8 @@ export default function CookbookPage() {
                 </div>
               )
             })}
-          </div>
-          <div className="px-3 md:px-2 pt-3 pb-1 text-xs font-medium text-gray-400 uppercase tracking-wide flex-shrink-0">Recipes</div>
-          <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="border-t-2 border-gray-900 mx-3 mt-3" />
+            <div className="px-3 md:px-2 pt-3 pb-1 text-xs font-medium text-gray-400 uppercase tracking-wide">Recipes</div>
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={filteredRecipes.map(r => r.id)} strategy={verticalListSortingStrategy}>
                 {filteredRecipes.map((r: any) => (
