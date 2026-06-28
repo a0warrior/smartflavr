@@ -30,14 +30,15 @@ function SortableRecipeItem({ recipe, isSelected, onClick, isOwner, isFavorited,
   const style = { transform: CSS.Transform.toString(transform), transition }
 
   return (
-    <div ref={setNodeRef} style={style} className={`mx-1 px-2 py-1.5 rounded-lg text-xs cursor-pointer flex items-center gap-1 ${isSelected ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-500 hover:bg-gray-50"}`}>
-      {isOwner && <span {...attributes} {...listeners} className="text-gray-300 cursor-grab text-xs mr-1">⠿</span>}
-      <span onClick={onClick} className="flex-1 truncate">{recipe.title}</span>
+    <div ref={setNodeRef} style={style} onClick={onClick} className={`mx-1 px-3 py-3.5 md:px-2 md:py-1.5 rounded-lg text-sm md:text-xs cursor-pointer flex items-center gap-2 md:gap-1 ${isSelected ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-600 md:text-gray-500 hover:bg-gray-50"}`}>
+      {isOwner && <span {...attributes} {...listeners} onClick={e => e.stopPropagation()} className="text-gray-300 cursor-grab text-xs mr-1 hidden md:block">⠿</span>}
+      <span className="flex-1 truncate">{recipe.title}</span>
       <button
         onClick={e => { e.stopPropagation(); onToggleFavorite(recipe.id) }}
-        className={`flex-shrink-0 text-xs transition ${isFavorited ? "text-red-400" : "text-gray-300 hover:text-red-300"}`}>
+        className={`flex-shrink-0 text-sm md:text-xs transition ${isFavorited ? "text-red-400" : "text-gray-300 hover:text-red-300"}`}>
         {isFavorited ? "♥" : "♡"}
       </button>
+      <svg className="w-3 h-3 text-gray-300 flex-shrink-0 md:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
     </div>
   )
 }
@@ -77,6 +78,7 @@ export default function CookbookPage() {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
   const recipeRefs = useRef<any>({})
   const [recipeCropSrc, setRecipeCropSrc] = useState("")
+  const [mobileView, setMobileView] = useState<"list" | "detail">("list")
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -254,6 +256,7 @@ export default function CookbookPage() {
       setSelectedRecipe(newRecipe)
       setEdited({ ...newRecipe })
       setEditMode(true)
+      setMobileView("detail")
     }
     await notifyFirebase()
   }
@@ -367,6 +370,7 @@ export default function CookbookPage() {
       return
     }
     setSelectedRecipe(target)
+    setMobileView("detail")
     if (scrollMode && recipeRefs.current[id]) {
       recipeRefs.current[id].scrollIntoView({ behavior: "smooth" })
     }
@@ -434,9 +438,9 @@ export default function CookbookPage() {
       <Navbar />
       <div className="flex flex-1 overflow-hidden" style={{ height: "calc(100vh - 57px)" }}>
 
-        <div className="w-52 bg-white border-r border-gray-100 flex flex-col overflow-hidden flex-shrink-0" style={{ height: "calc(100vh - 57px)" }}>
-          <div className="p-3 border-b border-gray-100 flex-shrink-0">
-            <button onClick={() => router.push("/dashboard")} className="text-xs text-orange-500 mb-2 block">← Dashboard</button>
+        <div className={`bg-white border-r border-gray-100 flex-col overflow-hidden flex-shrink-0 ${mobileView === "list" ? "flex w-full" : "hidden"} md:flex md:w-52`} style={{ height: "calc(100vh - 57px)" }}>
+          <div className="p-3 md:p-3 p-4 border-b border-gray-100 flex-shrink-0">
+            <button onClick={() => router.push("/dashboard")} className="text-sm md:text-xs text-orange-500 mb-2 block">← Dashboard</button>
             <div className="text-sm font-medium">{cookbookInfo?.title || "Cookbook"}</div>
             <div className="text-xs text-gray-400">{recipes.length} recipes</div>
             {activeUsers.length > 0 && (
@@ -446,9 +450,9 @@ export default function CookbookPage() {
               </div>
             )}
           </div>
-          <div className="p-2 border-b border-gray-100 space-y-2 flex-shrink-0">
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search recipes..." className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2 py-1.5 text-xs"/>
-            <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2 py-1.5 text-xs outline-none">
+          <div className="p-3 md:p-2 border-b border-gray-100 space-y-2 flex-shrink-0">
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search recipes..." className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-2.5 md:px-2 md:py-1.5 text-sm md:text-xs"/>
+            <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-2.5 md:px-2 md:py-1.5 text-sm md:text-xs outline-none">
               <option value="default">Sort: Default</option>
               <option value="az">A → Z</option>
               <option value="za">Z → A</option>
@@ -460,7 +464,7 @@ export default function CookbookPage() {
               <option value="difficulty_desc">Difficulty: Hardest first</option>
             </select>
           </div>
-          <div className="px-2 pt-2 pb-1 text-xs font-medium text-gray-400 uppercase tracking-wide flex items-center justify-between flex-shrink-0">
+          <div className="px-3 md:px-2 pt-3 md:pt-2 pb-1 text-xs font-medium text-gray-400 uppercase tracking-wide flex items-center justify-between flex-shrink-0">
             Categories
             {isOwner && (
               <button onClick={() => setShowCategoryModal(true)} className="text-orange-400 font-normal normal-case text-xs">+ Add</button>
@@ -469,12 +473,12 @@ export default function CookbookPage() {
           <div className="flex-shrink-0">
             <div
               onClick={() => { setActiveCategory("all"); setShowFavoritesOnly(false); setSelectedRecipe(recipes[0] || null) }}
-              className={`mx-1 px-2 py-1.5 rounded-lg text-xs cursor-pointer flex items-center gap-2 ${activeCategory === "all" && !showFavoritesOnly ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-500 hover:bg-gray-50"}`}>
+              className={`mx-1 px-3 py-3 md:px-2 md:py-1.5 rounded-lg text-sm md:text-xs cursor-pointer flex items-center gap-2 ${activeCategory === "all" && !showFavoritesOnly ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-600 md:text-gray-500 hover:bg-gray-50"}`}>
               📋 All <span className="ml-auto text-gray-400">{recipes.length}</span>
             </div>
             <div
               onClick={() => { setActiveCategory("all"); setShowFavoritesOnly(!showFavoritesOnly); setSelectedRecipe(null) }}
-              className={`mx-1 px-2 py-1.5 rounded-lg text-xs cursor-pointer flex items-center gap-2 ${showFavoritesOnly ? "bg-red-50 text-red-500 font-medium" : "text-gray-500 hover:bg-gray-50"}`}>
+              className={`mx-1 px-3 py-3 md:px-2 md:py-1.5 rounded-lg text-sm md:text-xs cursor-pointer flex items-center gap-2 ${showFavoritesOnly ? "bg-red-50 text-red-500 font-medium" : "text-gray-600 md:text-gray-500 hover:bg-gray-50"}`}>
               ♥ Favorites <span className="ml-auto text-gray-400">{favCount}</span>
             </div>
             {categories.map((cat: any) => {
@@ -483,13 +487,13 @@ export default function CookbookPage() {
                 <div
                   key={cat.id}
                   onClick={() => { setActiveCategory(cat.id); setShowFavoritesOnly(false); setSelectedRecipe(null) }}
-                  className={`mx-1 px-2 py-1.5 rounded-lg text-xs cursor-pointer flex items-center gap-2 ${activeCategory === cat.id && !showFavoritesOnly ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-500 hover:bg-gray-50"}`}>
+                  className={`mx-1 px-3 py-3 md:px-2 md:py-1.5 rounded-lg text-sm md:text-xs cursor-pointer flex items-center gap-2 ${activeCategory === cat.id && !showFavoritesOnly ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-600 md:text-gray-500 hover:bg-gray-50"}`}>
                   {cat.emoji} {cat.name} <span className="ml-auto text-gray-400">{count}</span>
                 </div>
               )
             })}
           </div>
-          <div className="px-2 pt-3 pb-1 text-xs font-medium text-gray-400 uppercase tracking-wide flex-shrink-0">Recipes</div>
+          <div className="px-3 md:px-2 pt-3 pb-1 text-xs font-medium text-gray-400 uppercase tracking-wide flex-shrink-0">Recipes</div>
           <div className="flex-1 overflow-y-auto min-h-0">
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={filteredRecipes.map(r => r.id)} strategy={verticalListSortingStrategy}>
@@ -508,16 +512,24 @@ export default function CookbookPage() {
             </DndContext>
           </div>
           {canEdit && (
-            <div className="p-2 border-t border-gray-100 flex-shrink-0">
-              <button onClick={createRecipe} className="w-full bg-orange-500 text-white rounded-lg py-1.5 text-xs font-medium hover:bg-orange-600 transition">
+            <div className="p-3 md:p-2 border-t border-gray-100 flex-shrink-0">
+              <button onClick={createRecipe} className="w-full bg-orange-500 text-white rounded-lg py-3 md:py-1.5 text-sm md:text-xs font-medium hover:bg-orange-600 transition">
                 + Add Recipe
               </button>
             </div>
           )}
         </div>
 
-        <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
-          <div className="bg-white border-b border-gray-100 px-4 py-2 flex items-center gap-2">
+        <div className={`flex-col overflow-hidden bg-gray-50 ${mobileView === "detail" ? "flex flex-1" : "hidden"} md:flex md:flex-1`}>
+          {/* Mobile: back to recipe list */}
+          <div className="md:hidden flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100 flex-shrink-0">
+            <button onClick={() => setMobileView("list")} className="text-orange-500 font-medium text-sm flex items-center gap-1">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
+              Recipes
+            </button>
+            {recipe && <span className="text-sm font-medium text-gray-800 truncate">{recipe.title}</span>}
+          </div>
+          <div className="bg-white border-b border-gray-100 px-3 md:px-4 py-2 flex items-center gap-2 overflow-x-auto flex-shrink-0 scrollbar-hide">
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${editMode ? "bg-orange-50 text-orange-700" : "bg-green-50 text-green-700"}`}>
               {editMode ? "Edit mode" : "Read mode"}
             </span>
@@ -590,7 +602,7 @@ export default function CookbookPage() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-8 py-6" id="recipe-content">
+          <div className="flex-1 overflow-y-auto px-4 py-4 md:px-8 md:py-6" id="recipe-content">
             {scrollMode ? (
               filteredRecipes.map((r: any) => (
                 <div key={r.id} ref={(el: any) => { recipeRefs.current[r.id] = el }} className="mb-16">
@@ -794,16 +806,18 @@ export default function CookbookPage() {
             )}
           </div>
 
-          <div className="bg-white border-t border-gray-100 px-4 py-2 flex gap-2 overflow-x-auto">
-            {["Top", "Ingredients", "Instructions", "Notes"].map(section => (
-              <button key={section} onClick={() => {
-                if (section === "Top") document.getElementById("recipe-content")?.scrollTo({ top: 0, behavior: "smooth" })
-                else document.getElementById(section.toLowerCase())?.scrollIntoView({ behavior: "smooth" })
-              }} className="px-3 py-1 rounded-full text-xs border border-gray-200 text-gray-500 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 transition whitespace-nowrap flex-shrink-0">
-                {section}
-              </button>
-            ))}
-          </div>
+          {recipe && !editMode && (
+            <div className="bg-white border-t border-gray-100 px-4 py-2 flex gap-2 overflow-x-auto flex-shrink-0">
+              {["Top", "Ingredients", "Instructions", "Notes"].map(section => (
+                <button key={section} onClick={() => {
+                  if (section === "Top") document.getElementById("recipe-content")?.scrollTo({ top: 0, behavior: "smooth" })
+                  else document.getElementById(section.toLowerCase())?.scrollIntoView({ behavior: "smooth" })
+                }} className="px-3 py-2 md:py-1 rounded-full text-sm md:text-xs border border-gray-200 text-gray-500 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 transition whitespace-nowrap flex-shrink-0">
+                  {section}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
