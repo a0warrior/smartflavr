@@ -48,7 +48,7 @@ export default function InventoryPage() {
   const [targetListId, setTargetListId] = useState<string>("")
 
   useEffect(() => {
-    if (status === "unauthenticated") router.push("/login")
+    if (status === "unauthenticated") router.push("/login?code=returning")
     if (status === "authenticated") {
       fetchInventory()
       fetchGroceryLists()

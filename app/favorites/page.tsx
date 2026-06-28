@@ -13,7 +13,7 @@ export default function FavoritesPage() {
   const [removingId, setRemovingId] = useState<number | null>(null)
 
   useEffect(() => {
-    if (status === "unauthenticated") router.push("/login")
+    if (status === "unauthenticated") router.push("/login?code=returning")
     if (status === "authenticated") fetchFavorites()
   }, [status])
 

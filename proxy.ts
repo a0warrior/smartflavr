@@ -9,7 +9,15 @@ export async function proxy(req: NextRequest) {
   const isProtected = protectedRoutes.some(route => pathname.startsWith(route))
 
   if (isProtected) {
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
+    // Must specify cookieName and salt to match the custom cookie name set in auth.ts.
+    // Without these, getToken looks for the default name and returns null even when
+    // the user is signed in, causing a redirect loop on every /cookbook visit.
+    const token = await getToken({
+      req,
+      secret: process.env.NEXTAUTH_SECRET,
+      cookieName: "next-auth.session-token",
+      salt: "next-auth.session-token",
+    })
     if (!token) {
       return NextResponse.redirect(new URL("/login?code=returning", req.url))
     }

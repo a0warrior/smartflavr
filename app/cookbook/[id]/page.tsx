@@ -82,7 +82,7 @@ export default function CookbookPage() {
   )
 
   useEffect(() => {
-    if (status === "unauthenticated") router.push("/login")
+    if (status === "unauthenticated") router.push("/login?code=returning")
     if (status === "authenticated") {
       fetchRecipes()
       fetchCategories()
