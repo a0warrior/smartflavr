@@ -93,23 +93,38 @@ export default function HomePage() {
       </nav>
 
       {/* Hero */}
-      <div className="relative px-6 pt-16 pb-28 text-center overflow-hidden bg-orange-50/40">
+      <div className="relative px-6 pt-16 pb-28 text-center overflow-hidden bg-white">
 
-        {/* Dot grid texture */}
+        {/* Gradient orbs — radial-gradient fades naturally, no blur artifacts */}
         <div
-          className="absolute inset-0 pointer-events-none"
+          className="absolute pointer-events-none animate-float"
           style={{
-            backgroundImage: "radial-gradient(circle, #f9731618 1.5px, transparent 1.5px)",
-            backgroundSize: "28px 28px",
+            width: "900px", height: "900px",
+            top: "-300px", right: "-300px",
+            background: "radial-gradient(circle, rgba(249,115,22,0.13) 0%, rgba(251,146,60,0.06) 45%, transparent 70%)",
+            animationDuration: "14s",
           }}
         />
-
-        {/* Animated blobs */}
-        <div className="absolute -top-24 -right-24 w-[560px] h-[560px] bg-orange-200 rounded-full blur-[120px] opacity-40 animate-float pointer-events-none" />
-        <div className="absolute top-16 -left-32 w-[420px] h-[420px] bg-amber-100 rounded-full blur-[100px] opacity-60 animate-float-slow pointer-events-none" style={{ animationDelay: "2s" }} />
-        <div className="absolute -bottom-16 left-1/3 w-[380px] h-[380px] bg-orange-100 rounded-full blur-[90px] opacity-50 animate-float pointer-events-none" style={{ animationDelay: "1s" }} />
-        <div className="absolute top-1/2 right-8 w-[220px] h-[220px] bg-orange-300 rounded-full blur-[80px] opacity-20 animate-float-slow pointer-events-none" style={{ animationDelay: "3.5s" }} />
-        <div className="absolute bottom-10 -left-10 w-[180px] h-[180px] bg-amber-200 rounded-full blur-[60px] opacity-30 animate-float pointer-events-none" style={{ animationDelay: "0.5s" }} />
+        <div
+          className="absolute pointer-events-none animate-float-slow"
+          style={{
+            width: "800px", height: "800px",
+            bottom: "-280px", left: "-280px",
+            background: "radial-gradient(circle, rgba(253,186,116,0.18) 0%, rgba(249,115,22,0.07) 45%, transparent 70%)",
+            animationDuration: "18s",
+            animationDelay: "2s",
+          }}
+        />
+        <div
+          className="absolute pointer-events-none animate-float"
+          style={{
+            width: "600px", height: "600px",
+            top: "10%", left: "20%",
+            background: "radial-gradient(circle, rgba(254,215,170,0.15) 0%, transparent 65%)",
+            animationDuration: "11s",
+            animationDelay: "5s",
+          }}
+        />
 
         <div className="relative max-w-3xl mx-auto z-10">
           <div
