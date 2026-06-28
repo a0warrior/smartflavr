@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter, useParams } from "next/navigation"
 import Navbar from "@/app/components/Navbar"
@@ -52,7 +52,6 @@ export default function CookbookPage() {
   const [selectedRecipe, setSelectedRecipe] = useState<any>(null)
   const [activeCategory, setActiveCategory] = useState("all")
   const [editMode, setEditMode] = useState(false)
-  const [cookMode, setCookMode] = useState(false)
   const [saving, setSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState("")
   const [search, setSearch] = useState("")
@@ -61,7 +60,6 @@ export default function CookbookPage() {
   const [showCategoryModal, setShowCategoryModal] = useState(false)
   const [newCatName, setNewCatName] = useState("")
   const [newCatEmoji, setNewCatEmoji] = useState("📋")
-  const [scrollMode, setScrollMode] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [recipeToDelete, setRecipeToDelete] = useState<string | null>(null)
   const [isPublic, setIsPublic] = useState(false)
@@ -76,7 +74,6 @@ export default function CookbookPage() {
   const [pendingRecipe, setPendingRecipe] = useState<any>(null)
   const [favorites, setFavorites] = useState<Set<number>>(new Set())
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
-  const recipeRefs = useRef<any>({})
   const [recipeCropSrc, setRecipeCropSrc] = useState("")
   const [mobileView, setMobileView] = useState<"list" | "detail">("list")
 
@@ -371,9 +368,6 @@ export default function CookbookPage() {
     }
     setSelectedRecipe(target)
     setMobileView("detail")
-    if (scrollMode && recipeRefs.current[id]) {
-      recipeRefs.current[id].scrollIntoView({ behavior: "smooth" })
-    }
   }
 
   async function handleUnsavedSave() {
@@ -381,9 +375,6 @@ export default function CookbookPage() {
     setShowUnsavedModal(false)
     setSelectedRecipe(pendingRecipe)
     setPendingRecipe(null)
-    if (scrollMode && pendingRecipe && recipeRefs.current[pendingRecipe.id]) {
-      recipeRefs.current[pendingRecipe.id].scrollIntoView({ behavior: "smooth" })
-    }
   }
 
   function handleUnsavedDiscard() {
@@ -392,9 +383,6 @@ export default function CookbookPage() {
     setShowUnsavedModal(false)
     setSelectedRecipe(pendingRecipe)
     setPendingRecipe(null)
-    if (scrollMode && pendingRecipe && recipeRefs.current[pendingRecipe.id]) {
-      recipeRefs.current[pendingRecipe.id].scrollIntoView({ behavior: "smooth" })
-    }
   }
 
   const filteredRecipes = recipes
@@ -551,12 +539,6 @@ export default function CookbookPage() {
             <div className="w-px h-4 bg-gray-100 mx-1"/>
             {!editMode && (
               <>
-                <button onClick={() => setCookMode(!cookMode)} className={`px-3 py-1 border rounded-lg text-xs ${cookMode ? "bg-orange-500 text-white border-orange-500" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
-                  {cookMode ? "✓ Cook mode" : "Cook mode"}
-                </button>
-                <button onClick={() => setScrollMode(!scrollMode)} className={`px-3 py-1 border rounded-lg text-xs ${scrollMode ? "bg-orange-500 text-white border-orange-500" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
-                  {scrollMode ? "✓ Scroll mode" : "Scroll mode"}
-                </button>
                 {canEdit && (
                   <button onClick={startEdit} className="px-3 py-1 border border-orange-300 text-orange-500 rounded-lg text-xs hover:bg-orange-50">Edit</button>
                 )}
@@ -603,56 +585,7 @@ export default function CookbookPage() {
           </div>
 
           <div className="flex-1 overflow-y-auto px-4 py-4 md:px-8 md:py-6" id="recipe-content">
-            {scrollMode ? (
-              filteredRecipes.map((r: any) => (
-                <div key={r.id} ref={(el: any) => { recipeRefs.current[r.id] = el }} className="mb-16">
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-2xl font-medium">{r.title}</h2>
-                    <button onClick={() => toggleFavorite(r.id)} className={`text-2xl transition ${favorites.has(r.id) ? "text-red-400" : "text-gray-300 hover:text-red-300"}`}>
-                      {favorites.has(r.id) ? "♥" : "♡"}
-                    </button>
-                  </div>
-                  <div className="flex gap-2 mb-3 flex-wrap">
-                    {r.prep_time && <span className="bg-gray-100 rounded-full px-3 py-1 text-xs text-gray-500">⏱ {r.prep_time}</span>}
-                    {r.servings && <span className="bg-gray-100 rounded-full px-3 py-1 text-xs text-gray-500">👤 {r.servings}</span>}
-                    {r.difficulty && <span className="bg-gray-100 rounded-full px-3 py-1 text-xs text-gray-500">★ {r.difficulty}</span>}
-                  </div>
-                  {r.description && <p className="text-sm text-gray-500 mb-4 leading-relaxed">{r.description}</p>}
-                  <div className="rounded-xl mb-5 overflow-hidden">
-                    {r.image_url ? <img src={r.image_url} className="w-full object-contain rounded-xl"/> : (
-                      <div className="border-2 border-dashed border-gray-100 rounded-xl h-32 flex items-center justify-center">
-                        <span className="text-xs text-gray-400">📷 No photo</span>
-                      </div>
-                    )}
-                  </div>
-                  {r.ingredients && (
-                    <div className="mb-5">
-                      <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Ingredients</div>
-                      {r.ingredients.split("\n").filter(Boolean).map((ing: string, i: number) => (
-                        <div key={i} className="flex items-center gap-3 py-2 border-b border-gray-50">
-                          {cookMode && <input type="checkbox" className="w-3.5 h-3.5 accent-orange-500"/>}
-                          <span className="text-sm">{ing}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {r.instructions && (
-                    <div className="mb-5">
-                      <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Instructions</div>
-                      {r.instructions.split("\n").filter(Boolean).map((step: string, i: number) => (
-                        <div key={i} className="flex gap-3 mb-3">
-                          <div className="w-6 h-6 rounded-full bg-orange-50 text-orange-700 text-xs font-medium flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</div>
-                          <p className="text-sm leading-relaxed flex-1">{step}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {r.notes && <div className="bg-amber-50 rounded-xl p-4 text-sm text-amber-800 leading-relaxed mb-4">💡 {r.notes}</div>}
-                  <NutritionPanel recipe={r}/>
-                  <hr className="border-gray-100 mt-6"/>
-                </div>
-              ))
-            ) : recipe ? (
+            {recipe ? (
               <>
                 {!editMode ? (
                   <>
@@ -680,7 +613,7 @@ export default function CookbookPage() {
                         <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Ingredients</div>
                         {recipe.ingredients.split("\n").filter(Boolean).map((ing: string, i: number) => (
                           <div key={i} className="flex items-center gap-3 py-2 border-b border-gray-50">
-                            {cookMode && <input type="checkbox" className="w-3.5 h-3.5 accent-orange-500 flex-shrink-0"/>}
+                            <input type="checkbox" className="w-3.5 h-3.5 accent-orange-500 flex-shrink-0"/>
                             <span className="text-sm">{ing}</span>
                           </div>
                         ))}
