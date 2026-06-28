@@ -122,18 +122,22 @@ export default function Dashboard() {
     let code = urlParams.get("code")
     if (!code) code = localStorage.getItem("pendingInviteCode")
     if (code && code !== "" && code !== "returning") {
-      await fetch("/api/invite", {
+      const inviteRes = await fetch("/api/invite", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code, email: session?.user?.email, name: session?.user?.name, image: session?.user?.image }),
       })
+      const inviteData = await inviteRes.json()
       localStorage.removeItem("pendingInviteCode")
-      router.push("/profile/settings?new=true")
-      return
+      if (inviteData.success) {
+        router.replace("/profile/settings?new=true")
+        return
+      }
+      // Code already used — fall through to profile check below
     }
-    const res = await fetch("/api/profile")
+    const res = await fetch("/api/profile", { cache: "no-store" })
     const data = await res.json()
-    if (!data.user?.username) { router.push("/profile/settings?new=true"); return }
+    if (!data.user?.username) { router.replace("/profile/settings?new=true"); return }
     fetchCookbooks()
     fetchGroceryLists()
   }

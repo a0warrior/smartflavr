@@ -105,7 +105,7 @@ function ProfileSettingsContent() {
     if (data.error) {
       setError(data.error)
     } else {
-      if (isNew) { router.push("/dashboard") } else { setSuccess("Profile saved!") }
+      if (isNew) { router.replace("/dashboard") } else { setSuccess("Profile saved!") }
     }
     setLoading(false)
   }
