@@ -1,0 +1,24 @@
+name: Post-deploy restart
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  restart-and-flush:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for Hostinger build to complete
+        run: sleep 180
+
+      - name: Restart Passenger workers via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            for i in 1 2 3 4 5; do
+              touch ~/domains/smartflavr.com/nodejs/tmp/restart.txt
+              sleep 3
+            done
