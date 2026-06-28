@@ -2,7 +2,25 @@
 import { useState } from "react"
 import { pdf } from "@react-pdf/renderer"
 import { RecipeDocument, CookbookDocument } from "./RecipePDF"
-import React from "react"
+
+function Spinner() {
+  return (
+    <svg className="animate-spin w-3 h-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+    </svg>
+  )
+}
+
+async function blobDownload(element: React.ReactElement<any>, filename: string) {
+  const blob = await (pdf as any)(element).toBlob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
 
 export function RecipePDFButton({ recipe }: { recipe: any }) {
   const [loading, setLoading] = useState(false)
@@ -10,13 +28,10 @@ export function RecipePDFButton({ recipe }: { recipe: any }) {
   async function download() {
     setLoading(true)
     try {
-      const blob = await pdf(React.createElement(RecipeDocument, { recipe })).toBlob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `${recipe.title.replace(/[^a-z0-9]/gi, "-")}.pdf`
-      a.click()
-      URL.revokeObjectURL(url)
+      await blobDownload(
+        <RecipeDocument recipe={recipe} />,
+        `${recipe.title.replace(/[^a-z0-9]/gi, "-")}.pdf`
+      )
     } finally {
       setLoading(false)
     }
@@ -28,15 +43,7 @@ export function RecipePDFButton({ recipe }: { recipe: any }) {
       disabled={loading}
       className="px-3 py-1.5 border border-gray-200 text-gray-500 rounded-lg text-xs hover:bg-gray-50 transition disabled:opacity-50 flex items-center gap-1.5"
     >
-      {loading ? (
-        <>
-          <svg className="animate-spin w-3 h-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-          </svg>
-          Generating...
-        </>
-      ) : "📄 Export PDF"}
+      {loading ? <><Spinner /> Generating...</> : "📄 Export PDF"}
     </button>
   )
 }
@@ -47,13 +54,10 @@ export function CookbookPDFButton({ cookbook, recipes, authorName }: { cookbook:
   async function download() {
     setLoading(true)
     try {
-      const blob = await pdf(React.createElement(CookbookDocument, { cookbook, recipes, authorName })).toBlob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `${cookbook.title.replace(/[^a-z0-9]/gi, "-")}.pdf`
-      a.click()
-      URL.revokeObjectURL(url)
+      await blobDownload(
+        <CookbookDocument cookbook={cookbook} recipes={recipes} authorName={authorName} />,
+        `${cookbook.title.replace(/[^a-z0-9]/gi, "-")}.pdf`
+      )
     } finally {
       setLoading(false)
     }
@@ -65,15 +69,7 @@ export function CookbookPDFButton({ cookbook, recipes, authorName }: { cookbook:
       disabled={loading}
       className="px-3 py-1.5 border border-gray-200 text-gray-500 rounded-lg text-xs hover:bg-gray-50 transition disabled:opacity-50 flex items-center gap-1.5"
     >
-      {loading ? (
-        <>
-          <svg className="animate-spin w-3 h-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-          </svg>
-          Generating...
-        </>
-      ) : "📚 Export cookbook"}
+      {loading ? <><Spinner /> Generating...</> : "📚 Export cookbook"}
     </button>
   )
 }
