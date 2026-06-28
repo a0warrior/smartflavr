@@ -61,9 +61,15 @@ export default function Navbar() {
   }
 
   async function markAllRead() {
-    await fetch("/api/notifications", { method: "PUT" })
+    await fetch("/api/notifications", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) })
     setUnreadCount(0)
     setNotifications(prev => prev.map(n => ({ ...n, read_at: new Date().toISOString() })))
+  }
+
+  async function markOneRead(id: number) {
+    await fetch("/api/notifications", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) })
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read_at: new Date().toISOString() } : n))
+    setUnreadCount(prev => Math.max(0, prev - 1))
   }
 
   async function respondToInvite(notification: any, action: "accept" | "decline") {
@@ -135,7 +141,7 @@ export default function Navbar() {
                 <div className="flex items-start gap-2">
                   {!n.read_at && <span className="w-2 h-2 rounded-full bg-orange-500 mt-1.5 flex-shrink-0" />}
                   {profileLink ? (
-                    <Link href={profileLink} onClick={() => setShowNotifications(false)} className={`text-sm text-gray-700 flex-1 leading-snug hover:text-orange-500 transition ${n.read_at ? "pl-4" : ""}`}>{n.message}</Link>
+                    <Link href={profileLink} onClick={() => { markOneRead(n.id); setShowNotifications(false) }} className={`text-sm text-gray-700 flex-1 leading-snug hover:text-orange-500 transition ${n.read_at ? "pl-4" : ""}`}>{n.message}</Link>
                   ) : (
                     <p className={`text-sm text-gray-700 flex-1 leading-snug ${n.read_at ? "pl-4" : ""}`}>{n.message}</p>
                   )}

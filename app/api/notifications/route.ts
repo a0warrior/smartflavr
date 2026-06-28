@@ -49,10 +49,19 @@ export async function PUT(req: Request) {
     [session.user.email]
   ) as any[]
 
-  await pool.query(
-    "UPDATE notifications SET read_at = NOW() WHERE user_id = ? AND read_at IS NULL",
-    [currentUser[0].id]
-  )
+  const body = await req.json().catch(() => ({}))
+
+  if (body.id) {
+    await pool.query(
+      "UPDATE notifications SET read_at = NOW() WHERE id = ? AND user_id = ? AND read_at IS NULL",
+      [body.id, currentUser[0].id]
+    )
+  } else {
+    await pool.query(
+      "UPDATE notifications SET read_at = NOW() WHERE user_id = ? AND read_at IS NULL",
+      [currentUser[0].id]
+    )
+  }
 
   return NextResponse.json({ success: true })
 }
