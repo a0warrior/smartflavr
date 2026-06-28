@@ -77,6 +77,7 @@ export default function CookbookPage() {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
   const [recipeCropSrc, setRecipeCropSrc] = useState("")
   const [mobileView, setMobileView] = useState<"list" | "detail">("list")
+  const [showMobileActions, setShowMobileActions] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -510,15 +511,33 @@ export default function CookbookPage() {
         </div>
 
         <div className={`flex-col overflow-hidden bg-gray-50 ${mobileView === "detail" ? "flex flex-1" : "hidden"} md:flex md:flex-1`}>
-          {/* Mobile: back to recipe list */}
-          <div className="md:hidden flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100 flex-shrink-0">
-            <button onClick={() => setMobileView("list")} className="text-orange-500 font-medium text-sm flex items-center gap-1">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
-              Recipes
+          {/* Mobile header — back + title + primary action + overflow */}
+          <div className="md:hidden flex items-center gap-2 px-3 py-3 bg-white border-b border-gray-100 flex-shrink-0">
+            <button onClick={() => { setMobileView("list"); if (editMode) cancelEdit() }} className="p-1.5 -ml-1 rounded-lg text-orange-500 flex-shrink-0">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
             </button>
-            {recipe && <span className="text-sm font-medium text-gray-800 truncate">{recipe.title}</span>}
+            <span className="flex-1 font-medium text-gray-900 truncate text-sm">{recipe?.title || cookbookInfo?.title}</span>
+            {editMode ? (
+              <>
+                <button onClick={cancelEdit} className="text-sm text-gray-400 px-2 py-1">Cancel</button>
+                <button onClick={saveRecipe} disabled={saving} className="text-sm font-semibold text-white bg-orange-500 px-3 py-1.5 rounded-lg disabled:opacity-50">
+                  {saving ? "Saving…" : "Save"}
+                </button>
+              </>
+            ) : (
+              <>
+                {canEdit && recipe && (
+                  <button onClick={startEdit} className="text-sm font-medium text-orange-500 px-2 py-1">Edit</button>
+                )}
+                <button onClick={() => setShowMobileActions(true)} className="p-1.5 rounded-lg text-gray-400">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+                </button>
+              </>
+            )}
           </div>
-          <div className="bg-white border-b border-gray-100 px-3 md:px-4 py-2 flex items-center gap-2 overflow-x-auto flex-shrink-0 scrollbar-hide">
+
+          {/* Desktop toolbar */}
+          <div className="hidden md:flex bg-white border-b border-gray-100 px-4 py-2 items-center gap-2 flex-shrink-0">
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${editMode ? "bg-orange-50 text-orange-700" : "bg-green-50 text-green-700"}`}>
               {editMode ? "Edit mode" : "Read mode"}
             </span>
@@ -801,6 +820,50 @@ export default function CookbookPage() {
               <button onClick={() => setShowCategoryModal(false)} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Cancel</button>
               <button onClick={createCategory} className="flex-1 bg-orange-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-orange-600">Create</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile actions bottom sheet */}
+      {showMobileActions && (
+        <div className="md:hidden fixed inset-0 z-50 flex flex-col justify-end">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowMobileActions(false)} />
+          <div className="relative bg-white rounded-t-2xl pt-2 pb-8 z-10">
+            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
+            {recipe && (
+              <div className="px-4 pb-3 border-b border-gray-100 mb-1">
+                <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Recipe</p>
+                <p className="text-sm font-medium text-gray-900 truncate">{recipe.title}</p>
+              </div>
+            )}
+            <div className="px-2">
+              {recipe && <RecipePDFButton recipe={recipe} className="w-full text-left px-4 py-3.5 text-sm text-gray-700 hover:bg-gray-50 rounded-xl flex items-center gap-3" />}
+              <CookbookPDFButton cookbook={cookbookInfo} recipes={recipes} authorName={session?.user?.name || ""} className="w-full text-left px-4 py-3.5 text-sm text-gray-700 hover:bg-gray-50 rounded-xl flex items-center gap-3" />
+              {isPublic && isOwner && (
+                <button
+                  onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/share/cookbook/${params.id}`); alert("Link copied!"); setShowMobileActions(false) }}
+                  className="w-full text-left px-4 py-3.5 text-sm text-gray-700 hover:bg-gray-50 rounded-xl flex items-center gap-3">
+                  <span className="text-base">🔗</span> Share cookbook
+                </button>
+              )}
+              {isOwner && (
+                <button
+                  onClick={() => { setShowCollaboratorModal(true); setShowMobileActions(false) }}
+                  className="w-full text-left px-4 py-3.5 text-sm text-gray-700 hover:bg-gray-50 rounded-xl flex items-center gap-3">
+                  <span className="text-base">👥</span> Collaborators
+                </button>
+              )}
+              {isOwner && selectedRecipe && (
+                <button
+                  onClick={() => { deleteRecipe(selectedRecipe.id); setShowMobileActions(false) }}
+                  className="w-full text-left px-4 py-3.5 text-sm text-red-500 hover:bg-red-50 rounded-xl flex items-center gap-3">
+                  <span className="text-base">🗑️</span> Delete recipe
+                </button>
+              )}
+            </div>
+            <button onClick={() => setShowMobileActions(false)} className="w-full mt-2 py-3 text-sm text-gray-400 border-t border-gray-100">
+              Cancel
+            </button>
           </div>
         </div>
       )}

@@ -73,21 +73,21 @@ function printHtml(body: string, title: string) {
   setTimeout(() => { win.print() }, 400)
 }
 
-export function RecipePDFButton({ recipe }: { recipe: any }) {
+export function RecipePDFButton({ recipe, className }: { recipe: any; className?: string }) {
   function print() {
     printHtml(`<div>${recipeHtml(recipe, new Date().toLocaleDateString())}</div>`, recipe.title)
   }
   return (
     <button
       onClick={print}
-      className="px-3 py-1.5 border border-gray-200 text-gray-500 rounded-lg text-xs hover:bg-gray-50 transition flex items-center gap-1.5"
+      className={className ?? "px-3 py-1.5 border border-gray-200 text-gray-500 rounded-lg text-xs hover:bg-gray-50 transition flex items-center gap-1.5"}
     >
       📄 Print / Save PDF
     </button>
   )
 }
 
-export function CookbookPDFButton({ cookbook, recipes, authorName }: { cookbook: any; recipes: any[]; authorName: string }) {
+export function CookbookPDFButton({ cookbook, recipes, authorName, className }: { cookbook: any; recipes: any[]; authorName: string; className?: string }) {
   function print() {
     const today = new Date().toLocaleDateString()
     const cover = `
@@ -111,7 +111,7 @@ export function CookbookPDFButton({ cookbook, recipes, authorName }: { cookbook:
   return (
     <button
       onClick={print}
-      className="px-3 py-1.5 border border-gray-200 text-gray-500 rounded-lg text-xs hover:bg-gray-50 transition flex items-center gap-1.5"
+      className={className ?? "px-3 py-1.5 border border-gray-200 text-gray-500 rounded-lg text-xs hover:bg-gray-50 transition flex items-center gap-1.5"}
     >
       📚 Print cookbook
     </button>
