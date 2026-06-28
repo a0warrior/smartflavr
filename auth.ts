@@ -74,13 +74,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return true
         }
 
-        // ON DUPLICATE KEY UPDATE guards against race conditions where two
-        // concurrent sign-ins for the same email both pass the SELECT above.
-        await pool.query(
-          "INSERT INTO users (name, email, image) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE name = VALUES(name), image = VALUES(image)",
-          [user.name, email, user.image]
-        )
-
+        // New user: allow the NextAuth session but don't create a DB record yet.
+        // Account creation requires a valid invite code, enforced in the dashboard.
         return true
       } catch (err) {
         console.error("SignIn DB error:", err)

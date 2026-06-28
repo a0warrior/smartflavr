@@ -139,7 +139,8 @@ export default function Dashboard() {
       }
       const res = await fetch("/api/profile", { cache: "no-store" })
       const data = await res.json()
-      if (!data.user?.username) { router.replace("/profile/settings?new=true"); return }
+      if (!data.user) { router.replace("/"); return }
+      if (!data.user.username) { router.replace("/profile/settings?new=true"); return }
       fetchCookbooks()
       fetchGroceryLists()
     } catch (e) {
