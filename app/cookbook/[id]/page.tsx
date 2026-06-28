@@ -429,15 +429,53 @@ export default function CookbookPage() {
       <div className="flex flex-1 overflow-hidden" style={{ height: "calc(100vh - 57px)" }}>
 
         <div className={`bg-white border-r border-gray-100 flex-col overflow-hidden flex-shrink-0 ${mobileView === "list" ? "flex w-full" : "hidden"} md:flex md:w-52`} style={{ height: "calc(100vh - 57px)" }}>
-          <div className="p-3 md:p-3 p-4 border-b border-gray-100 flex-shrink-0">
-            <button onClick={() => router.push("/dashboard")} className="text-sm md:text-xs text-orange-500 mb-2 block">← Dashboard</button>
-            <div className="text-sm font-medium">{cookbookInfo?.title || "Cookbook"}</div>
-            <div className="text-xs text-gray-400">{recipes.length} recipes</div>
-            {activeUsers.length > 0 && (
-              <div className="flex items-center gap-1 mt-2">
-                <div className="w-2 h-2 rounded-full bg-green-400"/>
-                <span className="text-xs text-gray-400">{activeUsers.length} also viewing</span>
-              </div>
+          <div className="p-3 border-b border-gray-100 flex-shrink-0">
+            <button onClick={() => router.push("/dashboard")} className="text-xs text-orange-500 mb-2 block">← Dashboard</button>
+            <div className="text-sm font-medium truncate">{cookbookInfo?.title || "Cookbook"}</div>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-xs text-gray-400">{recipes.length} recipes</span>
+              {activeUsers.length > 0 && (
+                <div className="flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-400"/>
+                  <span className="text-xs text-gray-400">{activeUsers.length} viewing</span>
+                </div>
+              )}
+            </div>
+            {/* Cookbook-level actions */}
+            <div className="flex items-center gap-1.5 mt-2.5">
+              {isPublic && isOwner && (
+                <button
+                  onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/share/cookbook/${params.id}`); alert("Link copied!") }}
+                  title="Share cookbook"
+                  className="flex-1 flex items-center justify-center py-1.5 text-xs text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+                  Share ↗
+                </button>
+              )}
+              {isOwner && (
+                <button
+                  onClick={() => setShowCollaboratorModal(true)}
+                  title="Collaborators"
+                  className="flex-1 flex items-center justify-center py-1.5 text-xs text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+                  👥
+                </button>
+              )}
+              <CookbookPDFButton
+                cookbook={cookbookInfo}
+                recipes={recipes}
+                authorName={session?.user?.name || ""}
+                className="flex-1 flex items-center justify-center py-1.5 text-xs text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition"
+              />
+            </div>
+            {isCollaborator && !isOwner && (
+              <button
+                onClick={async () => {
+                  if (!confirm("Leave this cookbook?")) return
+                  await fetch("/api/collaborators", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cookbook_id: params.id, user_id: "self" }) })
+                  router.push("/dashboard")
+                }}
+                className="mt-2 text-xs text-gray-400 hover:text-red-400 transition block">
+                Leave cookbook
+              </button>
             )}
           </div>
           <div className="p-3 md:p-2 border-b border-gray-100 space-y-2 flex-shrink-0">
@@ -536,44 +574,25 @@ export default function CookbookPage() {
             )}
           </div>
 
-          {/* Desktop toolbar */}
+          {/* Desktop toolbar — recipe-level actions only */}
           <div className="hidden md:flex bg-white border-b border-gray-100 px-4 py-2 items-center gap-2 flex-shrink-0">
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${editMode ? "bg-orange-50 text-orange-700" : "bg-green-50 text-green-700"}`}>
-              {editMode ? "Edit mode" : "Read mode"}
-            </span>
-            {isCollaborator && !isOwner && (
-              <button
-                onClick={async () => {
-                  if (!confirm("Leave this cookbook? You will lose access.")) return
-                  await fetch("/api/collaborators", {
-                    method: "DELETE",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ cookbook_id: params.id, user_id: "self" }),
-                  })
-                  router.push("/dashboard")
-                }}
-                className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium hover:bg-red-50 hover:text-red-500 transition">
-                Collaborator · Leave
+            {canEdit && !editMode && recipe && (
+              <button onClick={startEdit} className="px-3 py-1 border border-orange-300 text-orange-500 rounded-lg text-xs hover:bg-orange-50">
+                Edit
               </button>
-            )}
-            <div className="w-px h-4 bg-gray-100 mx-1"/>
-            {!editMode && (
-              <>
-                {canEdit && (
-                  <button onClick={startEdit} className="px-3 py-1 border border-orange-300 text-orange-500 rounded-lg text-xs hover:bg-orange-50">Edit</button>
-                )}
-              </>
             )}
             {canEdit && editMode && (
               <>
                 <button onClick={cancelEdit} className="px-3 py-1 border border-gray-200 text-gray-500 rounded-lg text-xs hover:bg-gray-50">Cancel</button>
-                <button onClick={saveRecipe} disabled={saving} className="px-3 py-1 bg-orange-500 text-white rounded-lg text-xs font-medium hover:bg-orange-600">
+                <button onClick={saveRecipe} disabled={saving} className="px-3 py-1 bg-orange-500 text-white rounded-lg text-xs font-medium hover:bg-orange-600 disabled:opacity-50">
                   {saving ? "Saving..." : "Save"}
                 </button>
               </>
             )}
-            {isOwner && selectedRecipe && !editMode && (
-              <button onClick={() => deleteRecipe(selectedRecipe.id)} className="px-3 py-1 border border-red-200 text-red-400 rounded-lg text-xs hover:bg-red-50 ml-1">Delete</button>
+            {isOwner && recipe && !editMode && (
+              <button onClick={() => deleteRecipe(recipe.id)} className="px-3 py-1 border border-red-200 text-red-400 rounded-lg text-xs hover:bg-red-50">
+                Delete
+              </button>
             )}
             <div className="ml-auto flex items-center gap-2">
               {activeUsers.length > 0 && (
@@ -585,22 +604,7 @@ export default function CookbookPage() {
                   ))}
                 </div>
               )}
-              {isOwner && (
-                <button onClick={() => setShowCollaboratorModal(true)} className="px-3 py-1 border border-blue-200 text-blue-500 rounded-lg text-xs hover:bg-blue-50">
-                  👥 Collaborators
-                </button>
-              )}
-              {isPublic && isOwner && (
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}/share/cookbook/${params.id}`)
-                    alert("Link copied to clipboard!")
-                  }}
-                  className="px-3 py-1 border border-orange-200 text-orange-500 rounded-lg text-xs hover:bg-orange-50">
-                  Share ↗
-                </button>
-              )}
-              <CookbookPDFButton cookbook={cookbookInfo} recipes={recipes} authorName={session?.user?.name || ""} />
+              {recipe && !editMode && <RecipePDFButton recipe={recipe} />}
               <span className="text-xs text-gray-400">{lastSaved}</span>
             </div>
           </div>
@@ -853,9 +857,9 @@ export default function CookbookPage() {
                   <span className="text-base">👥</span> Collaborators
                 </button>
               )}
-              {isOwner && selectedRecipe && (
+              {isOwner && recipe && (
                 <button
-                  onClick={() => { deleteRecipe(selectedRecipe.id); setShowMobileActions(false) }}
+                  onClick={() => { deleteRecipe(recipe.id); setShowMobileActions(false) }}
                   className="w-full text-left px-4 py-3.5 text-sm text-red-500 hover:bg-red-50 rounded-xl flex items-center gap-3">
                   <span className="text-base">🗑️</span> Delete recipe
                 </button>
