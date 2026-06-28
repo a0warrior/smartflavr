@@ -2,14 +2,11 @@
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter, useParams } from "next/navigation"
-import dynamic from "next/dynamic"
 import Navbar from "@/app/components/Navbar"
 import ImageCropper from "@/app/components/ImageCropper"
 import CollaboratorModal from "@/app/components/CollaboratorModal"
 import NutritionPanel from "@/app/components/NutritionPanel"
-
-const RecipePDFButton = dynamic(() => import("@/app/components/PDFButtons").then(m => m.RecipePDFButton), { ssr: false })
-const CookbookPDFButton = dynamic(() => import("@/app/components/PDFButtons").then(m => m.CookbookPDFButton), { ssr: false })
+import { RecipePDFButton, CookbookPDFButton } from "@/app/components/PDFButtons"
 import { db } from "@/lib/firebase"
 import { ref, onValue, set, off } from "firebase/database"
 import {
