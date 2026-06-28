@@ -106,6 +106,7 @@ export default function Dashboard() {
   const [groceryListToDelete, setGroceryListToDelete] = useState<number | null>(null)
   const [editingListName, setEditingListName] = useState(false)
   const [listNameInput, setListNameInput] = useState("")
+  const [checking, setChecking] = useState(true)
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -138,6 +139,7 @@ export default function Dashboard() {
     const res = await fetch("/api/profile", { cache: "no-store" })
     const data = await res.json()
     if (!data.user?.username) { router.replace("/profile/settings?new=true"); return }
+    setChecking(false)
     fetchCookbooks()
     fetchGroceryLists()
   }
@@ -327,7 +329,7 @@ export default function Dashboard() {
     setSelectedCookbooks(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id])
   }
 
-  if (status === "loading") return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+  if (status === "loading" || checking) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
 
   return (
     <div className="min-h-screen bg-gray-50">
