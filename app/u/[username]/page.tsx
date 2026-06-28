@@ -54,43 +54,35 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
         <Link href="/dashboard" className="text-sm text-orange-500 hover:text-orange-600">My cookbooks →</Link>
       </nav>
 
-      <div className="max-w-3xl mx-auto px-6 py-12">
-        <div className="flex items-start justify-between mb-10">
-          <div className="flex items-start gap-6">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5 mb-8">
+          <div className="flex items-start gap-4">
             {displayImage ? (
-              <img src={displayImage} className="w-20 h-20 rounded-full object-cover flex-shrink-0"/>
+              <img src={displayImage} className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover flex-shrink-0"/>
             ) : (
-              <div className="w-20 h-20 rounded-full bg-orange-500 flex items-center justify-center text-white text-3xl font-medium flex-shrink-0">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-orange-500 flex items-center justify-center text-white text-2xl sm:text-3xl font-medium flex-shrink-0">
                 {initials}
               </div>
             )}
-            <div>
-              <h1 className="text-2xl font-medium text-gray-900 mb-1">{user.name}</h1>
-              <p className="text-sm text-gray-400 mb-3">@{user.username}</p>
-              {user.bio && <p className="text-sm text-gray-600 leading-relaxed max-w-md mb-4">{user.bio}</p>}
-              <div className="flex gap-6">
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-medium text-gray-900 mb-0.5 truncate">{user.name}</h1>
+              <p className="text-sm text-gray-400 mb-2">@{user.username}</p>
+              {user.bio && <p className="text-sm text-gray-600 leading-relaxed mb-3">{user.bio}</p>}
+              <div className="flex flex-wrap gap-4 sm:gap-6">
                 <div className="text-center">
-                  <div className="text-lg font-medium text-gray-900">{cookbooks.length}</div>
+                  <div className="text-base sm:text-lg font-medium text-gray-900">{cookbooks.length}</div>
                   <div className="text-xs text-gray-400">Cookbooks</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-lg font-medium text-gray-900">{recipeCount[0].count}</div>
+                  <div className="text-base sm:text-lg font-medium text-gray-900">{recipeCount[0].count}</div>
                   <div className="text-xs text-gray-400">Recipes</div>
                 </div>
-                <FollowersModal
-                  username={username}
-                  type="followers"
-                  count={followerCount[0].count}
-                />
-                <FollowersModal
-                  username={username}
-                  type="following"
-                  count={followingCount[0].count}
-                />
+                <FollowersModal username={username} type="followers" count={followerCount[0].count} />
+                <FollowersModal username={username} type="following" count={followingCount[0].count} />
               </div>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 sm:flex-shrink-0">
             <CopyProfileLink username={username} />
             {isOwnProfile ? (
               <Link href="/profile/settings" className="px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">

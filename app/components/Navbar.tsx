@@ -128,11 +128,17 @@ export default function Navbar() {
           </div>
         ) : (
           notifications.map((n: any) => {
+            const nData = (() => { try { return typeof n.data === "string" ? JSON.parse(n.data) : (n.data || {}) } catch { return {} } })()
+            const profileLink = n.type === "new_follower" && nData.follower_username ? `/u/${nData.follower_username}` : null
             return (
               <div key={n.id} className={`px-4 py-3 ${!n.read_at ? "bg-orange-50/60" : ""}`}>
                 <div className="flex items-start gap-2">
                   {!n.read_at && <span className="w-2 h-2 rounded-full bg-orange-500 mt-1.5 flex-shrink-0" />}
-                  <p className={`text-sm text-gray-700 flex-1 leading-snug ${n.read_at ? "pl-4" : ""}`}>{n.message}</p>
+                  {profileLink ? (
+                    <Link href={profileLink} onClick={() => setShowNotifications(false)} className={`text-sm text-gray-700 flex-1 leading-snug hover:text-orange-500 transition ${n.read_at ? "pl-4" : ""}`}>{n.message}</Link>
+                  ) : (
+                    <p className={`text-sm text-gray-700 flex-1 leading-snug ${n.read_at ? "pl-4" : ""}`}>{n.message}</p>
+                  )}
                   <button onClick={() => deleteNotification(n.id)} className="text-gray-300 hover:text-red-400 transition flex-shrink-0 text-xs mt-0.5">✕</button>
                 </div>
                 {n.type === "collab_invite" && !n.read_at && (

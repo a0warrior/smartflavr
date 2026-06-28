@@ -11,7 +11,7 @@ export async function POST(req: Request) {
   const { username } = await req.json()
 
   const [currentUser] = await pool.query(
-    "SELECT id, name FROM users WHERE email = ?",
+    "SELECT id, name, username FROM users WHERE email = ?",
     [session.user.email]
   ) as any[]
 
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     [
       targetUser[0].id,
       `${currentUser[0].name} started following you`,
-      JSON.stringify({ follower_id: currentUser[0].id, follower_name: currentUser[0].name })
+      JSON.stringify({ follower_id: currentUser[0].id, follower_name: currentUser[0].name, follower_username: currentUser[0].username })
     ]
   )
 
