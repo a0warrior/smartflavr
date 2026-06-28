@@ -11,7 +11,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const { username } = await params
 
   const [users]: any = await pool.query(
-    "SELECT id, name, image, username, bio, profile_image FROM users WHERE username = ?",
+    "SELECT id, name, email, image, username, bio, profile_image FROM users WHERE username = ?",
     [username]
   )
 
