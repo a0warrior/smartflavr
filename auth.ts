@@ -74,8 +74,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return true
         }
 
+        // ON DUPLICATE KEY UPDATE guards against race conditions where two
+        // concurrent sign-ins for the same email both pass the SELECT above.
         await pool.query(
-          "INSERT INTO users (name, email, image) VALUES (?, ?, ?)",
+          "INSERT INTO users (name, email, image) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE name = VALUES(name), image = VALUES(image)",
           [user.name, email, user.image]
         )
 
