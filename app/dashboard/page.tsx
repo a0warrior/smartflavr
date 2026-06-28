@@ -119,29 +119,34 @@ export default function Dashboard() {
   }, [status])
 
   async function registerUser() {
-    const urlParams = new URLSearchParams(window.location.search)
-    let code = urlParams.get("code")
-    if (!code) code = localStorage.getItem("pendingInviteCode")
-    if (code && code !== "" && code !== "returning") {
-      const inviteRes = await fetch("/api/invite", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, email: session?.user?.email, name: session?.user?.name, image: session?.user?.image }),
-      })
-      const inviteData = await inviteRes.json()
-      localStorage.removeItem("pendingInviteCode")
-      if (inviteData.success) {
-        router.replace("/profile/settings?new=true")
-        return
+    try {
+      const urlParams = new URLSearchParams(window.location.search)
+      let code = urlParams.get("code")
+      if (!code) code = localStorage.getItem("pendingInviteCode")
+      if (code && code !== "" && code !== "returning") {
+        const inviteRes = await fetch("/api/invite", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code, email: session?.user?.email, name: session?.user?.name, image: session?.user?.image }),
+        })
+        const inviteData = await inviteRes.json()
+        localStorage.removeItem("pendingInviteCode")
+        if (inviteData.success) {
+          router.replace("/profile/settings?new=true")
+          return
+        }
+        // Code already used — fall through to profile check below
       }
-      // Code already used — fall through to profile check below
+      const res = await fetch("/api/profile", { cache: "no-store" })
+      const data = await res.json()
+      if (!data.user?.username) { router.replace("/profile/settings?new=true"); return }
+      fetchCookbooks()
+      fetchGroceryLists()
+    } catch (e) {
+      // swallow — page will still render
+    } finally {
+      setChecking(false)
     }
-    const res = await fetch("/api/profile", { cache: "no-store" })
-    const data = await res.json()
-    if (!data.user?.username) { router.replace("/profile/settings?new=true"); return }
-    setChecking(false)
-    fetchCookbooks()
-    fetchGroceryLists()
   }
 
   async function fetchCookbooks() {
