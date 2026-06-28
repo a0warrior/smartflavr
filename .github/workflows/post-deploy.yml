@@ -19,7 +19,4 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 65002
           script: |
-            for i in 1 2 3 4 5; do
-              touch ~/domains/smartflavr.com/nodejs/tmp/restart.txt
-              sleep 3
-            done
+            touch ~/domains/smartflavr.com/nodejs/tmp/restart.txt
