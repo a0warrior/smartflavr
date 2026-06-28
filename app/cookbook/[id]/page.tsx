@@ -518,7 +518,7 @@ export default function CookbookPage() {
                 </div>
               )
             })}
-            <div className="border-t-2 border-gray-900 mx-3 mt-3" />
+            <div className="border-t-2 border-gray-400 mx-3 mt-3" />
             <div className="px-3 md:px-2 pt-3 pb-1 text-xs font-medium text-gray-400 uppercase tracking-wide">Recipes</div>
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={filteredRecipes.map(r => r.id)} strategy={verticalListSortingStrategy}>
