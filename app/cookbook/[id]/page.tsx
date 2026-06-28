@@ -442,41 +442,39 @@ export default function CookbookPage() {
               )}
             </div>
             {/* Cookbook-level actions */}
-            <div className="flex items-center gap-1.5 mt-2.5">
+            <div className="mt-3 space-y-1">
               {isPublic && isOwner && (
                 <button
                   onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/share/cookbook/${params.id}`); alert("Link copied!") }}
-                  title="Share cookbook"
-                  className="flex-1 flex items-center justify-center py-1.5 text-xs text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
-                  Share ↗
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+                  <span>🔗</span> Share cookbook
                 </button>
               )}
               {isOwner && (
                 <button
                   onClick={() => setShowCollaboratorModal(true)}
-                  title="Collaborators"
-                  className="flex-1 flex items-center justify-center py-1.5 text-xs text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
-                  👥
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+                  <span>👥</span> Collaborators
                 </button>
               )}
               <CookbookPDFButton
                 cookbook={cookbookInfo}
                 recipes={recipes}
                 authorName={session?.user?.name || ""}
-                className="flex-1 flex items-center justify-center py-1.5 text-xs text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition"
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition"
               />
+              {isCollaborator && !isOwner && (
+                <button
+                  onClick={async () => {
+                    if (!confirm("Leave this cookbook?")) return
+                    await fetch("/api/collaborators", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cookbook_id: params.id, user_id: "self" }) })
+                    router.push("/dashboard")
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-red-400 border border-red-100 rounded-lg hover:bg-red-50 transition">
+                  Leave cookbook
+                </button>
+              )}
             </div>
-            {isCollaborator && !isOwner && (
-              <button
-                onClick={async () => {
-                  if (!confirm("Leave this cookbook?")) return
-                  await fetch("/api/collaborators", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cookbook_id: params.id, user_id: "self" }) })
-                  router.push("/dashboard")
-                }}
-                className="mt-2 text-xs text-gray-400 hover:text-red-400 transition block">
-                Leave cookbook
-              </button>
-            )}
           </div>
           <div className="p-3 md:p-2 border-b border-gray-100 space-y-2 flex-shrink-0">
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search recipes..." className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-2.5 md:px-2 md:py-1.5 text-sm md:text-xs"/>
@@ -842,21 +840,6 @@ export default function CookbookPage() {
             )}
             <div className="px-2">
               {recipe && <RecipePDFButton recipe={recipe} className="w-full text-left px-4 py-3.5 text-sm text-gray-700 hover:bg-gray-50 rounded-xl flex items-center gap-3" />}
-              <CookbookPDFButton cookbook={cookbookInfo} recipes={recipes} authorName={session?.user?.name || ""} className="w-full text-left px-4 py-3.5 text-sm text-gray-700 hover:bg-gray-50 rounded-xl flex items-center gap-3" />
-              {isPublic && isOwner && (
-                <button
-                  onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/share/cookbook/${params.id}`); alert("Link copied!"); setShowMobileActions(false) }}
-                  className="w-full text-left px-4 py-3.5 text-sm text-gray-700 hover:bg-gray-50 rounded-xl flex items-center gap-3">
-                  <span className="text-base">🔗</span> Share cookbook
-                </button>
-              )}
-              {isOwner && (
-                <button
-                  onClick={() => { setShowCollaboratorModal(true); setShowMobileActions(false) }}
-                  className="w-full text-left px-4 py-3.5 text-sm text-gray-700 hover:bg-gray-50 rounded-xl flex items-center gap-3">
-                  <span className="text-base">👥</span> Collaborators
-                </button>
-              )}
               {isOwner && recipe && (
                 <button
                   onClick={() => { deleteRecipe(recipe.id); setShowMobileActions(false) }}
