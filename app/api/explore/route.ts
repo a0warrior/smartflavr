@@ -34,12 +34,11 @@ export async function GET(req: Request) {
     LEFT JOIN recipes ON recipes.cookbook_id = cookbooks.id
     WHERE cookbooks.is_public = 1
       AND users.username IS NOT NULL
-      AND cookbooks.user_id != ?
       AND (cookbooks.title LIKE ? OR users.name LIKE ? OR users.username LIKE ?)
     GROUP BY cookbooks.id
     ORDER BY recipe_count DESC, cookbooks.created_at DESC
     LIMIT 24`,
-    [currentUserId, like, like, like]
+    [like, like, like]
   )
 
   const [users]: any = await pool.query(
