@@ -2,10 +2,14 @@
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter, useParams } from "next/navigation"
+import dynamic from "next/dynamic"
 import Navbar from "@/app/components/Navbar"
 import ImageCropper from "@/app/components/ImageCropper"
 import CollaboratorModal from "@/app/components/CollaboratorModal"
 import NutritionPanel from "@/app/components/NutritionPanel"
+
+const RecipePDFButton = dynamic(() => import("@/app/components/PDFButtons").then(m => m.RecipePDFButton), { ssr: false })
+const CookbookPDFButton = dynamic(() => import("@/app/components/PDFButtons").then(m => m.CookbookPDFButton), { ssr: false })
 import { db } from "@/lib/firebase"
 import { ref, onValue, set, off } from "firebase/database"
 import {
@@ -580,6 +584,7 @@ export default function CookbookPage() {
                   Share ↗
                 </button>
               )}
+              <CookbookPDFButton cookbook={cookbookInfo} recipes={recipes} authorName={session?.user?.name || ""} />
               <span className="text-xs text-gray-400">{lastSaved}</span>
             </div>
           </div>
@@ -637,7 +642,7 @@ export default function CookbookPage() {
                       </div>
                     )}
                     <NutritionPanel recipe={recipe}/>
-                    <div className="flex items-center gap-3 mt-4">
+                    <div className="flex items-center gap-3 mt-4 flex-wrap">
                       <button
                         onClick={() => {
                           navigator.clipboard.writeText(`${window.location.origin}/share/recipe/${recipe.id}`)
@@ -646,6 +651,7 @@ export default function CookbookPage() {
                         className="px-3 py-1.5 border border-orange-200 text-orange-500 rounded-lg text-xs hover:bg-orange-50 transition">
                         Share recipe ↗
                       </button>
+                      <RecipePDFButton recipe={recipe} />
                       {recipe.source_url && (
                         <a href={recipe.source_url} target="_blank" className="text-xs text-orange-500">View original source ↗</a>
                       )}
