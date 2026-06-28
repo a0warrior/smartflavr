@@ -49,7 +49,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
       <Navbar />
       {session?.user && (
         <div className="hidden md:block max-w-3xl mx-auto px-4 sm:px-6 pt-6">
-          <Link href="/dashboard" className="text-sm text-gray-400 hover:text-gray-600 transition">← Back to Dashboard</Link>
+          <Link href="/dashboard" className="text-sm text-orange-500 hover:text-orange-600 font-medium transition">Back to Dashboard</Link>
         </div>
       )}
 
