@@ -107,6 +107,7 @@ export default function Dashboard() {
   const [editingListName, setEditingListName] = useState(false)
   const [listNameInput, setListNameInput] = useState("")
   const [checking, setChecking] = useState(true)
+  const [groceryCopied, setGroceryCopied] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -218,6 +219,55 @@ export default function Dashboard() {
     if (activeGroceryList?.id === groceryListToDelete) { setShowGroceryListModal(false); setActiveGroceryList(null) }
     setShowDeleteGroceryModal(false)
     setGroceryListToDelete(null)
+  }
+
+  function printGroceryList() {
+    const list = activeGroceryList
+    const unchecked = list.items?.filter((i: any) => !i.checked) || []
+    const checked = list.items?.filter((i: any) => i.checked) || []
+    const rows = (items: any[], done: boolean) =>
+      items.map((i: any) => `<div class="item ${done ? "done" : ""}"><span class="box">${done ? "✓" : ""}</span><span>${i.ingredient}</span></div>`).join("")
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${list.name}</title><style>
+      body{font-family:-apple-system,sans-serif;max-width:600px;margin:40px auto;padding:0 24px;color:#1f2937}
+      .header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f3f4f6;padding-bottom:12px;margin-bottom:20px}
+      .brand{color:#f97316;font-weight:700;font-size:13px}.date{color:#d1d5db;font-size:11px}
+      h1{font-size:22px;font-weight:700;margin-bottom:4px}
+      .progress{font-size:12px;color:#9ca3af;margin-bottom:20px}
+      .item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #f9fafb;font-size:14px}
+      .box{width:16px;height:16px;border:1.5px solid #d1d5db;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;font-size:10px;color:#f97316}
+      .done{opacity:.45;text-decoration:line-through}
+      .section{font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;margin:18px 0 6px}
+      .footer{margin-top:32px;font-size:11px;color:#d1d5db;border-top:1px solid #f3f4f6;padding-top:10px;display:flex;justify-content:space-between}
+      @media print{@page{margin:16mm}body{padding:0}}
+    </style></head><body>
+      <div class="header"><span class="brand">SmartFlavr</span><span class="date">${new Date().toLocaleDateString()}</span></div>
+      <h1>${list.name}</h1>
+      <div class="progress">${checked.length} of ${list.items?.length || 0} items checked</div>
+      ${unchecked.length ? rows(unchecked, false) : ""}
+      ${checked.length ? `<div class="section">Checked</div>${rows(checked, true)}` : ""}
+      <div class="footer"><span>SmartFlavr</span><span>${list.name}</span></div>
+    </body></html>`
+    const win = window.open("", "_blank")
+    if (!win) return
+    win.document.write(html)
+    win.document.close()
+    win.focus()
+    setTimeout(() => win.print(), 400)
+  }
+
+  function copyGroceryText() {
+    const list = activeGroceryList
+    const unchecked = list.items?.filter((i: any) => !i.checked) || []
+    const checked = list.items?.filter((i: any) => i.checked) || []
+    const lines = [
+      list.name,
+      "",
+      ...unchecked.map((i: any) => `• ${i.ingredient}`),
+      ...(checked.length ? ["", "— checked —", ...checked.map((i: any) => `✓ ${i.ingredient}`)] : []),
+    ]
+    navigator.clipboard.writeText(lines.join("\n"))
+    setGroceryCopied(true)
+    setTimeout(() => setGroceryCopied(false), 2000)
   }
 
   async function createNewGroceryList() {
@@ -488,7 +538,13 @@ export default function Dashboard() {
               )}
               <button onClick={() => deleteGroceryList(activeGroceryList.id)} className="text-xs text-red-400 hover:text-red-600 border border-red-100 hover:border-red-300 rounded-lg px-3 py-1.5 transition">Delete list</button>
             </div>
-            <p className="text-xs text-gray-400 mb-3">{activeGroceryList.items?.filter((i: any) => i.checked).length} of {activeGroceryList.items?.length} items checked</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-gray-400">{activeGroceryList.items?.filter((i: any) => i.checked).length} of {activeGroceryList.items?.length} items checked</p>
+              <div className="flex gap-2">
+                <button onClick={printGroceryList} className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 transition">📄 Print</button>
+                <button onClick={copyGroceryText} className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 transition">{groceryCopied ? "✓ Copied!" : "📋 Copy text"}</button>
+              </div>
+            </div>
             <div className="flex gap-2 mb-4">
               <a href="https://www.hy-vee.com/aisles-online/" target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 py-2 bg-red-50 hover:bg-red-100 border border-red-100 rounded-xl transition">
                 <span className="text-base">🛒</span><span className="text-xs font-medium text-red-700">Hy-Vee</span>
