@@ -81,14 +81,14 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
               </div>
             </div>
           </div>
-          <div className="flex gap-2 sm:flex-shrink-0">
-            <CopyProfileLink username={username} />
+          <div className="flex gap-3 w-full sm:w-auto sm:flex-shrink-0">
+            <CopyProfileLink username={username} className="flex-1 sm:flex-none text-center" />
             {isOwnProfile ? (
-              <Link href="/profile/settings" className="px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">
+              <Link href="/profile/settings" className="flex-1 sm:flex-none text-center px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition">
                 Edit profile
               </Link>
             ) : session?.user ? (
-              <FollowButton username={username} />
+              <div className="flex-1 sm:flex-none"><FollowButton username={username} /></div>
             ) : null}
           </div>
         </div>
