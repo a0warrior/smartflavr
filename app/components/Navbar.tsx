@@ -4,10 +4,29 @@ import Link from "next/link"
 import Image from "next/image"
 import { useState, useEffect } from "react"
 
+function BellIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
+  )
+}
+
+const navLinks = [
+  { href: "/feed", label: "Feed" },
+  { href: "/explore", label: "Explore" },
+  { href: "/favorites", label: "Favorites" },
+  { href: "/inventory", label: "Inventory" },
+  { href: "/meal-planner", label: "Meal Plan" },
+]
+
 export default function Navbar() {
   const { data: session } = useSession()
   const [showMenu, setShowMenu] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
+  const [showSidebar, setShowSidebar] = useState(false)
+  const [bellRinging, setBellRinging] = useState(false)
   const [username, setUsername] = useState("")
   const [profileImage, setProfileImage] = useState("")
   const [isAdmin, setIsAdmin] = useState(false)
@@ -52,16 +71,10 @@ export default function Navbar() {
     await fetch("/api/notifications/respond", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        notification_id: notification.id,
-        cookbook_id: data.cookbook_id,
-        action,
-      }),
+      body: JSON.stringify({ notification_id: notification.id, cookbook_id: data.cookbook_id, action }),
     })
     fetchNotifications()
-    if (action === "accept") {
-      window.location.reload()
-    }
+    if (action === "accept") window.location.reload()
   }
 
   async function deleteNotification(id: number) {
@@ -74,178 +87,218 @@ export default function Navbar() {
     setUnreadCount(prev => Math.max(0, prev - 1))
   }
 
+  function handleBellClick() {
+    if (!showNotifications) {
+      setBellRinging(true)
+      setTimeout(() => setBellRinging(false), 700)
+    }
+    setShowNotifications(prev => !prev)
+    setShowMenu(false)
+  }
+
   const initials = session?.user?.name?.charAt(0).toUpperCase() || "?"
 
-  return (
-    <nav className="bg-white border-b border-gray-100 px-6 py-2 flex items-center justify-between">
-      <Link href="/dashboard" className="flex items-center gap-1">
-        <Image src="/logo.svg" alt="SmartFlavr" width={80} height={80}/>
-        <span className="text-xl font-medium text-gray-900">Smart<span className="text-orange-500">Flavr</span></span>
-      </Link>
-      <div className="flex items-center gap-6 relative">
-        <Link href="/feed" className="text-sm text-gray-500 hover:text-gray-900 transition">
-          Feed
-        </Link>
-        <Link href="/explore" className="text-sm text-gray-500 hover:text-gray-900 transition">
-          Explore
-        </Link>
-        <Link href="/favorites" className="text-sm text-gray-500 hover:text-gray-900 transition">
-          Favorites
-        </Link>
-        <Link href="/inventory" className="text-sm text-gray-500 hover:text-gray-900 transition">
-          Inventory
-        </Link>
-        <Link href="/meal-planner" className="text-sm text-gray-500 hover:text-gray-900 transition">
-          Meal Plan
-        </Link>
+  function Avatar({ size = 32 }: { size?: number }) {
+    return profileImage ? (
+      <img src={profileImage} width={size} height={size} className="rounded-full object-cover" style={{ width: size, height: size }} />
+    ) : (
+      <div className="rounded-full bg-orange-500 flex items-center justify-center text-white font-medium" style={{ width: size, height: size, fontSize: size * 0.4 }}>
+        {initials}
+      </div>
+    )
+  }
 
-        <div className="relative">
-          <button
-            onClick={() => {
-              setShowNotifications(!showNotifications)
-              setShowMenu(false)
-            }}
-            className="relative text-gray-500 hover:text-gray-900 transition">
-            <span className="text-xl">🔔</span>
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
-                {unreadCount > 9 ? "9+" : unreadCount}
-              </span>
-            )}
+  const NotificationDropdown = () => (
+    <div className="absolute right-0 top-11 bg-white border border-gray-100 rounded-2xl shadow-xl w-80 z-50 overflow-hidden">
+      <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
+        {unreadCount > 0 && (
+          <button onClick={markAllRead} className="text-xs text-orange-500 hover:text-orange-600 font-medium">
+            Mark all read
           </button>
-
-          {showNotifications && (
-            <div className="absolute right-0 top-10 bg-white border border-gray-100 rounded-2xl shadow-lg w-80 z-50 overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-50 flex items-center justify-between">
-                <h3 className="text-sm font-medium">Notifications</h3>
-                {unreadCount > 0 && (
-                  <button onClick={markAllRead} className="text-xs text-orange-500 hover:text-orange-600">
-                    Mark all read
-                  </button>
-                )}
-              </div>
-              <div className="max-h-96 overflow-y-auto">
-                {notifications.length === 0 ? (
-                  <div className="px-4 py-8 text-center text-sm text-gray-400">
-                    No notifications yet
-                  </div>
-                ) : (
-                  notifications.map((n: any) => {
-                    const data = typeof n.data === "string" ? JSON.parse(n.data) : n.data
-                    return (
-                      <div key={n.id} className={`px-4 py-3 border-b border-gray-50 ${!n.read_at ? "bg-orange-50" : ""}`}>
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="text-sm text-gray-700 flex-1">{n.message}</p>
-                          <button
-                            onClick={() => deleteNotification(n.id)}
-                            className="text-xs text-gray-300 hover:text-red-400 flex-shrink-0">
-                            ✕
-                          </button>
-                        </div>
-                        {n.type === "collab_invite" && !n.read_at && (
-                          <div className="flex gap-2 mt-2">
-                            <button
-                              onClick={() => respondToInvite(n, "accept")}
-                              className="flex-1 bg-orange-500 text-white rounded-lg py-1 text-xs font-medium hover:bg-orange-600">
-                              Accept
-                            </button>
-                            <button
-                              onClick={() => respondToInvite(n, "decline")}
-                              className="flex-1 border border-gray-200 text-gray-500 rounded-lg py-1 text-xs hover:bg-gray-50">
-                              Decline
-                            </button>
-                          </div>
-                        )}
-                        {n.type === "collab_invite" && n.read_at && (
-                          <p className="text-xs text-gray-400 mt-1 italic">✓ Responded</p>
-                        )}
-                        <p className="text-xs text-gray-400 mt-1">
-                          {new Date(n.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                    )
-                  })
-                )}
-              </div>
+        )}
+      </div>
+      <div className="max-h-96 overflow-y-auto divide-y divide-gray-50">
+        {notifications.length === 0 ? (
+          <div className="px-4 py-10 text-center">
+            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+              <BellIcon />
             </div>
+            <p className="text-sm text-gray-400">You're all caught up</p>
+          </div>
+        ) : (
+          notifications.map((n: any) => {
+            return (
+              <div key={n.id} className={`px-4 py-3 ${!n.read_at ? "bg-orange-50/60" : ""}`}>
+                <div className="flex items-start gap-2">
+                  {!n.read_at && <span className="w-2 h-2 rounded-full bg-orange-500 mt-1.5 flex-shrink-0" />}
+                  <p className={`text-sm text-gray-700 flex-1 leading-snug ${n.read_at ? "pl-4" : ""}`}>{n.message}</p>
+                  <button onClick={() => deleteNotification(n.id)} className="text-gray-300 hover:text-red-400 transition flex-shrink-0 text-xs mt-0.5">✕</button>
+                </div>
+                {n.type === "collab_invite" && !n.read_at && (
+                  <div className="flex gap-2 mt-2 pl-4">
+                    <button onClick={() => respondToInvite(n, "accept")} className="flex-1 bg-orange-500 text-white rounded-lg py-1.5 text-xs font-semibold hover:bg-orange-600 transition">
+                      Accept
+                    </button>
+                    <button onClick={() => respondToInvite(n, "decline")} className="flex-1 border border-gray-200 text-gray-500 rounded-lg py-1.5 text-xs hover:bg-gray-50 transition">
+                      Decline
+                    </button>
+                  </div>
+                )}
+                {n.type === "collab_invite" && n.read_at && (
+                  <p className="text-xs text-gray-400 mt-1 pl-4 italic">✓ Responded</p>
+                )}
+                <p className="text-xs text-gray-400 mt-1 pl-4">{new Date(n.created_at).toLocaleDateString()}</p>
+              </div>
+            )
+          })
+        )}
+      </div>
+    </div>
+  )
+
+  return (
+    <>
+      <nav className="bg-white border-b border-gray-100 px-4 sm:px-6 py-2 flex items-center justify-between relative z-30">
+        {/* Logo */}
+        <Link href="/dashboard" className="flex items-center gap-1 flex-shrink-0">
+          <Image src="/logo.svg" alt="SmartFlavr" width={80} height={80} />
+          <span className="text-xl font-medium text-gray-900">Smart<span className="text-orange-500">Flavr</span></span>
+        </Link>
+
+        {/* Desktop nav links */}
+        <div className="hidden md:flex items-center gap-6">
+          {navLinks.map(link => (
+            <Link key={link.href} href={link.href} className="text-sm text-gray-500 hover:text-gray-900 transition">
+              {link.label}
+            </Link>
+          ))}
+        </div>
+
+        {/* Right side */}
+        <div className="flex items-center gap-2">
+          {/* Bell — visible on all screen sizes */}
+          <div className="relative">
+            <button
+              onClick={handleBellClick}
+              className={`relative p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition ${bellRinging ? "animate-bell-ring" : ""}`}
+              style={{ transformOrigin: "top center" }}
+            >
+              <BellIcon />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold leading-none">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </button>
+            {showNotifications && <NotificationDropdown />}
+          </div>
+
+          {/* Desktop: avatar + dropdown */}
+          <div className="relative hidden md:block">
+            <button
+              onClick={() => { setShowMenu(prev => !prev); setShowNotifications(false) }}
+              className="rounded-full focus:outline-none focus:ring-2 focus:ring-orange-300">
+              <Avatar />
+            </button>
+            {showMenu && (
+              <div className="absolute right-0 top-11 bg-white border border-gray-100 rounded-xl shadow-lg w-48 z-50 py-1 overflow-hidden">
+                {username && (
+                  <Link href={`/u/${username}`} onClick={() => setShowMenu(false)} className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition">
+                    View profile
+                  </Link>
+                )}
+                <Link href="/profile/settings" onClick={() => setShowMenu(false)} className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition">
+                  Settings
+                </Link>
+                {isAdmin && (
+                  <Link href="/admin" onClick={() => setShowMenu(false)} className="block px-4 py-2 text-sm text-orange-500 font-medium hover:bg-gray-50 transition">
+                    Admin Panel
+                  </Link>
+                )}
+                <div className="border-t border-gray-100 my-1" />
+                <button onClick={() => signOut({ callbackUrl: "/" })} className="block w-full text-left px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition">
+                  Sign out
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Mobile: hamburger */}
+          <button
+            onClick={() => { setShowSidebar(true); setShowNotifications(false); setShowMenu(false) }}
+            className="md:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-50 transition"
+            aria-label="Open menu">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+        </div>
+      </nav>
+
+      {/* Mobile sidebar backdrop */}
+      <div
+        className={`fixed inset-0 bg-black/40 z-40 md:hidden transition-opacity duration-300 ${showSidebar ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+        onClick={() => setShowSidebar(false)}
+      />
+
+      {/* Mobile sidebar drawer */}
+      <div className={`fixed top-0 right-0 h-full w-72 bg-white z-50 shadow-2xl md:hidden flex flex-col transform transition-transform duration-300 ease-in-out ${showSidebar ? "translate-x-0" : "translate-x-full"}`}>
+        {/* Sidebar header: avatar + name + close */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <Avatar size={40} />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-gray-900 truncate">{session?.user?.name}</p>
+              {username && <p className="text-xs text-gray-400">@{username}</p>}
+            </div>
+          </div>
+          <button onClick={() => setShowSidebar(false)} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-50 transition" aria-label="Close menu">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Sidebar links */}
+        <div className="flex-1 overflow-y-auto py-2">
+          <Link href="/dashboard" onClick={() => setShowSidebar(false)} className="flex items-center px-5 py-3 text-sm text-gray-700 hover:bg-gray-50 transition font-medium">
+            Dashboard
+          </Link>
+          <div className="border-t border-gray-50 my-1" />
+          {navLinks.map(link => (
+            <Link key={link.href} href={link.href} onClick={() => setShowSidebar(false)} className="flex items-center px-5 py-3 text-sm text-gray-600 hover:bg-gray-50 transition">
+              {link.label}
+            </Link>
+          ))}
+          <div className="border-t border-gray-50 my-1" />
+          {username && (
+            <Link href={`/u/${username}`} onClick={() => setShowSidebar(false)} className="flex items-center px-5 py-3 text-sm text-gray-600 hover:bg-gray-50 transition">
+              My Profile
+            </Link>
+          )}
+          <Link href="/profile/settings" onClick={() => setShowSidebar(false)} className="flex items-center px-5 py-3 text-sm text-gray-600 hover:bg-gray-50 transition">
+            Settings
+          </Link>
+          {isAdmin && (
+            <Link href="/admin" onClick={() => setShowSidebar(false)} className="flex items-center px-5 py-3 text-sm text-orange-500 font-semibold hover:bg-gray-50 transition">
+              Admin Panel
+            </Link>
           )}
         </div>
 
-        <span className="text-sm text-gray-600">{session?.user?.name}</span>
-        <div className="relative">
-          <button onClick={() => { setShowMenu(!showMenu); setShowNotifications(false) }}>
-            {profileImage ? (
-              <img src={profileImage} width={32} height={32} className="rounded-full cursor-pointer object-cover"/>
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white text-sm font-medium cursor-pointer">
-                {initials}
-              </div>
-            )}
+        {/* Sign out pinned to bottom */}
+        <div className="border-t border-gray-100 p-5">
+          <button
+            onClick={() => signOut({ callbackUrl: "/" })}
+            className="w-full text-left text-sm text-red-400 hover:text-red-500 transition font-medium py-1">
+            Sign out
           </button>
-          {showMenu && (
-            <div className="absolute right-0 top-10 bg-white border border-gray-100 rounded-xl shadow-sm w-48 z-50 py-1">
-              {username && (
-                <Link
-                  href={`/u/${username}`}
-                  onClick={() => setShowMenu(false)}
-                  className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
-                  Profile
-                </Link>
-              )}
-              <Link
-                href="/feed"
-                onClick={() => setShowMenu(false)}
-                className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
-                Feed
-              </Link>
-              <Link
-                href="/explore"
-                onClick={() => setShowMenu(false)}
-                className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
-                Explore
-              </Link>
-              <Link
-                href="/favorites"
-                onClick={() => setShowMenu(false)}
-                className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
-                Favorites
-              </Link>
-              <Link
-                href="/inventory"
-                onClick={() => setShowMenu(false)}
-                className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
-                Inventory
-              </Link>
-              <Link
-                href="/meal-planner"
-                onClick={() => setShowMenu(false)}
-                className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
-                Meal Plan
-              </Link>
-              <Link
-                href="/profile/settings"
-                onClick={() => setShowMenu(false)}
-                className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
-                Settings
-              </Link>
-              {isAdmin && (
-                <Link
-                  href="/admin"
-                  onClick={() => setShowMenu(false)}
-                  className="block px-4 py-2 text-sm text-orange-500 font-medium hover:bg-gray-50">
-                  Admin Panel
-                </Link>
-              )}
-              <div className="border-t border-gray-100 my-1"/>
-              <button
-                onClick={() => signOut({ callbackUrl: "/" })}
-                className="block w-full text-left px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
-                Sign out
-              </button>
-            </div>
-          )}
         </div>
       </div>
-    </nav>
+    </>
   )
 }
