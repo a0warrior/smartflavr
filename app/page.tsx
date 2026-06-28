@@ -93,36 +93,42 @@ export default function HomePage() {
       </nav>
 
       {/* Hero */}
-      <div className="relative px-6 pt-16 pb-28 text-center overflow-hidden bg-white">
+      <div className="relative px-6 pt-16 pb-28 text-center overflow-hidden">
 
-        {/* Gradient orbs — radial-gradient fades naturally, no blur artifacts */}
+        {/* Animated shifting gradient base */}
+        <div
+          className="absolute inset-0 pointer-events-none animate-gradient-shift"
+          style={{
+            background: "linear-gradient(135deg, #ffffff 0%, #fff7ed 25%, #ffedd5 50%, #fff7ed 75%, #ffffff 100%)",
+            backgroundSize: "300% 300%",
+          }}
+        />
+
+        {/* Focused glow spots that drift around */}
         <div
           className="absolute pointer-events-none animate-float"
           style={{
-            width: "900px", height: "900px",
-            top: "-300px", right: "-300px",
-            background: "radial-gradient(circle, rgba(249,115,22,0.13) 0%, rgba(251,146,60,0.06) 45%, transparent 70%)",
-            animationDuration: "14s",
+            width: "420px", height: "420px",
+            top: "-80px", right: "5%",
+            background: "radial-gradient(circle, rgba(249,115,22,0.28) 0%, rgba(251,146,60,0.10) 50%, transparent 70%)",
           }}
         />
         <div
           className="absolute pointer-events-none animate-float-slow"
           style={{
-            width: "800px", height: "800px",
-            bottom: "-280px", left: "-280px",
-            background: "radial-gradient(circle, rgba(253,186,116,0.18) 0%, rgba(249,115,22,0.07) 45%, transparent 70%)",
-            animationDuration: "18s",
-            animationDelay: "2s",
+            width: "380px", height: "380px",
+            bottom: "-60px", left: "8%",
+            background: "radial-gradient(circle, rgba(253,186,116,0.32) 0%, rgba(249,115,22,0.10) 50%, transparent 70%)",
+            animationDelay: "3s",
           }}
         />
         <div
           className="absolute pointer-events-none animate-float"
           style={{
-            width: "600px", height: "600px",
-            top: "10%", left: "20%",
-            background: "radial-gradient(circle, rgba(254,215,170,0.15) 0%, transparent 65%)",
-            animationDuration: "11s",
-            animationDelay: "5s",
+            width: "300px", height: "300px",
+            top: "30%", left: "-40px",
+            background: "radial-gradient(circle, rgba(254,215,170,0.35) 0%, transparent 65%)",
+            animationDelay: "1.5s",
           }}
         />
 

@@ -8,22 +8,29 @@ module.exports = {
     extend: {
       keyframes: {
         float: {
-          '0%, 100%': { transform: 'translateY(0px)' },
-          '50%': { transform: 'translateY(-18px)' },
+          '0%, 100%': { transform: 'translateY(0px) translateX(0px)' },
+          '33%': { transform: 'translateY(-24px) translateX(12px)' },
+          '66%': { transform: 'translateY(-12px) translateX(-8px)' },
         },
         'float-slow': {
-          '0%, 100%': { transform: 'translateY(0px)' },
-          '50%': { transform: 'translateY(-10px)' },
+          '0%, 100%': { transform: 'translateY(0px) translateX(0px)' },
+          '33%': { transform: 'translateY(16px) translateX(-14px)' },
+          '66%': { transform: 'translateY(-10px) translateX(10px)' },
         },
         'fade-up': {
           '0%': { opacity: '0', transform: 'translateY(20px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
+        'gradient-shift': {
+          '0%, 100%': { backgroundPosition: '0% 50%' },
+          '50%': { backgroundPosition: '100% 50%' },
+        },
       },
       animation: {
-        float: 'float 6s ease-in-out infinite',
-        'float-slow': 'float-slow 9s ease-in-out infinite',
+        float: 'float 8s ease-in-out infinite',
+        'float-slow': 'float-slow 12s ease-in-out infinite',
         'fade-up': 'fade-up 0.5s ease-out forwards',
+        'gradient-shift': 'gradient-shift 10s ease infinite',
       },
     },
   },
