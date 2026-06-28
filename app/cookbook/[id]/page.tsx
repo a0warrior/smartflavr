@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter, useParams } from "next/navigation"
 import Navbar from "@/app/components/Navbar"
+import ImageCropper from "@/app/components/ImageCropper"
 import CollaboratorModal from "@/app/components/CollaboratorModal"
 import NutritionPanel from "@/app/components/NutritionPanel"
 import { db } from "@/lib/firebase"
@@ -75,6 +76,7 @@ export default function CookbookPage() {
   const [favorites, setFavorites] = useState<Set<number>>(new Set())
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
   const recipeRefs = useRef<any>({})
+  const [recipeCropSrc, setRecipeCropSrc] = useState("")
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -285,20 +287,23 @@ export default function CookbookPage() {
     await fetchCategories()
   }
 
-  async function uploadPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+  function uploadPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onloadend = async () => {
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: reader.result }),
-      })
-      const data = await res.json()
-      if (data.success) updateEdited("image_url", data.url)
-    }
+    reader.onloadend = () => setRecipeCropSrc(reader.result as string)
     reader.readAsDataURL(file)
+  }
+
+  async function handleRecipeCrop(cropped: string) {
+    setRecipeCropSrc("")
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: cropped }),
+    })
+    const data = await res.json()
+    if (data.success) updateEdited("image_url", data.url)
   }
 
   async function handleDragEnd(event: any) {
@@ -858,6 +863,15 @@ export default function CookbookPage() {
             setShowCollaboratorModal(false)
             fetchCookbookInfo()
           }}
+        />
+      )}
+
+      {recipeCropSrc && (
+        <ImageCropper
+          image={recipeCropSrc}
+          aspect={4 / 3}
+          onCrop={handleRecipeCrop}
+          onCancel={() => setRecipeCropSrc("")}
         />
       )}
     </div>

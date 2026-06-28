@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Suspense } from "react"
 import Navbar from "@/app/components/Navbar"
+import ImageCropper from "@/app/components/ImageCropper"
 
 function ProfileSettingsContent() {
   const { data: session, status } = useSession()
@@ -23,6 +24,7 @@ function ProfileSettingsContent() {
   const [success, setSuccess] = useState("")
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [cropSrc, setCropSrc] = useState("")
 
   // Privacy state
   const [profileVisibility, setProfileVisibility] = useState("everyone")
@@ -73,22 +75,25 @@ function ProfileSettingsContent() {
     }
   }
 
-  async function uploadProfilePhoto(e: React.ChangeEvent<HTMLInputElement>) {
+  function selectProfilePhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    setUploading(true)
     const reader = new FileReader()
-    reader.onloadend = async () => {
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: reader.result }),
-      })
-      const data = await res.json()
-      if (data.success) setProfileImage(data.url)
-      setUploading(false)
-    }
+    reader.onloadend = () => setCropSrc(reader.result as string)
     reader.readAsDataURL(file)
+  }
+
+  async function handleProfileCrop(cropped: string) {
+    setCropSrc("")
+    setUploading(true)
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: cropped }),
+    })
+    const data = await res.json()
+    if (data.success) setProfileImage(data.url)
+    setUploading(false)
   }
 
   async function saveProfile() {
@@ -245,7 +250,7 @@ function ProfileSettingsContent() {
                         Remove photo
                       </button>
                     )}
-                    <input type="file" id="profile-photo-upload" accept="image/*" onChange={uploadProfilePhoto} className="hidden"/>
+                    <input type="file" id="profile-photo-upload" accept="image/*" onChange={selectProfilePhoto} className="hidden"/>
                   </div>
                 </div>
               </div>
@@ -388,6 +393,15 @@ function ProfileSettingsContent() {
             </div>
           </div>
         </div>
+      )}
+
+      {cropSrc && (
+        <ImageCropper
+          image={cropSrc}
+          aspect={1}
+          onCrop={handleProfileCrop}
+          onCancel={() => setCropSrc("")}
+        />
       )}
     </div>
   )

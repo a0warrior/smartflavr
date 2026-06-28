@@ -106,9 +106,9 @@ export default function Navbar() {
 
   function Avatar({ size = 32 }: { size?: number }) {
     return profileImage ? (
-      <img src={profileImage} width={size} height={size} className="rounded-full object-cover ring-2 ring-gray-900" style={{ width: size, height: size }} />
+      <img src={profileImage} width={size} height={size} className="rounded-full object-cover ring-2 ring-gray-500" style={{ width: size, height: size }} />
     ) : (
-      <div className="rounded-full bg-orange-500 flex items-center justify-center text-white font-medium ring-2 ring-gray-900" style={{ width: size, height: size, fontSize: size * 0.4 }}>
+      <div className="rounded-full bg-orange-500 flex items-center justify-center text-white font-medium ring-2 ring-gray-500" style={{ width: size, height: size, fontSize: size * 0.4 }}>
         {initials}
       </div>
     )
