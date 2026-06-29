@@ -62,7 +62,7 @@ function DotsIcon() {
   )
 }
 
-function PostCard({ post, currentUserId, isTimedOut, onDelete, onUpdate }: any) {
+function PostCard({ post, currentUserId, isAdmin, isTimedOut, onDelete, onUpdate }: any) {
   const [showComments, setShowComments] = useState(false)
   const [comments, setComments] = useState<any[]>([])
   const [newComment, setNewComment] = useState("")
@@ -81,6 +81,8 @@ function PostCard({ post, currentUserId, isTimedOut, onDelete, onUpdate }: any) 
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null)
   const [editCommentText, setEditCommentText] = useState("")
   const [tapHeartVisible, setTapHeartVisible] = useState(false)
+  const [warningDismissed, setWarningDismissed] = useState(false)
+  const [showTimeoutMenu, setShowTimeoutMenu] = useState(false)
   const lastTap = useRef(0)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -186,6 +188,28 @@ function PostCard({ post, currentUserId, isTimedOut, onDelete, onUpdate }: any) 
 
   const isOwn = post.user_id === currentUserId
 
+  async function setContentWarning(on: boolean) {
+    await fetch("/api/posts", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: post.id, content_warning: on }),
+    })
+    onUpdate(post.id, { content_warning: on ? 1 : 0 })
+    setShowMenu(false)
+  }
+
+  async function adminTimeoutUser(minutes: number) {
+    await fetch("/api/admin/users", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: post.user_id, timeout_minutes: minutes }),
+    })
+    setShowTimeoutMenu(false)
+    setShowMenu(false)
+  }
+
+  const showDots = isOwn || isAdmin
+
   return (
     <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
       <div className="p-4">
@@ -202,39 +226,93 @@ function PostCard({ post, currentUserId, isTimedOut, onDelete, onUpdate }: any) 
                 {post.updated_at && (
                   <span className="text-xs text-gray-400 italic">(edited)</span>
                 )}
+                {post.content_warning === 1 && (
+                  <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">⚠️ Warning</span>
+                )}
                 {post.visibility === "followers" && (
                   <span className="text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full">👥 Followers</span>
                 )}
               </div>
             </div>
           </Link>
-          {isOwn && (
+          {showDots && (
             <div className="relative" ref={menuRef}>
               <button
-                onClick={() => setShowMenu(p => !p)}
+                onClick={() => { setShowMenu(p => !p); setShowTimeoutMenu(false) }}
                 className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition">
                 <DotsIcon />
               </button>
               {showMenu && (
-                <div className="absolute right-0 top-8 bg-white border border-gray-100 rounded-xl shadow-lg z-10 py-1 w-32 overflow-hidden">
-                  <button
-                    onClick={() => { setEditMode(true); setShowMenu(false) }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => { onDelete(post.id); setShowMenu(false) }}
-                    className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50">
-                    Delete
-                  </button>
+                <div className="absolute right-0 top-8 bg-white border border-gray-100 rounded-xl shadow-lg z-20 py-1 w-48 overflow-hidden">
+                  {isOwn && (
+                    <button
+                      onClick={() => { setEditMode(true); setShowMenu(false) }}
+                      className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
+                      ✏️ Edit post
+                    </button>
+                  )}
+                  {isAdmin && (
+                    <>
+                      <button
+                        onClick={() => setContentWarning(post.content_warning !== 1)}
+                        className="w-full text-left px-4 py-2.5 text-sm text-yellow-700 hover:bg-yellow-50">
+                        {post.content_warning === 1 ? "✅ Remove warning" : "⚠️ Add content warning"}
+                      </button>
+                      {!isOwn && (
+                        <div className="border-t border-gray-50">
+                          {showTimeoutMenu ? (
+                            <div className="px-4 py-2">
+                              <p className="text-xs text-gray-400 mb-2 font-medium">Timeout duration</p>
+                              <div className="grid grid-cols-2 gap-1">
+                                {([["15 min", 15], ["1 hour", 60], ["24 hours", 1440], ["7 days", 10080]] as [string, number][]).map(([label, mins]) => (
+                                  <button key={label} onClick={() => adminTimeoutUser(mins)}
+                                    className="px-2 py-1.5 text-xs bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 text-left">
+                                    {label}
+                                  </button>
+                                ))}
+                              </div>
+                              <button onClick={() => setShowTimeoutMenu(false)} className="text-xs text-gray-400 mt-2">Cancel</button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setShowTimeoutMenu(true)}
+                              className="w-full text-left px-4 py-2.5 text-sm text-orange-600 hover:bg-orange-50">
+                              ⏱ Timeout user
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+                  <div className="border-t border-gray-50">
+                    <button
+                      onClick={() => { onDelete(post.id); setShowMenu(false) }}
+                      className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50">
+                      🗑️ {isAdmin && !isOwn ? "Remove post" : "Delete post"}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
           )}
         </div>
 
-        {/* Content — edit mode or read mode */}
-        {editMode ? (
+        {/* Content warning overlay */}
+        {post.content_warning === 1 && !warningDismissed && !editMode && (
+          <div className="mb-3 rounded-xl bg-yellow-50 border border-yellow-200 p-4 flex flex-col items-center text-center gap-2">
+            <span className="text-2xl">⚠️</span>
+            <p className="text-sm font-medium text-yellow-800">Content Warning</p>
+            <p className="text-xs text-yellow-600">This post has been flagged by a moderator. It may contain sensitive content.</p>
+            <button
+              onClick={() => setWarningDismissed(true)}
+              className="mt-1 px-4 py-1.5 bg-yellow-200 hover:bg-yellow-300 text-yellow-900 text-xs font-medium rounded-lg transition">
+              Show anyway
+            </button>
+          </div>
+        )}
+
+        {/* Content — edit mode or read mode (hidden behind warning until dismissed) */}
+        {(post.content_warning !== 1 || warningDismissed) && (editMode ? (
           <div className="mb-3">
             <textarea
               value={editContent}
@@ -307,7 +385,7 @@ function PostCard({ post, currentUserId, isTimedOut, onDelete, onUpdate }: any) 
               </div>
             )}
           </>
-        )}
+        ))}
 
         {/* Like + Comment buttons */}
         {!editMode && (
@@ -439,6 +517,7 @@ export default function FeedPage() {
   const [myRecipes, setMyRecipes] = useState([])
   const [uploading, setUploading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   const isTimedOut = Boolean(postTimeoutUntil && new Date(postTimeoutUntil) > new Date())
 
@@ -459,6 +538,7 @@ export default function FeedPage() {
     if (data.user) {
       setCurrentUserId(data.user.id)
       setPostTimeoutUntil(data.user.post_timeout_until || null)
+      setIsAdmin(data.user.is_admin === 1)
     }
   }
 
@@ -597,6 +677,7 @@ export default function FeedPage() {
                 key={post.id}
                 post={post}
                 currentUserId={currentUserId}
+                isAdmin={isAdmin}
                 isTimedOut={isTimedOut}
                 onDelete={deletePost}
                 onUpdate={handlePostUpdate}
