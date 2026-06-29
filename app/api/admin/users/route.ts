@@ -20,20 +20,25 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
-  const { user_id, is_admin, status } = await req.json()
+  const { user_id, is_admin, status, timeout_minutes } = await req.json()
 
   if (status !== undefined) {
-    await pool.query(
-      "UPDATE users SET status = ? WHERE id = ?",
-      [status, user_id]
-    )
+    await pool.query("UPDATE users SET status = ? WHERE id = ?", [status, user_id])
   }
 
   if (is_admin !== undefined) {
-    await pool.query(
-      "UPDATE users SET is_admin = ? WHERE id = ?",
-      [is_admin, user_id]
-    )
+    await pool.query("UPDATE users SET is_admin = ? WHERE id = ?", [is_admin, user_id])
+  }
+
+  if (timeout_minutes !== undefined) {
+    if (timeout_minutes > 0) {
+      await pool.query(
+        "UPDATE users SET post_timeout_until = DATE_ADD(NOW(), INTERVAL ? MINUTE) WHERE id = ?",
+        [timeout_minutes, user_id]
+      )
+    } else {
+      await pool.query("UPDATE users SET post_timeout_until = NULL WHERE id = ?", [user_id])
+    }
   }
 
   return NextResponse.json({ success: true })

@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   }
 
   const [currentUser] = await pool.query(
-    "SELECT id FROM users WHERE email = ?",
+    "SELECT id, name, username FROM users WHERE email = ?",
     [session.user.email]
   ) as any[]
 
@@ -26,11 +26,29 @@ export async function POST(req: Request) {
       [post_id, currentUser[0].id]
     )
     return NextResponse.json({ liked: false })
-  } else {
-    await pool.query(
-      "INSERT INTO post_likes (post_id, user_id) VALUES (?, ?)",
-      [post_id, currentUser[0].id]
-    )
-    return NextResponse.json({ liked: true })
   }
+
+  await pool.query(
+    "INSERT INTO post_likes (post_id, user_id) VALUES (?, ?)",
+    [post_id, currentUser[0].id]
+  )
+
+  // Notify post author (not self)
+  const [postRows] = await pool.query(
+    "SELECT user_id FROM posts WHERE id = ?",
+    [post_id]
+  ) as any[]
+
+  if (postRows.length > 0 && postRows[0].user_id !== currentUser[0].id) {
+    await pool.query(
+      "INSERT INTO notifications (user_id, type, message, data) VALUES (?, 'post_like', ?, ?)",
+      [
+        postRows[0].user_id,
+        `${currentUser[0].name} liked your post`,
+        JSON.stringify({ liker_username: currentUser[0].username, post_id }),
+      ]
+    )
+  }
+
+  return NextResponse.json({ liked: true })
 }

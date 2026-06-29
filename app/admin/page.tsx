@@ -32,6 +32,7 @@ export default function AdminPage() {
   const [userSearch, setUserSearch] = useState("")
   const [deleteUserTarget, setDeleteUserTarget] = useState<any>(null)
   const [deletingUser, setDeletingUser] = useState(false)
+  const [timeoutTarget, setTimeoutTarget] = useState<string | null>(null)
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login?code=returning")
@@ -115,6 +116,16 @@ export default function AdminPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ user_id: userId, status }),
     })
+    fetchData()
+  }
+
+  async function timeoutUser(userId: string, minutes: number) {
+    await fetch("/api/admin/users", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: userId, timeout_minutes: minutes }),
+    })
+    setTimeoutTarget(null)
     fetchData()
   }
 
@@ -309,6 +320,11 @@ export default function AdminPage() {
                           {user.status === "banned" && (
                             <span className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded-full">Banned</span>
                           )}
+                          {user.post_timeout_until && new Date(user.post_timeout_until) > new Date() && (
+                            <span className="text-xs bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full">
+                              ⏱ Post timeout
+                            </span>
+                          )}
                         </div>
                         <div className="text-xs text-gray-400">
                           {user.username ? `@${user.username}` : "No username set"} · {user.email}
@@ -351,6 +367,30 @@ export default function AdminPage() {
                               onClick={() => updateUserStatus(user.id, "active")}
                               className="px-3 py-1 rounded-lg text-xs border border-green-200 text-green-600 hover:bg-green-50 transition">
                               Reactivate
+                            </button>
+                          )}
+                          {timeoutTarget === user.id ? (
+                            <div className="flex items-center gap-1 bg-orange-50 border border-orange-200 rounded-lg px-2 py-1">
+                              <span className="text-xs text-orange-600 font-medium mr-1">Timeout:</span>
+                              {[["15m", 15], ["1h", 60], ["24h", 1440], ["7d", 10080]].map(([label, mins]) => (
+                                <button key={label as string} onClick={() => timeoutUser(user.id, mins as number)}
+                                  className="px-2 py-0.5 text-xs bg-white border border-orange-200 rounded text-orange-600 hover:bg-orange-100">
+                                  {label}
+                                </button>
+                              ))}
+                              <button onClick={() => setTimeoutTarget(null)} className="text-xs text-gray-400 ml-1">✕</button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setTimeoutTarget(user.id)}
+                              className="px-3 py-1 rounded-lg text-xs border border-orange-200 text-orange-500 hover:bg-orange-50 transition">
+                              ⏱ Timeout
+                            </button>
+                          )}
+                          {user.post_timeout_until && new Date(user.post_timeout_until) > new Date() && (
+                            <button onClick={() => timeoutUser(user.id, 0)}
+                              className="px-3 py-1 rounded-lg text-xs border border-gray-200 text-gray-500 hover:bg-gray-50 transition">
+                              Clear timeout
                             </button>
                           )}
                           <button

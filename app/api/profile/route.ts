@@ -9,7 +9,7 @@ export async function GET(req: Request) {
   }
 
   const [users]: any = await pool.query(
-    "SELECT id, name, email, image, username, bio, profile_image, is_admin FROM users WHERE email = ?",
+    "SELECT id, name, email, image, username, bio, profile_image, is_admin, post_timeout_until FROM users WHERE email = ?",
     [session.user.email]
   )
 

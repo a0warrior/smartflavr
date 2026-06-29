@@ -36,6 +36,19 @@ module.exports = {
           '70%':  { transform: 'rotate(2deg)' },
           '100%': { transform: 'rotate(0deg)' },
         },
+        'heart-pop': {
+          '0%':   { transform: 'scale(1)' },
+          '30%':  { transform: 'scale(1.45)' },
+          '60%':  { transform: 'scale(0.88)' },
+          '80%':  { transform: 'scale(1.12)' },
+          '100%': { transform: 'scale(1)' },
+        },
+        'bubble-pop': {
+          '0%':   { transform: 'scale(1)' },
+          '40%':  { transform: 'scale(0.82)' },
+          '70%':  { transform: 'scale(1.12)' },
+          '100%': { transform: 'scale(1)' },
+        },
       },
       animation: {
         float: 'float 8s ease-in-out infinite',
@@ -43,6 +56,8 @@ module.exports = {
         'fade-up': 'fade-up 0.5s ease-out forwards',
         'gradient-shift': 'gradient-shift 10s ease infinite',
         'bell-ring': 'bell-ring 0.7s ease-out',
+        'heart-pop': 'heart-pop 0.35s cubic-bezier(.36,.07,.19,.97)',
+        'bubble-pop': 'bubble-pop 0.3s ease-out',
       },
     },
   },
