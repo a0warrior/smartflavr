@@ -71,7 +71,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
               <div className="flex flex-wrap gap-4 sm:gap-6">
                 <div className="text-center">
                   <div className="text-base sm:text-lg font-medium text-gray-900">{cookbooks.length}</div>
-                  <div className="text-xs text-gray-400">Cookbooks</div>
+                  <div className="text-xs text-gray-400">Public cookbooks</div>
                 </div>
                 <div className="text-center">
                   <div className="text-base sm:text-lg font-medium text-gray-900">{recipeCount[0].count}</div>
