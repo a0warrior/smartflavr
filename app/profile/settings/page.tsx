@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Suspense } from "react"
 import Navbar from "@/app/components/Navbar"
 import ImageCropper from "@/app/components/ImageCropper"
+import { WarningIcon } from "@/app/components/Icons"
 
 function ProfileSettingsContent() {
   const { data: session, status } = useSession()
@@ -376,7 +377,7 @@ function ProfileSettingsContent() {
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm mx-4">
-            <div className="text-3xl mb-3 text-center">⚠️</div>
+            <div className="text-yellow-500 mb-3 flex justify-center"><WarningIcon size={32} /></div>
             <h2 className="text-lg font-medium text-center mb-2">Delete your account?</h2>
             <p className="text-sm text-gray-500 text-center mb-1">This will permanently delete:</p>
             <ul className="text-sm text-gray-500 mb-6 space-y-1 text-center">

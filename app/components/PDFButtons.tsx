@@ -42,9 +42,9 @@ function recipeHtml(recipe: any, today: string) {
     <h1>${recipe.title}</h1>
     ${recipe.description ? `<p class="desc">${recipe.description}</p>` : ""}
     <div class="chips">
-      ${recipe.prep_time ? `<span class="chip">⏱ ${recipe.prep_time}</span>` : ""}
-      ${recipe.servings ? `<span class="chip">👤 ${recipe.servings} servings</span>` : ""}
-      ${recipe.difficulty ? `<span class="chip">★ ${recipe.difficulty}</span>` : ""}
+      ${recipe.prep_time ? `<span class="chip">Time: ${recipe.prep_time}</span>` : ""}
+      ${recipe.servings ? `<span class="chip">Serves: ${recipe.servings}</span>` : ""}
+      ${recipe.difficulty ? `<span class="chip">Difficulty: ${recipe.difficulty}</span>` : ""}
     </div>
     ${ingredients.length ? `
       <div class="section-label">Ingredients</div>
@@ -59,7 +59,7 @@ function recipeHtml(recipe: any, today: string) {
         </div>
       `).join("")}
     ` : ""}
-    ${recipe.notes ? `<div class="notes">💡 ${recipe.notes}</div>` : ""}
+    ${recipe.notes ? `<div class="notes">Note: ${recipe.notes}</div>` : ""}
     ${recipe.source_url ? `<div class="source">Source: ${recipe.source_url}</div>` : ""}
     <div class="footer"><span>SmartFlavr</span><span>${recipe.title}</span></div>
   `

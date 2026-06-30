@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Navbar from "@/app/components/Navbar"
 import Link from "next/link"
+import { WarningIcon, PeopleIcon, CheckIcon, ClockIcon, HeartIcon, UserIcon, QuestionIcon, PlateIcon, BookIcon, CameraIcon, PencilIcon, GlobeIcon, TrashIcon } from "@/app/components/Icons"
 
 function timeAgo(date: string) {
   const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000)
@@ -34,17 +35,6 @@ function Avatar({ image, name, size = "sm" }: { image?: string; name?: string; s
   )
 }
 
-function HeartIcon({ filled }: { filled: boolean }) {
-  return filled ? (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#ef4444">
-      <path d="M12 21.593c-.52-.462-8.592-7.11-8.592-12.177C3.408 5.853 6.058 3 9.207 3c1.777 0 3.375.98 4.293 2.467A5.024 5.024 0 0117.292 3C20.442 3 23.09 5.853 23.09 9.416c0 5.067-8.07 11.715-8.59 12.177L12 21.593z"/>
-    </svg>
-  ) : (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-    </svg>
-  )
-}
 
 function CommentIcon({ open }: { open: boolean }) {
   return (
@@ -229,10 +219,10 @@ function PostCard({ post, currentUserId, isAdmin, isTimedOut, onDelete, onUpdate
                   <span className="text-xs text-gray-400 italic">(edited)</span>
                 )}
                 {post.content_warning === 1 && (
-                  <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">⚠️ Warning</span>
+                  <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full flex items-center gap-1"><WarningIcon size={11} />Warning</span>
                 )}
                 {post.visibility === "followers" && (
-                  <span className="text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full">👥 Followers</span>
+                  <span className="text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full flex items-center gap-1"><PeopleIcon size={11} />Followers</span>
                 )}
               </div>
             </div>
@@ -249,8 +239,8 @@ function PostCard({ post, currentUserId, isAdmin, isTimedOut, onDelete, onUpdate
                   {isOwn && (
                     <button
                       onClick={() => { setEditMode(true); setShowMenu(false) }}
-                      className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
-                      ✏️ Edit post
+                      className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                      <PencilIcon size={14} />Edit post
                     </button>
                   )}
                   {isAdmin && (
@@ -258,7 +248,7 @@ function PostCard({ post, currentUserId, isAdmin, isTimedOut, onDelete, onUpdate
                       <button
                         onClick={() => setContentWarning(post.content_warning !== 1)}
                         className="w-full text-left px-4 py-2.5 text-sm text-yellow-700 hover:bg-yellow-50">
-                        {post.content_warning === 1 ? "✅ Remove warning" : "⚠️ Add content warning"}
+                        {post.content_warning === 1 ? <><CheckIcon size={14} /> Remove warning</> : <><WarningIcon size={14} /> Add content warning</>}
                       </button>
                       {!isOwn && (
                         <div className="border-t border-gray-50">
@@ -279,7 +269,7 @@ function PostCard({ post, currentUserId, isAdmin, isTimedOut, onDelete, onUpdate
                             <button
                               onClick={() => setShowTimeoutMenu(true)}
                               className="w-full text-left px-4 py-2.5 text-sm text-orange-600 hover:bg-orange-50">
-                              ⏱ Timeout user
+                              <ClockIcon size={13} /> Timeout user
                             </button>
                           )}
                         </div>
@@ -289,8 +279,8 @@ function PostCard({ post, currentUserId, isAdmin, isTimedOut, onDelete, onUpdate
                   <div className="border-t border-gray-50">
                     <button
                       onClick={() => { onDelete(post.id); setShowMenu(false) }}
-                      className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50">
-                      🗑️ {isAdmin && !isOwn ? "Remove post" : "Delete post"}
+                      className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 flex items-center gap-2">
+                      <TrashIcon size={14} /> {isAdmin && !isOwn ? "Remove post" : "Delete post"}
                     </button>
                   </div>
                 </div>
@@ -302,7 +292,7 @@ function PostCard({ post, currentUserId, isAdmin, isTimedOut, onDelete, onUpdate
         {/* Content warning overlay */}
         {post.content_warning === 1 && !warningDismissed && !editMode && (
           <div className="mb-3 rounded-xl bg-yellow-50 border border-yellow-200 p-4 flex flex-col items-center text-center gap-2">
-            <span className="text-2xl">⚠️</span>
+            <div className="text-yellow-500"><WarningIcon size={24} /></div>
             <p className="text-sm font-medium text-yellow-800">Content Warning</p>
             <p className="text-xs text-yellow-600">This post has been flagged by a moderator. It may contain sensitive content.</p>
             <button
@@ -347,7 +337,7 @@ function PostCard({ post, currentUserId, isAdmin, isTimedOut, onDelete, onUpdate
                 <img src={post.image_url} className="w-full object-contain rounded-xl" />
                 {tapHeartVisible && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <span className="text-7xl tap-heart">❤️</span>
+                    <div className="tap-heart text-red-500"><HeartIcon filled size={72} /></div>
                   </div>
                 )}
               </div>
@@ -362,8 +352,8 @@ function PostCard({ post, currentUserId, isAdmin, isTimedOut, onDelete, onUpdate
                   <div className="text-sm font-medium text-gray-900">{post.recipe_title}</div>
                   {post.recipe_description && <div className="text-xs text-gray-500 mt-1 line-clamp-2">{post.recipe_description}</div>}
                   <div className="flex gap-3 mt-2 text-xs text-gray-400">
-                    {post.recipe_prep_time && <span>⏱ {post.recipe_prep_time}</span>}
-                    {post.recipe_servings && <span>👤 {post.recipe_servings}</span>}
+                    {post.recipe_prep_time && <span className="flex items-center gap-1"><ClockIcon size={11} />{post.recipe_prep_time}</span>}
+                    {post.recipe_servings && <span className="flex items-center gap-1"><UserIcon size={11} />{post.recipe_servings}</span>}
                   </div>
                 </div>
               </Link>
@@ -383,7 +373,7 @@ function PostCard({ post, currentUserId, isAdmin, isTimedOut, onDelete, onUpdate
             )}
             {post.type === "question" && (
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-3">
-                <div className="text-xs font-medium text-blue-600 mb-1">❓ Question</div>
+                <div className="text-xs font-medium text-blue-600 mb-1 flex items-center gap-1"><QuestionIcon size={12} />Question</div>
               </div>
             )}
           </>
@@ -396,7 +386,7 @@ function PostCard({ post, currentUserId, isAdmin, isTimedOut, onDelete, onUpdate
               onClick={toggleLike}
               className={`flex items-center gap-1.5 transition-colors ${liked ? "text-red-500" : "text-gray-400 hover:text-red-400"}`}>
               <div className={`relative ${heartAnim ? "animate-heart-pop" : ""}`}>
-                <HeartIcon filled={liked} />
+                <HeartIcon filled={liked} size={20} />
                 {burstAnim && (
                   <div className="absolute inset-0 pointer-events-none">
                     <div className="burst-particle burst-1"/>
@@ -629,7 +619,7 @@ export default function FeedPage() {
         {/* Timeout banner */}
         {isTimedOut && postTimeoutUntil && (
           <div className="mb-5 bg-orange-50 border border-orange-200 rounded-2xl px-4 py-3 flex items-start gap-3">
-            <span className="text-lg mt-0.5">⏱</span>
+            <div className="text-orange-500 mt-0.5"><ClockIcon size={18} /></div>
             <div>
               <p className="text-sm font-medium text-orange-700">Posting temporarily restricted</p>
               <p className="text-xs text-orange-500 mt-0.5">
@@ -657,7 +647,7 @@ export default function FeedPage() {
             onClick={() => !isTimedOut && setShowPostModal(true)}
             disabled={isTimedOut}
             className={`px-4 py-2 rounded-xl text-sm font-medium transition ${isTimedOut ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-orange-500 text-white hover:bg-orange-600"}`}>
-            {isTimedOut ? "⏱ Restricted" : "+ New Post"}
+            {isTimedOut ? <span className="flex items-center gap-1.5"><ClockIcon size={14} />Restricted</span> : "+ New Post"}
           </button>
         </div>
 
@@ -665,7 +655,7 @@ export default function FeedPage() {
         <div className="space-y-4">
           {posts.length === 0 ? (
             <div className="text-center py-16">
-              <p className="text-4xl mb-3">🍽️</p>
+              <div className="text-gray-300 mb-3 flex justify-center"><PlateIcon size={40} /></div>
               <p className="text-sm text-gray-400 mb-2">
                 {feedType === "following" ? "No posts from people you follow yet" : "No posts yet"}
               </p>
@@ -701,7 +691,7 @@ export default function FeedPage() {
                   key={t}
                   onClick={() => { setPostType(t); setPostImage(""); setPostRecipeId(""); setPostCookbookId("") }}
                   className={`px-3 py-1 rounded-full text-xs border transition ${postType === t ? "bg-orange-500 text-white border-orange-500" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
-                  {t === "text" ? "📝 Text" : t === "photo" ? "📷 Photo" : t === "recipe" ? "🍽️ Recipe" : t === "cookbook" ? "📖 Cookbook" : "❓ Question"}
+                  {t === "text" ? <span className="flex items-center gap-1"><PencilIcon size={12} />Text</span> : t === "photo" ? <span className="flex items-center gap-1"><CameraIcon size={12} />Photo</span> : t === "recipe" ? <span className="flex items-center gap-1"><PlateIcon size={12} />Recipe</span> : t === "cookbook" ? <span className="flex items-center gap-1"><BookIcon size={12} />Cookbook</span> : <span className="flex items-center gap-1"><QuestionIcon size={12} />Question</span>}
                 </button>
               ))}
             </div>
@@ -730,7 +720,7 @@ export default function FeedPage() {
                   onClick={() => document.getElementById("post-image-upload")?.click()}
                   className="border-2 border-dashed border-gray-100 rounded-xl h-40 flex items-center justify-center cursor-pointer hover:bg-gray-50 overflow-hidden">
                   {postImage ? <img src={postImage} className="w-full h-full object-cover" />
-                    : <span className="text-xs text-gray-400">{uploading ? "Uploading..." : "📷 Click to add photo"}</span>}
+                    : <span className="text-xs text-gray-400 flex items-center gap-1">{uploading ? "Uploading..." : <><CameraIcon size={13} />Click to add photo</>}</span>}
                 </div>
                 <input type="file" id="post-image-upload" accept="image/*" onChange={uploadImage} className="hidden" />
                 {postImage && <button onClick={() => setPostImage("")} className="text-xs text-red-400 mt-1">Remove photo</button>}
@@ -772,11 +762,11 @@ export default function FeedPage() {
               <div className="flex gap-3">
                 <button onClick={() => setPostVisibility("everyone")}
                   className={`flex-1 py-2 rounded-xl text-sm border transition ${postVisibility === "everyone" ? "bg-orange-500 text-white border-orange-500" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
-                  🌍 Everyone
+                  <span className="flex items-center gap-1.5 justify-center"><GlobeIcon size={14} />Everyone</span>
                 </button>
                 <button onClick={() => setPostVisibility("followers")}
                   className={`flex-1 py-2 rounded-xl text-sm border transition ${postVisibility === "followers" ? "bg-orange-500 text-white border-orange-500" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
-                  👥 Followers only
+                  <span className="flex items-center gap-1.5 justify-center"><PeopleIcon size={14} />Followers only</span>
                 </button>
               </div>
             </div>

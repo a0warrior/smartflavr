@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Navbar from "@/app/components/Navbar"
+import { SparkleIcon, PlateIcon, ClockIcon, UserIcon, FlameIcon } from "@/app/components/Icons"
 
 function getWeekDates(date: Date) {
   const day = date.getDay()
@@ -415,7 +416,7 @@ export default function MealPlannerPage() {
                 onClick={generateMissingNutrition}
                 disabled={generatingNutrition}
                 className="border border-orange-200 text-orange-500 px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-50 disabled:opacity-50 transition bg-white">
-                {generatingNutrition ? "Generating..." : "✨ Generate missing nutrition"}
+                {generatingNutrition ? "Generating..." : <><SparkleIcon size={13} /> Generate missing nutrition</>}
               </button>
             )}
             <button
@@ -583,7 +584,7 @@ export default function MealPlannerPage() {
                       <img src={r.image_url} className="w-10 h-10 rounded-lg object-cover flex-shrink-0"/>
                     ) : (
                       <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
-                        <span style={{ fontSize: "16px" }}>🍽️</span>
+                        <div className="text-orange-400"><PlateIcon size={20} /></div>
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
@@ -592,11 +593,11 @@ export default function MealPlannerPage() {
                         {r.category_name && (
                           <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">{r.category_name}</span>
                         )}
-                        {r.prep_time && <span>⏱ {r.prep_time}</span>}
-                        {r.servings && <span>👤 {r.servings}</span>}
+                        {r.prep_time && <span className="flex items-center gap-1"><ClockIcon size={11} />{r.prep_time}</span>}
+                        {r.servings && <span className="flex items-center gap-1"><UserIcon size={11} />{r.servings}</span>}
                         {r.nutrition && (() => {
                           const n = typeof r.nutrition === "string" ? JSON.parse(r.nutrition) : r.nutrition
-                          return <span>🔥 {Math.round(n.calories)} cal</span>
+                          return <span className="flex items-center gap-1"><FlameIcon size={11} />{Math.round(n.calories)} cal</span>
                         })()}
                       </div>
                     </div>

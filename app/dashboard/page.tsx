@@ -21,6 +21,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
+import { ClockIcon, UserIcon, StarIcon, LinkIcon, DocumentIcon, CameraIcon, PrintIcon, ListIcon, CheckIcon, PencilIcon, GlobeIcon, LockIcon, SparkleIcon } from "@/app/components/Icons"
 
 const COLORS = [
   "#F97316", "#EF4444", "#8B5CF6", "#3B82F6",
@@ -398,7 +399,7 @@ export default function Dashboard() {
           <p className="text-sm text-gray-400 mb-4">SmartFlavr can read recipes from the web or your files and save them straight to your cookbooks.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white border border-gray-100 rounded-2xl p-5">
-              <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-lg mb-3">🔗</div>
+              <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-orange-500 mb-3"><LinkIcon size={20} /></div>
               <h3 className="text-sm font-medium text-gray-900 mb-1">Extract from URL</h3>
               <p className="text-xs text-gray-400 mb-4 leading-relaxed">Paste a link from any recipe site and we'll pull out the ingredients, steps, and details automatically.</p>
               <div className="flex gap-2 mb-3">
@@ -413,14 +414,14 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="bg-white border border-gray-100 rounded-2xl p-5">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-lg mb-3">📄</div>
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 mb-3"><DocumentIcon size={20} /></div>
               <h3 className="text-sm font-medium text-gray-900 mb-1">Import from file</h3>
               <p className="text-xs text-gray-400 mb-4 leading-relaxed">Upload a photo of a recipe card, a PDF cookbook page, or a text file — AI will do the reading.</p>
               <p className="text-xs text-gray-400 mb-2">Supported formats</p>
               <div className="flex flex-wrap gap-1.5 mb-4">
-                <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">📷 Photo</span>
-                <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">📄 PDF</span>
-                <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">📝 Text file</span>
+                <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 flex items-center gap-1"><CameraIcon size={11} />Photo</span>
+                <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 flex items-center gap-1"><DocumentIcon size={11} />PDF</span>
+                <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 flex items-center gap-1"><DocumentIcon size={11} />Text file</span>
               </div>
               <button onClick={() => document.getElementById("file-import")?.click()} className="w-full border border-gray-200 text-gray-600 px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 transition text-center">Choose a file to import</button>
               <input type="file" id="file-import" accept="image/*,.pdf,.txt" onChange={handleFileImport} className="hidden"/>
@@ -451,7 +452,7 @@ export default function Dashboard() {
               <button
                 onClick={() => { setEditingCookbook({ ...book }); setShowEditModal(true) }}
                 className="absolute top-2 right-2 w-7 h-7 bg-white/90 shadow-sm rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 text-xs transition">
-                ✏️
+                <PencilIcon size={12} />
               </button>
             </div>
           ))}
@@ -537,7 +538,7 @@ export default function Dashboard() {
                   autoFocus className="text-lg font-medium border-b border-orange-300 outline-none flex-1 mr-2"/>
               ) : (
                 <h2 onClick={() => { setListNameInput(activeGroceryList.name); setEditingListName(true) }} className="text-lg font-medium cursor-pointer hover:text-orange-500 transition flex-1 mr-2" title="Click to rename">
-                  {activeGroceryList.name} ✏️
+                  {activeGroceryList.name} <PencilIcon size={13} className="inline text-gray-400" />
                 </h2>
               )}
               <button onClick={() => deleteGroceryList(activeGroceryList.id)} className="text-xs text-red-400 hover:text-red-600 border border-red-100 hover:border-red-300 rounded-lg px-3 py-1.5 transition">Delete list</button>
@@ -545,8 +546,8 @@ export default function Dashboard() {
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs text-gray-400">{activeGroceryList.items?.filter((i: any) => i.checked).length} of {activeGroceryList.items?.length} items checked</p>
               <div className="flex gap-2">
-                <button onClick={printGroceryList} className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 transition">📄 Print</button>
-                <button onClick={copyGroceryText} className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 transition">{groceryCopied ? "✓ Copied!" : "📋 Copy text"}</button>
+                <button onClick={printGroceryList} className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 transition"><PrintIcon size={12} />Print</button>
+                <button onClick={copyGroceryText} className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 transition">{groceryCopied ? <><CheckIcon size={12} />Copied!</> : <><ListIcon size={12} />Copy text</>}</button>
               </div>
             </div>
             <div className="flex gap-2 mb-4">
@@ -625,7 +626,7 @@ export default function Dashboard() {
             <div className="mb-4">
               <label className="text-sm text-gray-500 mb-1 block">Cover image (optional)</label>
               <div onClick={() => document.getElementById("cover-upload-new")?.click()} className="border-2 border-dashed border-gray-100 rounded-xl h-24 flex items-center justify-center cursor-pointer hover:bg-gray-50 overflow-hidden">
-                {coverImage ? <img src={coverImage} className="w-full h-full object-cover rounded-xl"/> : <span className="text-xs text-gray-400">📷 Click to add cover photo</span>}
+                {coverImage ? <img src={coverImage} className="w-full h-full object-cover rounded-xl"/> : <span className="text-xs text-gray-400 flex items-center gap-1"><CameraIcon size={13} />Click to add cover photo</span>}
               </div>
               <input type="file" id="cover-upload-new" accept="image/*" onChange={e => uploadCoverImage(e, false)} className="hidden"/>
               {coverImage && <button onClick={() => setCoverImage("")} className="text-xs text-red-400 mt-1">Remove image</button>}
@@ -647,8 +648,8 @@ export default function Dashboard() {
             <div className="mb-6">
               <label className="text-sm text-gray-500 mb-2 block">Visibility</label>
               <div className="flex gap-3">
-                <button onClick={() => setIsPublic(0)} className={`flex-1 py-2 rounded-xl text-sm border transition ${isPublic === 0 ? "bg-gray-900 text-white border-gray-900" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>🔒 Private</button>
-                <button onClick={() => setIsPublic(1)} className={`flex-1 py-2 rounded-xl text-sm border transition ${isPublic === 1 ? "bg-green-500 text-white border-green-500" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>🌍 Public</button>
+                <button onClick={() => setIsPublic(0)} className={`flex-1 py-2 rounded-xl text-sm border transition flex items-center justify-center gap-1.5 ${isPublic === 0 ? "bg-gray-900 text-white border-gray-900" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}><LockIcon size={13} />Private</button>
+                <button onClick={() => setIsPublic(1)} className={`flex-1 py-2 rounded-xl text-sm border transition flex items-center justify-center gap-1.5 ${isPublic === 1 ? "bg-green-500 text-white border-green-500" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}><GlobeIcon size={13} />Public</button>
               </div>
             </div>
             <div className="flex gap-3">
@@ -670,7 +671,7 @@ export default function Dashboard() {
             <div className="mb-4">
               <label className="text-sm text-gray-500 mb-1 block">Cover image (optional)</label>
               <div onClick={() => document.getElementById("cover-upload-edit")?.click()} className="border-2 border-dashed border-gray-100 rounded-xl h-24 flex items-center justify-center cursor-pointer hover:bg-gray-50 overflow-hidden">
-                {editingCookbook.cover_image ? <img src={editingCookbook.cover_image} className="w-full h-full object-cover rounded-xl"/> : <span className="text-xs text-gray-400">📷 Click to add cover photo</span>}
+                {editingCookbook.cover_image ? <img src={editingCookbook.cover_image} className="w-full h-full object-cover rounded-xl"/> : <span className="text-xs text-gray-400 flex items-center gap-1"><CameraIcon size={13} />Click to add cover photo</span>}
               </div>
               <input type="file" id="cover-upload-edit" accept="image/*" onChange={e => uploadCoverImage(e, true)} className="hidden"/>
               {editingCookbook.cover_image && <button onClick={() => setEditingCookbook({ ...editingCookbook, cover_image: "" })} className="text-xs text-red-400 mt-1">Remove image</button>}
@@ -692,8 +693,8 @@ export default function Dashboard() {
             <div className="mb-6">
               <label className="text-sm text-gray-500 mb-2 block">Visibility</label>
               <div className="flex gap-3">
-                <button onClick={() => setEditingCookbook({ ...editingCookbook, is_public: 0 })} className={`flex-1 py-2 rounded-xl text-sm border transition ${editingCookbook.is_public === 0 || !editingCookbook.is_public ? "bg-gray-900 text-white border-gray-900" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>🔒 Private</button>
-                <button onClick={() => setEditingCookbook({ ...editingCookbook, is_public: 1 })} className={`flex-1 py-2 rounded-xl text-sm border transition ${editingCookbook.is_public === 1 ? "bg-green-500 text-white border-green-500" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>🌍 Public</button>
+                <button onClick={() => setEditingCookbook({ ...editingCookbook, is_public: 0 })} className={`flex-1 py-2 rounded-xl text-sm border transition flex items-center justify-center gap-1.5 ${editingCookbook.is_public === 0 || !editingCookbook.is_public ? "bg-gray-900 text-white border-gray-900" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}><LockIcon size={13} />Private</button>
+                <button onClick={() => setEditingCookbook({ ...editingCookbook, is_public: 1 })} className={`flex-1 py-2 rounded-xl text-sm border transition flex items-center justify-center gap-1.5 ${editingCookbook.is_public === 1 ? "bg-green-500 text-white border-green-500" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}><GlobeIcon size={13} />Public</button>
               </div>
             </div>
             <div className="flex gap-3">
@@ -745,7 +746,7 @@ export default function Dashboard() {
             <h2 className="text-lg font-medium mb-4">Import Recipes</h2>
             {importing ? (
               <div className="text-center py-12">
-                <div className="text-4xl mb-3">🤖</div>
+                <div className="text-gray-400 mb-3 flex justify-center"><SparkleIcon size={40} /></div>
                 <p className="text-sm text-gray-500">AI is reading your file...</p>
                 <p className="text-xs text-gray-400 mt-1">This may take a few seconds</p>
               </div>
@@ -763,9 +764,9 @@ export default function Dashboard() {
                       <div className="font-medium text-sm mb-1">{r.title}</div>
                       {r.description && <div className="text-xs text-gray-500 mb-2 line-clamp-2">{r.description}</div>}
                       <div className="flex gap-3 mb-3 text-xs text-gray-400">
-                        {r.prep_time && <span>⏱ {r.prep_time}</span>}
-                        {r.servings && <span>👤 {r.servings}</span>}
-                        {r.difficulty && <span>★ {r.difficulty}</span>}
+                        {r.prep_time && <span className="flex items-center gap-1"><ClockIcon size={11} />{r.prep_time}</span>}
+                        {r.servings && <span className="flex items-center gap-1"><UserIcon size={11} />{r.servings}</span>}
+                        {r.difficulty && <span className="flex items-center gap-1"><StarIcon size={11} />{r.difficulty}</span>}
                       </div>
                       <p className="text-xs text-gray-500 mb-2">Save to:</p>
                       <div className="space-y-1">

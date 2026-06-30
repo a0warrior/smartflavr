@@ -4,6 +4,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { auth } from "@/auth"
 import NutritionPanel from "@/app/components/NutritionPanel"
+import { ClockIcon, UserIcon, StarIcon, LightBulbIcon } from "@/app/components/Icons"
 
 export default async function ShareRecipePage({
   params
@@ -75,9 +76,9 @@ export default async function ShareRecipePage({
           <h1 className="text-2xl font-medium mb-3">{recipe.title}</h1>
 
           <div className="flex gap-2 mb-4 flex-wrap">
-            {recipe.prep_time && <span className="bg-gray-100 rounded-full px-3 py-1 text-xs text-gray-500">⏱ {recipe.prep_time}</span>}
-            {recipe.servings && <span className="bg-gray-100 rounded-full px-3 py-1 text-xs text-gray-500">👤 {recipe.servings}</span>}
-            {recipe.difficulty && <span className="bg-gray-100 rounded-full px-3 py-1 text-xs text-gray-500">★ {recipe.difficulty}</span>}
+            {recipe.prep_time && <span className="bg-gray-100 rounded-full px-3 py-1 text-xs text-gray-500 flex items-center gap-1.5"><ClockIcon size={11} />{recipe.prep_time}</span>}
+            {recipe.servings && <span className="bg-gray-100 rounded-full px-3 py-1 text-xs text-gray-500 flex items-center gap-1.5"><UserIcon size={11} />{recipe.servings}</span>}
+            {recipe.difficulty && <span className="bg-gray-100 rounded-full px-3 py-1 text-xs text-gray-500 flex items-center gap-1.5"><StarIcon size={11} />{recipe.difficulty}</span>}
           </div>
 
           {recipe.description && (
@@ -109,7 +110,7 @@ export default async function ShareRecipePage({
 
           {recipe.notes && (
             <div className="bg-amber-50 rounded-xl p-4 text-sm text-amber-800 leading-relaxed">
-              💡 {recipe.notes}
+              <div className="flex gap-2"><LightBulbIcon size={15} className="flex-shrink-0 mt-0.5" /><span>{recipe.notes}</span></div>
             </div>
           )}
 

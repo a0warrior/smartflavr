@@ -3,6 +3,7 @@ import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Navbar from "@/app/components/Navbar"
+import { ClockIcon, WarningIcon } from "@/app/components/Icons"
 
 function formatCode(val: string) {
   const clean = val.replace(/[^A-Za-z0-9]/g, "").toUpperCase()
@@ -312,7 +313,7 @@ export default function AdminPage() {
                           {user.status === "suspended" && <span className="text-xs bg-yellow-50 text-yellow-600 px-2 py-0.5 rounded-full flex-shrink-0">Suspended</span>}
                           {user.status === "banned" && <span className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded-full flex-shrink-0">Banned</span>}
                           {user.post_timeout_until && new Date(user.post_timeout_until) > new Date() && (
-                            <span className="text-xs bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full flex-shrink-0">⏱ Timed out</span>
+                            <span className="text-xs bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full flex-shrink-0 flex items-center gap-1"><ClockIcon size={11} />Timed out</span>
                           )}
                         </div>
                         <p className="text-xs text-gray-400 truncate mt-0.5">
@@ -343,7 +344,7 @@ export default function AdminPage() {
                             <button onClick={() => updateUserStatus(user.id, "active")} className="px-3 py-1.5 rounded-lg text-xs border border-green-200 text-green-600 hover:bg-green-50 transition">Reactivate</button>
                           )}
                           {timeoutTarget !== user.id && (
-                            <button onClick={() => setTimeoutTarget(user.id)} className="px-3 py-1.5 rounded-lg text-xs border border-orange-200 text-orange-500 hover:bg-orange-50 transition">⏱ Timeout</button>
+                            <button onClick={() => setTimeoutTarget(user.id)} className="px-3 py-1.5 rounded-lg text-xs border border-orange-200 text-orange-500 hover:bg-orange-50 transition flex items-center gap-1"><ClockIcon size={12} />Timeout</button>
                           )}
                           {user.post_timeout_until && new Date(user.post_timeout_until) > new Date() && (
                             <button onClick={() => timeoutUser(user.id, 0)} className="px-3 py-1.5 rounded-lg text-xs border border-gray-200 text-gray-500 hover:bg-gray-50 transition">Clear timeout</button>
@@ -377,7 +378,7 @@ export default function AdminPage() {
       {deleteUserTarget && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm mx-4">
-            <div className="text-3xl mb-3 text-center">⚠️</div>
+            <div className="text-yellow-500 mb-3 flex justify-center"><WarningIcon size={32} /></div>
             <h2 className="text-lg font-medium text-center mb-2">Delete {deleteUserTarget.name}?</h2>
             <p className="text-sm text-gray-500 text-center mb-1">This will permanently delete:</p>
             <ul className="text-sm text-gray-500 mb-4 space-y-1 text-center">

@@ -26,89 +26,7 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 
-function HeartIcon({ filled, size = 16 }: { filled?: boolean; size?: number }) {
-  return filled ? (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="#f87171" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-    </svg>
-  ) : (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-    </svg>
-  )
-}
-function ShareIcon({ size = 16 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-    </svg>
-  )
-}
-function PeopleIcon({ size = 16 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-      <circle cx="9" cy="7" r="4"/>
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-    </svg>
-  )
-}
-function PrintIcon({ size = 16 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="6 9 6 2 18 2 18 9"/>
-      <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
-      <rect x="6" y="14" width="12" height="8"/>
-    </svg>
-  )
-}
-function SearchIcon({ size = 16 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-    </svg>
-  )
-}
-function ClockIcon({ size = 13 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-    </svg>
-  )
-}
-function ChevronRightIcon({ size = 16 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="9 18 15 12 9 6"/>
-    </svg>
-  )
-}
-function SortIcon({ size = 16 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="3" y1="6" x2="21" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/>
-    </svg>
-  )
-}
-function ListIcon({ size = 13 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
-      <circle cx="3" cy="6" r="1.2" fill="currentColor" stroke="none"/><circle cx="3" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="3" cy="18" r="1.2" fill="currentColor" stroke="none"/>
-    </svg>
-  )
-}
-function LeaveIcon({ size = 16 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-      <polyline points="16 17 21 12 16 7"/>
-      <line x1="21" y1="12" x2="9" y2="12"/>
-    </svg>
-  )
-}
+import { HeartIcon, ShareIcon, PeopleIcon, PrintIcon, SearchIcon, ClockIcon, ChevronRightIcon, SortIcon, ListIcon, LeaveIcon, SparkleIcon, UserIcon, StarIcon, LightBulbIcon, CameraIcon, PlateIcon, TrashIcon } from "@/app/components/Icons"
 
 function SortableRecipeItem({ recipe, isSelected, onClick, isOwner, isFavorited, onToggleFavorite }: any) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: recipe.id })
@@ -716,7 +634,7 @@ export default function CookbookPage() {
 
             {/* Pinned add recipe footer */}
             {canEdit && (
-              <div className="flex-shrink-0 bg-white border-t border-gray-100 px-4 py-3">
+              <div className="flex-shrink-0 bg-white border-t border-gray-100 px-4 pt-3" style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}>
                 <button
                   onClick={createRecipe}
                   className="w-full bg-orange-500 text-white rounded-2xl py-3.5 text-[15px] font-semibold active:bg-orange-600 transition flex items-center justify-center gap-2">
@@ -950,20 +868,20 @@ export default function CookbookPage() {
                   <>
                     <div className="flex items-center justify-between mb-3">
                       <h1 className="text-2xl font-medium">{recipe.title}</h1>
-                      <button onClick={() => toggleFavorite(recipe.id)} className={`text-2xl transition ${favorites.has(recipe.id) ? "text-red-400" : "text-gray-300 hover:text-red-300"}`}>
-                        {favorites.has(recipe.id) ? "♥" : "♡"}
+                      <button onClick={() => toggleFavorite(recipe.id)} className={`transition ${favorites.has(recipe.id) ? "text-red-400" : "text-gray-300 hover:text-red-300"}`}>
+                        <HeartIcon filled={favorites.has(recipe.id)} size={24} />
                       </button>
                     </div>
                     <div className="flex gap-2 mb-3 flex-wrap">
-                      {recipe.prep_time && <span className="bg-gray-100 rounded-full px-3 py-1 text-xs text-gray-500">⏱ {recipe.prep_time}</span>}
-                      {recipe.servings && <span className="bg-gray-100 rounded-full px-3 py-1 text-xs text-gray-500">👤 {recipe.servings}</span>}
-                      {recipe.difficulty && <span className="bg-gray-100 rounded-full px-3 py-1 text-xs text-gray-500">★ {recipe.difficulty}</span>}
+                      {recipe.prep_time && <span className="bg-gray-100 rounded-full px-3 py-1 text-xs text-gray-500 flex items-center gap-1.5"><ClockIcon size={11} />{recipe.prep_time}</span>}
+                      {recipe.servings && <span className="bg-gray-100 rounded-full px-3 py-1 text-xs text-gray-500 flex items-center gap-1.5"><UserIcon size={11} />{recipe.servings}</span>}
+                      {recipe.difficulty && <span className="bg-gray-100 rounded-full px-3 py-1 text-xs text-gray-500 flex items-center gap-1.5"><StarIcon size={11} />{recipe.difficulty}</span>}
                     </div>
                     {recipe.description && <p className="text-sm text-gray-500 mb-5 leading-relaxed">{recipe.description}</p>}
                     <div className="rounded-xl mb-6 overflow-hidden">
                       {recipe.image_url ? <img src={recipe.image_url} className="w-full object-contain rounded-xl"/> : (
                         <div className="border-2 border-dashed border-gray-100 rounded-xl h-48 flex items-center justify-center">
-                          <span className="text-xs text-gray-400">📷 No photo yet</span>
+                          <span className="text-xs text-gray-400 flex items-center gap-1.5"><CameraIcon size={13} />No photo yet</span>
                         </div>
                       )}
                     </div>
@@ -992,7 +910,7 @@ export default function CookbookPage() {
                     {recipe.notes && (
                       <div id="notes" className="mb-6">
                         <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Notes</div>
-                        <div className="bg-amber-50 rounded-xl p-4 text-sm text-amber-800 leading-relaxed">💡 {recipe.notes}</div>
+                        <div className="bg-amber-50 rounded-xl p-4 text-sm text-amber-800 leading-relaxed flex gap-2"><LightBulbIcon size={15} className="flex-shrink-0 mt-0.5" /><span>{recipe.notes}</span></div>
                       </div>
                     )}
                     <NutritionPanel recipe={recipe}/>
@@ -1015,11 +933,11 @@ export default function CookbookPage() {
                   <>
                     <input value={edited.title || ""} onChange={e => updateEdited("title", e.target.value)} className="text-2xl font-medium bg-transparent border-b border-gray-200 outline-none w-full mb-4 pb-2" placeholder="Recipe title"/>
                     <div className="flex gap-2 mb-4 flex-wrap">
-                      <input value={edited.prep_time || ""} onChange={e => updateEdited("prep_time", e.target.value)} placeholder="⏱ Time" className="bg-white border border-gray-200 rounded-full px-3 py-1 text-xs w-28 outline-none"/>
-                      <input value={edited.servings || ""} onChange={e => updateEdited("servings", e.target.value)} placeholder="👤 Servings" className="bg-white border border-gray-200 rounded-full px-3 py-1 text-xs w-28 outline-none"/>
-                      <input value={edited.difficulty || ""} onChange={e => updateEdited("difficulty", e.target.value)} placeholder="★ Difficulty" className="bg-white border border-gray-200 rounded-full px-3 py-1 text-xs w-28 outline-none"/>
+                      <input value={edited.prep_time || ""} onChange={e => updateEdited("prep_time", e.target.value)} placeholder="Time" className="bg-white border border-gray-200 rounded-full px-3 py-1 text-xs w-28 outline-none"/>
+                      <input value={edited.servings || ""} onChange={e => updateEdited("servings", e.target.value)} placeholder="Servings" className="bg-white border border-gray-200 rounded-full px-3 py-1 text-xs w-28 outline-none"/>
+                      <input value={edited.difficulty || ""} onChange={e => updateEdited("difficulty", e.target.value)} placeholder="Difficulty" className="bg-white border border-gray-200 rounded-full px-3 py-1 text-xs w-28 outline-none"/>
                       <select value={edited.category_id || ""} onChange={e => updateEdited("category_id", e.target.value)} className="bg-white border border-gray-200 rounded-full px-3 py-1 text-xs outline-none">
-                        <option value="">📋 No category</option>
+                        <option value="">No category</option>
                         {categories.map((cat: any) => (
                           <option key={cat.id} value={cat.id}>{cat.emoji} {cat.name}</option>
                         ))}
@@ -1034,7 +952,7 @@ export default function CookbookPage() {
                           <img src={edited.image_url} className="w-full object-contain rounded-xl"/>
                         ) : (
                           <div className="h-48 flex items-center justify-center">
-                            <span className="text-xs text-gray-400">📷 Click to add photo</span>
+                            <span className="text-xs text-gray-400 flex items-center gap-1"><CameraIcon size={13} />Click to add photo</span>
                           </div>
                         )}
                       </div>
@@ -1050,7 +968,7 @@ export default function CookbookPage() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Description</div>
                         <button onClick={() => aiAssist("description")} disabled={aiLoading === "description"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1">
-                          {aiLoading === "description" ? "✨ Writing..." : "✨ AI write"}
+                          {aiLoading === "description" ? "Writing..." : "<SparkleIcon size={13} /> AI write"}
                         </button>
                       </div>
                       <textarea value={edited.description || ""} onChange={e => updateEdited("description", e.target.value)} placeholder="Add a description..." className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none outline-none" rows={2}/>
@@ -1059,7 +977,7 @@ export default function CookbookPage() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Ingredients <span className="text-gray-300 font-normal normal-case">(one per line)</span></div>
                         <button onClick={() => aiAssist("ingredients")} disabled={aiLoading === "ingredients"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1">
-                          {aiLoading === "ingredients" ? "✨ Suggesting..." : "✨ AI suggest"}
+                          {aiLoading === "ingredients" ? "Suggesting..." : "<SparkleIcon size={13} /> AI suggest"}
                         </button>
                       </div>
                       <textarea value={edited.ingredients || ""} onChange={e => updateEdited("ingredients", e.target.value)} placeholder="200g pasta&#10;100g cheese&#10;Salt" className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none outline-none" rows={6}/>
@@ -1068,7 +986,7 @@ export default function CookbookPage() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Instructions <span className="text-gray-300 font-normal normal-case">(one step per line)</span></div>
                         <button onClick={() => aiAssist("instructions")} disabled={aiLoading === "instructions"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1">
-                          {aiLoading === "instructions" ? "✨ Improving..." : "✨ AI improve"}
+                          {aiLoading === "instructions" ? "Improving..." : "<SparkleIcon size={13} /> AI improve"}
                         </button>
                       </div>
                       <textarea value={edited.instructions || ""} onChange={e => updateEdited("instructions", e.target.value)} placeholder="Boil water&#10;Add pasta&#10;Drain and serve" className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none outline-none" rows={8}/>
@@ -1077,7 +995,7 @@ export default function CookbookPage() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Notes</div>
                         <button onClick={() => aiAssist("notes")} disabled={aiLoading === "notes"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1">
-                          {aiLoading === "notes" ? "✨ Generating..." : "✨ AI generate"}
+                          {aiLoading === "notes" ? "Generating..." : "<SparkleIcon size={13} /> AI generate"}
                         </button>
                       </div>
                       <textarea value={edited.notes || ""} onChange={e => updateEdited("notes", e.target.value)} placeholder="Tips, variations, substitutions..." className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none outline-none" rows={3}/>
@@ -1092,7 +1010,7 @@ export default function CookbookPage() {
             ) : (
               <div className="flex items-center justify-center h-full text-gray-400">
                 <div className="text-center">
-                  <p className="text-4xl mb-3">🍽️</p>
+                  <div className="text-gray-300 mb-3"><PlateIcon size={40} /></div>
                   <p className="text-sm">No recipes in this category yet</p>
                 </div>
               </div>
@@ -1185,7 +1103,7 @@ export default function CookbookPage() {
                 <button
                   onClick={() => { deleteRecipe(recipe.id); setShowMobileActions(false) }}
                   className="w-full text-left px-4 py-3.5 text-sm text-red-500 hover:bg-red-50 rounded-xl flex items-center gap-3">
-                  <span className="text-base">🗑️</span> Delete recipe
+                  <TrashIcon size={16} /> Delete recipe
                 </button>
               )}
             </div>

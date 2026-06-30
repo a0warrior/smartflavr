@@ -6,6 +6,7 @@ import FollowButton from "@/app/components/FollowButton"
 import FollowersModal from "../../components/FollowersModal"
 import CopyProfileLink from "@/app/components/CopyProfileLink"
 import Navbar from "@/app/components/Navbar"
+import { BookIcon } from "@/app/components/Icons"
 
 export default async function ProfilePage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params
@@ -96,7 +97,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
         <h2 className="text-lg font-medium mb-4">Public Cookbooks</h2>
         {cookbooks.length === 0 ? (
           <div className="text-center py-16 text-gray-400">
-            <p className="text-4xl mb-3">📖</p>
+            <div className="text-gray-300 mb-3 flex justify-center"><BookIcon size={40} /></div>
             <p className="text-sm">No public cookbooks yet</p>
           </div>
         ) : (

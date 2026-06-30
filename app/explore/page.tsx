@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react"
 import Navbar from "@/app/components/Navbar"
 import FollowButton from "@/app/components/FollowButton"
 import Link from "next/link"
+import { BookIcon, UserIcon } from "@/app/components/Icons"
 
 function CookbookCard({ cookbook }: { cookbook: any }) {
   return (
@@ -165,7 +166,7 @@ export default function ExplorePage() {
             {activeTab === "cookbooks" ? (
               cookbooks.length === 0 ? (
                 <div className="text-center py-16">
-                  <p className="text-3xl mb-3">📖</p>
+                  <div className="text-gray-300 mb-3 flex justify-center"><BookIcon size={32} /></div>
                   <p className="text-sm text-gray-400">No cookbooks found for &ldquo;{query}&rdquo;</p>
                 </div>
               ) : (
@@ -176,7 +177,7 @@ export default function ExplorePage() {
             ) : (
               users.length === 0 ? (
                 <div className="text-center py-16">
-                  <p className="text-3xl mb-3">👤</p>
+                  <div className="text-gray-300 mb-3 flex justify-center"><UserIcon size={32} /></div>
                   <p className="text-sm text-gray-400">No people found for &ldquo;{query}&rdquo;</p>
                 </div>
               ) : (
@@ -197,7 +198,7 @@ export default function ExplorePage() {
               </div>
               {cookbooks.length === 0 ? (
                 <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
-                  <p className="text-3xl mb-3">📖</p>
+                  <div className="text-gray-300 mb-3 flex justify-center"><BookIcon size={32} /></div>
                   <p className="text-sm text-gray-400">No public cookbooks yet</p>
                 </div>
               ) : (
@@ -215,7 +216,7 @@ export default function ExplorePage() {
               </div>
               {users.length === 0 ? (
                 <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
-                  <p className="text-3xl mb-3">👤</p>
+                  <div className="text-gray-300 mb-3 flex justify-center"><UserIcon size={32} /></div>
                   <p className="text-sm text-gray-400">No other members yet</p>
                 </div>
               ) : (

@@ -3,6 +3,7 @@ import { useState } from "react"
 import { signIn } from "next-auth/react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
+import { BookIcon, LinkIcon, PlateIcon, SparkleIcon, PencilIcon, SearchIcon } from "@/app/components/Icons"
 
 export default function HomePage() {
   const router = useRouter()
@@ -41,32 +42,32 @@ export default function HomePage() {
 
   const features = [
     {
-      icon: "✦",
+      icon: <SearchIcon size={24} />,
       title: "Paste a link. Get a clean recipe.",
       desc: "Any recipe website — paste the URL and SmartFlavr strips out the clutter. Just the ingredients and steps, no ads, no life story before the recipe.",
     },
     {
-      icon: "📖",
+      icon: <BookIcon size={24} />,
       title: "Build beautiful cookbooks.",
       desc: "Create themed collections for weeknight dinners, holiday baking, or whatever your family loves most. Add cover photos, sort by category, make it feel like yours.",
     },
     {
-      icon: "👨‍🍳",
+      icon: <PlateIcon size={24} />,
       title: "Cook mode keeps you on track.",
       desc: "Step through the recipe one instruction at a time, check off ingredients as you use them, and keep your screen awake. Built for messy hands in a real kitchen.",
     },
     {
-      icon: "🔗",
+      icon: <LinkIcon size={24} />,
       title: "Share with anyone, instantly.",
       desc: "Make a cookbook public and share one link — no app required to view it. Send family recipes, swap ideas with friends, or show off your collection.",
     },
     {
-      icon: "🤖",
+      icon: <SparkleIcon size={24} />,
       title: "AI that actually helps you cook.",
       desc: "Tell it what's in your fridge, what you're craving, or who you're cooking for. It suggests recipes from your own cookbooks and helps you plan the week.",
     },
     {
-      icon: "✏️",
+      icon: <PencilIcon size={24} />,
       title: "Edit recipes to match how you cook.",
       desc: "Added more garlic? Swapped the oil? Save your version so next time it's already perfect. Your tweaks, stored forever.",
     },
@@ -136,7 +137,7 @@ export default function HomePage() {
           <div
             className="inline-block bg-orange-100 text-orange-600 text-xs font-semibold px-4 py-1.5 rounded-full mb-8 animate-fade-up"
             style={{ animationDelay: "0s" }}>
-            🧑‍🍳 Private beta — invite only
+            Private beta — invite only
           </div>
 
           <h1

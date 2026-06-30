@@ -1,5 +1,6 @@
 "use client"
 import { useState } from "react"
+import { SparkleIcon } from "@/app/components/Icons"
 
 export default function NutritionPanel({ recipe }: { recipe: any }) {
   const [nutrition, setNutrition] = useState<any>(
@@ -67,7 +68,7 @@ export default function NutritionPanel({ recipe }: { recipe: any }) {
             onClick={generateNutrition}
             disabled={loading || !recipe.ingredients}
             className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1 disabled:opacity-50">
-            {loading ? "✨ Calculating..." : nutrition ? "✨ Regenerate" : "✨ Generate nutrition"}
+            {loading ? <><SparkleIcon size={13} /> Calculating...</> : nutrition ? <><SparkleIcon size={13} /> Regenerate</> : <><SparkleIcon size={13} /> Generate nutrition</>}
           </button>
         </div>
       </div>
@@ -75,7 +76,7 @@ export default function NutritionPanel({ recipe }: { recipe: any }) {
       {!nutrition && !loading && (
         <div className="bg-gray-50 rounded-xl p-6 text-center">
           <p className="text-sm text-gray-400 mb-2">No nutrition data yet</p>
-          <p className="text-xs text-gray-400">Click ✨ Generate nutrition to get AI-estimated nutrition facts</p>
+          <p className="text-xs text-gray-400">Click Generate nutrition to get AI-estimated nutrition facts</p>
         </div>
       )}
 

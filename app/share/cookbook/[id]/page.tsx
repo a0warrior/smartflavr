@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { auth } from "@/auth"
+import { ClockIcon, UserIcon, StarIcon } from "@/app/components/Icons"
 
 export default async function PublicCookbookPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -110,9 +111,9 @@ export default async function PublicCookbookPage({ params }: { params: Promise<{
                   <p className="text-sm text-gray-500 mb-3 leading-relaxed line-clamp-2">{recipe.description}</p>
                 )}
                 <div className="flex gap-3 text-xs text-gray-400">
-                  {recipe.prep_time && <span>⏱ {recipe.prep_time}</span>}
-                  {recipe.servings && <span>👤 {recipe.servings}</span>}
-                  {recipe.difficulty && <span>★ {recipe.difficulty}</span>}
+                  {recipe.prep_time && <span className="flex items-center gap-1"><ClockIcon size={11} />{recipe.prep_time}</span>}
+                  {recipe.servings && <span className="flex items-center gap-1"><UserIcon size={11} />{recipe.servings}</span>}
+                  {recipe.difficulty && <span className="flex items-center gap-1"><StarIcon size={11} />{recipe.difficulty}</span>}
                 </div>
                 {recipe.ingredients && (
                   <div className="mt-4">
@@ -137,8 +138,8 @@ export default async function PublicCookbookPage({ params }: { params: Promise<{
                 <div key={recipe.id} className="bg-white border border-gray-100 rounded-2xl p-5">
                   <h3 className="font-medium text-gray-900 mb-2">{recipe.title}</h3>
                   <div className="flex gap-3 text-xs text-gray-400">
-                    {recipe.prep_time && <span>⏱ {recipe.prep_time}</span>}
-                    {recipe.servings && <span>👤 {recipe.servings}</span>}
+                    {recipe.prep_time && <span className="flex items-center gap-1"><ClockIcon size={11} />{recipe.prep_time}</span>}
+                    {recipe.servings && <span className="flex items-center gap-1"><UserIcon size={11} />{recipe.servings}</span>}
                   </div>
                 </div>
               ))}

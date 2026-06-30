@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Navbar from "@/app/components/Navbar"
+import { HeartIcon, ClockIcon, UserIcon, StarIcon, PlateIcon } from "@/app/components/Icons"
 
 export default function FavoritesPage() {
   const { data: session, status } = useSession()
@@ -72,9 +73,9 @@ export default function FavoritesPage() {
           </div>
         ) : favorites.length === 0 ? (
           <div className="bg-white border border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center p-16 text-center">
-            <span className="text-5xl mb-4">♡</span>
+            <div className="text-gray-300 mb-4"><HeartIcon size={48} /></div>
             <p className="text-gray-500 font-medium mb-1">No favorites yet</p>
-            <p className="text-sm text-gray-400">Open any cookbook and tap the ♡ on a recipe to save it here</p>
+            <p className="text-sm text-gray-400">Open any cookbook and tap the heart on a recipe to save it here</p>
             <button
               onClick={() => router.push("/dashboard")}
               className="mt-6 bg-orange-500 text-white px-5 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 transition">
@@ -120,7 +121,7 @@ export default function FavoritesPage() {
                               {recipe.image_url ? (
                                 <img src={recipe.image_url} className="w-full h-full object-cover"/>
                               ) : (
-                                <span className="text-2xl">🍽️</span>
+                                <div className="text-gray-400"><PlateIcon size={24} /></div>
                               )}
                             </div>
                             <div className="flex-1 p-3 min-w-0">
@@ -130,9 +131,9 @@ export default function FavoritesPage() {
                                 {recipe.title}
                               </div>
                               <div className="flex gap-2 mt-1 flex-wrap">
-                                {recipe.prep_time && <span className="text-xs text-gray-400">⏱ {recipe.prep_time}</span>}
-                                {recipe.servings && <span className="text-xs text-gray-400">👤 {recipe.servings}</span>}
-                                {recipe.difficulty && <span className="text-xs text-gray-400">★ {recipe.difficulty}</span>}
+                                {recipe.prep_time && <span className="text-xs text-gray-400 flex items-center gap-1"><ClockIcon size={11} />{recipe.prep_time}</span>}
+                                {recipe.servings && <span className="text-xs text-gray-400 flex items-center gap-1"><UserIcon size={11} />{recipe.servings}</span>}
+                                {recipe.difficulty && <span className="text-xs text-gray-400 flex items-center gap-1"><StarIcon size={11} />{recipe.difficulty}</span>}
                               </div>
                               {recipe.description && (
                                 <p className="text-xs text-gray-400 mt-1 line-clamp-1">{recipe.description}</p>
@@ -148,7 +149,7 @@ export default function FavoritesPage() {
                                 onClick={() => removeFavorite(recipe.id)}
                                 disabled={removingId === recipe.id}
                                 className="text-lg text-red-400 hover:text-red-300 transition">
-                                {removingId === recipe.id ? "..." : "♥"}
+                                {removingId === recipe.id ? "..." : <HeartIcon filled size={18} />}
                               </button>
                             </div>
                           </div>

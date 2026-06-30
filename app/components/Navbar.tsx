@@ -3,15 +3,7 @@ import { signOut, useSession } from "next-auth/react"
 import Link from "next/link"
 import Image from "next/image"
 import { useState, useEffect } from "react"
-
-function BellIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-    </svg>
-  )
-}
+import { BellIcon, HeartIcon, UserIcon, CommentIcon, BookIcon, BanIcon, WarningIcon } from "@/app/components/Icons"
 
 const navLinks = [
   { href: "/feed", label: "Feed" },
@@ -107,13 +99,13 @@ export default function Navbar() {
 
   function notificationMeta(n: any, nData: any) {
     switch (n.type) {
-      case "new_follower":   return { icon: "👤", link: nData.follower_username   ? `/u/${nData.follower_username}`   : null, rowBg: !n.read_at ? "bg-orange-50/60" : "" }
-      case "post_like":      return { icon: "❤️", link: nData.liker_username      ? `/u/${nData.liker_username}`      : null, rowBg: !n.read_at ? "bg-orange-50/60" : "" }
-      case "post_comment":   return { icon: "💬", link: nData.commenter_username  ? `/u/${nData.commenter_username}`  : null, rowBg: !n.read_at ? "bg-orange-50/60" : "" }
-      case "collab_invite":  return { icon: "📚", link: null, rowBg: !n.read_at ? "bg-orange-50/60" : "" }
-      case "post_removed":   return { icon: "🚫", link: null, rowBg: "bg-red-50" }
-      case "content_warning_added": return { icon: "⚠️", link: null, rowBg: "bg-yellow-50" }
-      default:               return { icon: "🔔", link: null, rowBg: !n.read_at ? "bg-orange-50/60" : "" }
+      case "new_follower":   return { icon: <UserIcon size={16} />,    link: nData.follower_username   ? `/u/${nData.follower_username}`   : null, rowBg: !n.read_at ? "bg-orange-50/60" : "" }
+      case "post_like":      return { icon: <HeartIcon filled size={16} />, link: nData.liker_username ? `/u/${nData.liker_username}`      : null, rowBg: !n.read_at ? "bg-orange-50/60" : "" }
+      case "post_comment":   return { icon: <CommentIcon size={16} />, link: nData.commenter_username  ? `/u/${nData.commenter_username}`  : null, rowBg: !n.read_at ? "bg-orange-50/60" : "" }
+      case "collab_invite":  return { icon: <BookIcon size={16} />,    link: null, rowBg: !n.read_at ? "bg-orange-50/60" : "" }
+      case "post_removed":   return { icon: <BanIcon size={16} />,     link: null, rowBg: "bg-red-50" }
+      case "content_warning_added": return { icon: <WarningIcon size={16} />, link: null, rowBg: "bg-yellow-50" }
+      default:               return { icon: <BellIcon size={16} />,    link: null, rowBg: !n.read_at ? "bg-orange-50/60" : "" }
     }
   }
 
@@ -168,7 +160,7 @@ export default function Navbar() {
                     return (
                       <div key={n.id} className="rounded-xl border border-orange-200 bg-orange-50 px-3 py-3">
                         <div className="flex items-start gap-2">
-                          <span className="text-base flex-shrink-0 mt-0.5">📚</span>
+                          <div className="flex-shrink-0 mt-0.5 text-orange-500"><BookIcon size={16} /></div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-gray-800 leading-snug">{n.message}</p>
                             <p className="text-xs text-gray-400 mt-0.5">{timeAgo(n.created_at)}</p>
@@ -196,7 +188,7 @@ export default function Navbar() {
                     return (
                       <div key={n.id} className={`px-4 py-3 ${rowBg}`}>
                         <div className="flex items-start gap-2">
-                          <span className="text-base flex-shrink-0 mt-0.5">{icon}</span>
+                          <div className="flex-shrink-0 mt-0.5 text-gray-400">{icon}</div>
                           <div className="flex-1 min-w-0">
                             {link ? (
                               <Link href={link} onClick={() => { markOneRead(n.id); setShowNotifications(false) }} className="text-sm text-gray-700 leading-snug hover:text-orange-500 transition block">
