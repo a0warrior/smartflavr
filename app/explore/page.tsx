@@ -79,7 +79,7 @@ function UserCard({ user }: { user: any }) {
 function RecipeCard({ recipe }: { recipe: any }) {
   return (
     <Link
-      href={`/share/cookbook/${recipe.cookbook_id}`}
+      href={`/share/recipe/${recipe.id}`}
       className="bg-white border border-gray-100 rounded-2xl overflow-hidden hover:shadow-md transition group flex gap-3 p-3 items-center"
     >
       {recipe.image_url ? (
@@ -147,7 +147,7 @@ export default function ExplorePage() {
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-medium text-gray-900 mb-1">Explore</h1>
-          <p className="text-sm text-gray-400">Discover cookbooks and people on SmartFlavr</p>
+          <p className="text-sm text-gray-400">Discover cookbooks, recipes, and people on SmartFlavr</p>
         </div>
 
         {/* Search */}
@@ -240,7 +240,7 @@ export default function ExplorePage() {
             <div className="mb-10">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-base font-semibold text-gray-900">Trending Cookbooks</h2>
-                <span className="text-xs text-gray-400">{cookbooks.length} public</span>
+                <Link href="/explore/cookbooks" className="text-sm font-medium text-orange-500 hover:text-orange-600 transition">View all →</Link>
               </div>
               {cookbooks.length === 0 ? (
                 <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
@@ -259,7 +259,7 @@ export default function ExplorePage() {
               <div className="mb-10">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-base font-semibold text-gray-900">Trending Recipes</h2>
-                  <span className="text-xs text-gray-400">from public cookbooks</span>
+                  <Link href="/explore/recipes" className="text-sm font-medium text-orange-500 hover:text-orange-600 transition">View all →</Link>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {trendingRecipes.map(r => <RecipeCard key={r.id} recipe={r} />)}
@@ -271,7 +271,7 @@ export default function ExplorePage() {
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-base font-semibold text-gray-900">People to Discover</h2>
-                <span className="text-xs text-gray-400">{users.length} members</span>
+                <Link href="/explore/people" className="text-sm font-medium text-orange-500 hover:text-orange-600 transition">View all →</Link>
               </div>
               {users.length === 0 ? (
                 <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">

@@ -29,9 +29,12 @@ export default async function ShareRecipePage({
   const recipe = recipes[0]
 
   const session = await auth()
-  if (session?.user?.email) {
+  if (session?.user?.email && recipe.cookbook_is_public) {
+    // Only redirect to the full cookbook view when the cookbook is public
     redirect(`/cookbook/${recipe.cookbook_id}?recipe=${recipe.id}`)
   }
+
+  const isLoggedIn = !!session?.user?.email
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -41,12 +44,18 @@ export default async function ShareRecipePage({
           <span className="text-lg font-medium">Smart<span className="text-orange-500">Flavr</span></span>
         </Link>
         <div className="flex items-center gap-3">
-          <Link href="/login?code=returning" className="text-sm text-gray-500 hover:text-gray-900">
-            Sign in
-          </Link>
-          <Link href="/" className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition">
-            Join SmartFlavr
-          </Link>
+          {isLoggedIn ? (
+            <Link href="/explore" className="text-sm text-gray-500 hover:text-gray-900">← Explore</Link>
+          ) : (
+            <>
+              <Link href="/login?code=returning" className="text-sm text-gray-500 hover:text-gray-900">
+                Sign in
+              </Link>
+              <Link href="/" className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition">
+                Join SmartFlavr
+              </Link>
+            </>
+          )}
         </div>
       </nav>
 
@@ -117,15 +126,27 @@ export default async function ShareRecipePage({
           <NutritionPanel recipe={recipe}/>
         </div>
 
-        <div className="bg-orange-50 border border-orange-100 rounded-2xl p-5 flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-medium text-orange-900 mb-1">Want to save this recipe?</p>
-            <p className="text-xs text-orange-700">Join SmartFlavr to save recipes, create cookbooks and share with friends.</p>
+        {isLoggedIn ? (
+          <div className="bg-orange-50 border border-orange-100 rounded-2xl p-5 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-orange-900 mb-1">Like this recipe?</p>
+              <p className="text-xs text-orange-700">Open it in a public cookbook to copy it to your own collection.</p>
+            </div>
+            <Link href="/explore/recipes" className="flex-shrink-0 bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 transition">
+              Browse recipes →
+            </Link>
           </div>
-          <Link href="/" className="flex-shrink-0 bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 transition">
-            Get started →
-          </Link>
-        </div>
+        ) : (
+          <div className="bg-orange-50 border border-orange-100 rounded-2xl p-5 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-orange-900 mb-1">Want to save this recipe?</p>
+              <p className="text-xs text-orange-700">Join SmartFlavr to save recipes, create cookbooks and share with friends.</p>
+            </div>
+            <Link href="/" className="flex-shrink-0 bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 transition">
+              Get started →
+            </Link>
+          </div>
+        )}
 
         <div className="mt-8 text-center">
           <p className="text-xs text-gray-400">Shared via <Link href="/" className="text-orange-500">SmartFlavr</Link></p>

@@ -36,6 +36,25 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const cookbook_id = searchParams.get("cookbook_id")
 
+  // Check access: must be public, owner, or accepted collaborator
+  const [currentUser]: any = await pool.query("SELECT id FROM users WHERE email = ?", [session.user.email])
+  const userId = currentUser[0]?.id
+
+  const [cbRows]: any = await pool.query(
+    "SELECT is_public, user_id FROM cookbooks WHERE id = ?",
+    [cookbook_id]
+  )
+  if (cbRows.length === 0) return NextResponse.json({ recipes: [] })
+
+  const cb = cbRows[0]
+  if (!cb.is_public && cb.user_id !== userId) {
+    const [collabs]: any = await pool.query(
+      "SELECT id FROM cookbook_collaborators WHERE cookbook_id = ? AND user_id = ? AND status = 'accepted'",
+      [cookbook_id, userId]
+    )
+    if (collabs.length === 0) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
+
   const [recipes]: any = await pool.query(
     `SELECT recipes.*, categories.name as category_name
      FROM recipes
