@@ -412,13 +412,16 @@ function selectProfilePhoto(e: React.ChangeEvent<HTMLInputElement>) {
                   {planStatus?.plan === "pro" && <p className="text-xs text-gray-400 mt-0.5">{planStatus?.trialUsed && !planStatus?.isActive ? "Trial ended" : planStatus?.plan_expires_at ? "Trial active" : "Pro subscription"}</p>}
                   {planStatus?.plan === "premium" && <p className="text-xs text-gray-400 mt-0.5">Premium subscription</p>}
                 </div>
-                {planStatus?.plan === "free" && (
+                {planStatus?.weeklyLimit === null && (
+                  <span className="text-xs font-bold px-3 py-1 rounded-full text-white" style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}>Unlimited</span>
+                )}
+                {planStatus?.weeklyLimit !== null && planStatus?.plan === "free" && (
                   <span className="text-xs bg-gray-100 text-gray-500 px-3 py-1 rounded-full font-medium">Free</span>
                 )}
-                {planStatus?.plan === "pro" && (
+                {planStatus?.weeklyLimit !== null && planStatus?.plan === "pro" && (
                   <span className="text-xs font-bold px-3 py-1 rounded-full text-white" style={{ background: "linear-gradient(135deg,#f97316,#ea580c)" }}>Pro</span>
                 )}
-                {planStatus?.plan === "premium" && (
+                {planStatus?.weeklyLimit !== null && planStatus?.plan === "premium" && (
                   <span className="text-xs font-bold px-3 py-1 rounded-full text-white" style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>Premium</span>
                 )}
               </div>
@@ -426,20 +429,20 @@ function selectProfilePhoto(e: React.ChangeEvent<HTMLInputElement>) {
               {/* AI usage this week */}
               <div className="mb-1 flex items-center justify-between text-xs text-gray-500">
                 <span>AI uses this week</span>
-                <span>{planStatus?.aiUsesThisWeek ?? 0} / {planStatus?.weeklyLimit ?? 5}</span>
+                <span>{planStatus?.weeklyLimit === null ? "Unlimited" : `${planStatus?.aiUsesThisWeek ?? 0} / ${planStatus?.weeklyLimit ?? 5}`}</span>
               </div>
               <div className="w-full bg-gray-100 rounded-full h-2 mb-4">
                 <div
                   className="h-2 rounded-full transition-all"
                   style={{
-                    width: `${planStatus?.weeklyLimit ? Math.min(100, Math.round(((planStatus?.aiUsesThisWeek ?? 0) / planStatus.weeklyLimit) * 100)) : 0}%`,
-                    background: planStatus?.plan === "premium" ? "linear-gradient(90deg,#7c3aed,#a855f7)" : "linear-gradient(90deg,#f97316,#ea580c)"
+                    width: planStatus?.weeklyLimit === null ? "100%" : `${planStatus?.weeklyLimit ? Math.min(100, Math.round(((planStatus?.aiUsesThisWeek ?? 0) / planStatus.weeklyLimit) * 100)) : 0}%`,
+                    background: planStatus?.weeklyLimit === null ? "linear-gradient(90deg,#6366f1,#8b5cf6)" : planStatus?.plan === "premium" ? "linear-gradient(90deg,#7c3aed,#a855f7)" : "linear-gradient(90deg,#f97316,#ea580c)"
                   }}
                 />
               </div>
 
-              {/* Trial CTA */}
-              {planStatus?.plan === "free" && !planStatus?.trialUsed && (
+              {/* Trial CTA — hidden for unlimited (admin/owner) users */}
+              {planStatus?.weeklyLimit !== null && planStatus?.plan === "free" && !planStatus?.trialUsed && (
                 <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 mb-4">
                   <p className="text-sm font-medium text-orange-800 mb-1">Try Pro free for 7 days</p>
                   <p className="text-xs text-orange-600 mb-3">Get 25 AI uses/week, no credit card required.</p>
@@ -449,7 +452,7 @@ function selectProfilePhoto(e: React.ChangeEvent<HTMLInputElement>) {
                 </div>
               )}
 
-              {planStatus?.plan === "free" && planStatus?.trialUsed && (
+              {planStatus?.weeklyLimit !== null && planStatus?.plan === "free" && planStatus?.trialUsed && (
                 <p className="text-xs text-gray-400 mb-4">Your 7-day trial has ended. Paid plans coming soon.</p>
               )}
             </div>
