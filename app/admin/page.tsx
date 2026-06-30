@@ -2,6 +2,7 @@
 import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import Navbar from "@/app/components/Navbar"
 import { ClockIcon, WarningIcon } from "@/app/components/Icons"
 
@@ -325,7 +326,11 @@ export default function AdminPage() {
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-1.5 text-sm font-medium text-gray-900">
-                          <span className="truncate">{user.name}</span>
+                          {user.username ? (
+                            <Link href={`/u/${user.username}`} className="truncate hover:text-orange-500 transition">{user.name}</Link>
+                          ) : (
+                            <span className="truncate">{user.name}</span>
+                          )}
                           {user.is_admin === 1 && <span className="text-xs bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full flex-shrink-0">Admin</span>}
                           {user.plan === "premium" && <span className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full flex-shrink-0 font-semibold">Premium</span>}
                           {user.plan === "pro" && <span className="text-xs bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full flex-shrink-0 font-semibold">Pro</span>}
