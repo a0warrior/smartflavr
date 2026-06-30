@@ -45,9 +45,6 @@ function SortableRecipeItem({ recipe, isSelected, onClick, isOwner, isFavorited,
       )}
       {/* Mobile-only chevron on left */}
       <svg className="w-3 h-3 text-gray-300 flex-shrink-0 md:hidden rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
-      {recipe.image_url && (
-        <img src={recipe.image_url} alt="" className="hidden md:block w-9 h-9 rounded-lg object-cover flex-shrink-0" />
-      )}
       <div className="flex-1 min-w-0">
         <p className={`text-sm font-medium truncate leading-tight ${isSelected ? "text-orange-700" : "text-gray-800"}`}>{recipe.title}</p>
         {recipe.prep_time && (
