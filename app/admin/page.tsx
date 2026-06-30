@@ -351,7 +351,7 @@ export default function AdminPage() {
                     </div>
 
                     {/* Action buttons */}
-                    {user.email !== session?.user?.email && (
+                    {user.email !== session?.user?.email && !user.is_owner && (
                       <div className="mt-3 pl-12 space-y-2">
                         <div className="flex flex-wrap gap-2">
                           <button

@@ -54,7 +54,9 @@ export async function GET(req: Request) {
     users = rows
   }
 
-  return NextResponse.json({ codes, users })
+  const ownerEmail = process.env.OWNER_EMAIL
+  const enriched = users.map((u: any) => ({ ...u, is_owner: ownerEmail ? u.email === ownerEmail : false }))
+  return NextResponse.json({ codes, users: enriched })
 }
 
 export async function POST(req: Request) {

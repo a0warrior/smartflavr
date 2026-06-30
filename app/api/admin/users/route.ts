@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import pool from "@/lib/db"
 import { auth } from "@/auth"
 
+const OWNER_EMAIL = process.env.OWNER_EMAIL
+
 async function isAdmin(email: string) {
   const [users]: any = await pool.query(
     "SELECT is_admin FROM users WHERE email = ?",
@@ -21,6 +23,12 @@ export async function PUT(req: Request) {
   }
 
   const { user_id, is_admin, status, timeout_minutes } = await req.json()
+
+  // Protect the owner from any modification by other admins
+  const [targetRows]: any = await pool.query("SELECT email FROM users WHERE id = ?", [user_id])
+  if (targetRows.length > 0 && targetRows[0].email === OWNER_EMAIL && session.user.email !== OWNER_EMAIL) {
+    return NextResponse.json({ error: "This account cannot be modified." }, { status: 403 })
+  }
 
   if (status !== undefined) {
     await pool.query("UPDATE users SET status = ? WHERE id = ?", [status, user_id])
@@ -56,13 +64,12 @@ export async function DELETE(req: Request) {
 
   const { user_id } = await req.json()
 
-  // Prevent admin from deleting themselves
-  const [target]: any = await pool.query(
-    "SELECT email FROM users WHERE id = ?",
-    [user_id]
-  )
+  const [target]: any = await pool.query("SELECT email FROM users WHERE id = ?", [user_id])
   if (target.length > 0 && target[0].email === session.user.email) {
     return NextResponse.json({ error: "You cannot delete your own account" }, { status: 400 })
+  }
+  if (target.length > 0 && target[0].email === OWNER_EMAIL) {
+    return NextResponse.json({ error: "This account cannot be deleted." }, { status: 403 })
   }
 
   const conn = await pool.getConnection()
