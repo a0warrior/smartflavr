@@ -12,7 +12,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const { username } = await params
 
   const [users]: any = await pool.query(
-    "SELECT id, name, email, image, username, bio, profile_image FROM users WHERE username = ?",
+    "SELECT id, name, email, image, username, bio, profile_image, plan FROM users WHERE username = ?",
     [username]
   )
 
@@ -47,6 +47,30 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <style>{`
+        @keyframes sfProShimmer {
+          0% { background-position: 0% 50% }
+          50% { background-position: 100% 50% }
+          100% { background-position: 0% 50% }
+        }
+        @keyframes sfPremiumShimmer {
+          0% { background-position: 0% 50% }
+          50% { background-position: 100% 50% }
+          100% { background-position: 0% 50% }
+        }
+        .sf-pro-badge {
+          background: linear-gradient(270deg, #f97316, #fb923c, #ea580c, #f97316);
+          background-size: 300% 300%;
+          animation: sfProShimmer 3s ease infinite;
+          box-shadow: 0 0 8px rgba(249,115,22,0.5);
+        }
+        .sf-premium-badge {
+          background: linear-gradient(270deg, #7c3aed, #a855f7, #6d28d9, #c026d3, #7c3aed);
+          background-size: 400% 400%;
+          animation: sfPremiumShimmer 2.5s ease infinite;
+          box-shadow: 0 0 10px rgba(168,85,247,0.6);
+        }
+      `}</style>
       <Navbar />
       {session?.user && (
         <div className="hidden md:block max-w-3xl mx-auto px-4 sm:px-6 pt-6">
@@ -65,7 +89,21 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
               </div>
             )}
             <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl font-medium text-gray-900 mb-0.5 truncate">{user.name}</h1>
+              <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                <h1 className="text-xl sm:text-2xl font-medium text-gray-900 truncate">{user.name}</h1>
+                {user.plan === "pro" && (
+                  <span className="sf-pro-badge inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold text-white flex-shrink-0">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+                    Pro
+                  </span>
+                )}
+                {user.plan === "premium" && (
+                  <span className="sf-premium-badge inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold text-white flex-shrink-0">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l3.5 7L12 2l3.5 8L19 3l1 18H4L5 3z"/></svg>
+                    Premium
+                  </span>
+                )}
+              </div>
               <p className="text-sm text-gray-400 mb-2">@{user.username}</p>
               {user.bio && <p className="text-sm text-gray-600 leading-relaxed mb-3">{user.bio}</p>}
               <div className="flex flex-wrap gap-4 sm:gap-6">

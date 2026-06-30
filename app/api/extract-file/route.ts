@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import Anthropic from "@anthropic-ai/sdk"
+import { getPlanStatus, incrementAIUsage } from "@/lib/subscription"
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export async function POST(req: Request) {
   const session = await auth()
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const status = await getPlanStatus(session.user.email)
+  if (!status.canUseAI) {
+    return NextResponse.json({ error: "limit_reached", plan: status.plan, limit: status.weeklyLimit }, { status: 402 })
   }
 
   const { image, text, type } = await req.json()
@@ -32,40 +36,21 @@ Return ONLY the JSON object, no other text. If multiple recipes are found, retur
       messages = [{
         role: "user",
         content: [
-          {
-            type: "image",
-            source: {
-              type: "base64",
-              media_type: image.split(";")[0].split(":")[1],
-              data: image.split(",")[1],
-            },
-          },
-          {
-            type: "text",
-            text: "Extract the recipe from this image. Return as JSON."
-          }
+          { type: "image", source: { type: "base64", media_type: image.split(";")[0].split(":")[1], data: image.split(",")[1] } },
+          { type: "text", text: "Extract the recipe from this image. Return as JSON." }
         ]
       }]
     } else {
-      messages = [{
-        role: "user",
-        content: `Extract the recipe from this text. Return as JSON.\n\n${text}`
-      }]
+      messages = [{ role: "user", content: `Extract the recipe from this text. Return as JSON.\n\n${text}` }]
     }
 
-    const response = await anthropic.messages.create({
-      model: "claude-opus-4-6",
-      max_tokens: 2000,
-      system: systemPrompt,
-      messages,
-    })
-
+    const response = await anthropic.messages.create({ model: "claude-opus-4-6", max_tokens: 2000, system: systemPrompt, messages })
     const content = response.content[0].type === "text" ? response.content[0].text : ""
     const clean = content.replace(/```json|```/g, "").trim()
     const parsed = JSON.parse(clean)
-
     const recipes = Array.isArray(parsed) ? parsed : [parsed]
 
+    await incrementAIUsage(session.user.email)
     return NextResponse.json({ success: true, recipes })
   } catch (err) {
     console.error("Extract file error:", err)

@@ -130,6 +130,17 @@ export default function AdminPage() {
     fetchData()
   }
 
+  async function grantPlan(userId: string, plan: string) {
+    await fetch("/api/subscription", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "admin_grant", user_id: userId, plan }),
+    })
+    setSuccess(`Plan updated to ${plan}`)
+    setTimeout(() => setSuccess(""), 2000)
+    fetchData()
+  }
+
   async function confirmDeleteUser() {
     if (!deleteUserTarget) return
     setDeletingUser(true)
@@ -310,6 +321,8 @@ export default function AdminPage() {
                         <div className="flex flex-wrap items-center gap-1.5 text-sm font-medium text-gray-900">
                           <span className="truncate">{user.name}</span>
                           {user.is_admin === 1 && <span className="text-xs bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full flex-shrink-0">Admin</span>}
+                          {user.plan === "premium" && <span className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full flex-shrink-0 font-semibold">Premium</span>}
+                          {user.plan === "pro" && <span className="text-xs bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full flex-shrink-0 font-semibold">Pro</span>}
                           {user.status === "suspended" && <span className="text-xs bg-yellow-50 text-yellow-600 px-2 py-0.5 rounded-full flex-shrink-0">Suspended</span>}
                           {user.status === "banned" && <span className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded-full flex-shrink-0">Banned</span>}
                           {user.post_timeout_until && new Date(user.post_timeout_until) > new Date() && (
@@ -350,6 +363,12 @@ export default function AdminPage() {
                             <button onClick={() => timeoutUser(user.id, 0)} className="px-3 py-1.5 rounded-lg text-xs border border-gray-200 text-gray-500 hover:bg-gray-50 transition">Clear timeout</button>
                           )}
                           <button onClick={() => setDeleteUserTarget(user)} className="px-3 py-1.5 rounded-lg text-xs border border-red-300 text-red-600 hover:bg-red-50 transition">Delete</button>
+                        </div>
+                        {/* Plan controls */}
+                        <div className="flex flex-wrap gap-2">
+                          {user.plan !== "pro" && <button onClick={() => grantPlan(user.id, "pro")} className="px-3 py-1.5 rounded-lg text-xs border border-amber-200 text-amber-600 hover:bg-amber-50 transition">Grant Pro</button>}
+                          {user.plan !== "premium" && <button onClick={() => grantPlan(user.id, "premium")} className="px-3 py-1.5 rounded-lg text-xs border border-purple-200 text-purple-600 hover:bg-purple-50 transition">Grant Premium</button>}
+                          {(user.plan === "pro" || user.plan === "premium") && <button onClick={() => grantPlan(user.id, "free")} className="px-3 py-1.5 rounded-lg text-xs border border-gray-200 text-gray-500 hover:bg-gray-50 transition">Set Free</button>}
                         </div>
                         {timeoutTarget === user.id && (
                           <div className="bg-orange-50 border border-orange-200 rounded-xl px-3 py-2.5">

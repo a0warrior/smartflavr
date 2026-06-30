@@ -1,19 +1,22 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import Anthropic from "@anthropic-ai/sdk"
+import { getPlanStatus, incrementAIUsage } from "@/lib/subscription"
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export async function POST(req: Request) {
   const session = await auth()
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const status = await getPlanStatus(session.user.email)
+  if (!status.canUseAI) {
+    return NextResponse.json({ error: "limit_reached", plan: status.plan, limit: status.weeklyLimit }, { status: 402 })
   }
 
   const { type, recipe } = await req.json()
 
   let prompt = ""
-
   switch (type) {
     case "description":
       prompt = `Write a short appetizing description (2-3 sentences) for this recipe:
@@ -53,6 +56,6 @@ Return only the notes text (2-4 sentences), nothing else.`
   })
 
   const content = response.content[0].type === "text" ? response.content[0].text : ""
-
+  await incrementAIUsage(session.user.email)
   return NextResponse.json({ success: true, content })
 }

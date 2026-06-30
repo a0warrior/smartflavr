@@ -1,20 +1,21 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import Anthropic from "@anthropic-ai/sdk"
+import { getPlanStatus, incrementAIUsage } from "@/lib/subscription"
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export async function POST(req: Request) {
   const session = await auth()
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const status = await getPlanStatus(session.user.email)
+  if (!status.canUseAI) {
+    return NextResponse.json({ error: "limit_reached", plan: status.plan, limit: status.weeklyLimit }, { status: 402 })
   }
 
   const { ingredients } = await req.json()
-
-  if (!ingredients || ingredients.length === 0) {
-    return NextResponse.json({ success: true, list: {} })
-  }
+  if (!ingredients || ingredients.length === 0) return NextResponse.json({ success: true, list: {} })
 
   const prompt = `Take these recipe ingredients and create an organized grocery list.
 Combine duplicates, add up quantities where possible, and group by category.
@@ -48,5 +49,6 @@ Only include categories that have items. Combine similar ingredients.`
   const clean = content.replace(/```json|```/g, "").trim()
   const list = JSON.parse(clean)
 
+  await incrementAIUsage(session.user.email)
   return NextResponse.json({ success: true, list })
 }

@@ -2,13 +2,17 @@ import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import pool from "@/lib/db"
 import Anthropic from "@anthropic-ai/sdk"
+import { getPlanStatus, incrementAIUsage } from "@/lib/subscription"
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export async function POST(req: Request) {
   const session = await auth()
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const status = await getPlanStatus(session.user.email)
+  if (!status.canUseAI) {
+    return NextResponse.json({ error: "limit_reached", plan: status.plan, limit: status.weeklyLimit }, { status: 402 })
   }
 
   const { recipe_id, ingredients, servings } = await req.json()
@@ -76,27 +80,16 @@ All numeric values should be numbers not strings. Vitamin and mineral amounts in
   const clean = content.replace(/```json|```/g, "").trim()
   const nutrition = JSON.parse(clean)
 
-  await pool.query(
-    "UPDATE recipes SET nutrition = ? WHERE id = ?",
-    [JSON.stringify(nutrition), recipe_id]
-  )
-
+  await pool.query("UPDATE recipes SET nutrition = ? WHERE id = ?", [JSON.stringify(nutrition), recipe_id])
+  await incrementAIUsage(session.user.email)
   return NextResponse.json({ success: true, nutrition })
 }
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const recipe_id = searchParams.get("recipe_id")
-
-  const [recipes] = await pool.query(
-    "SELECT nutrition FROM recipes WHERE id = ?",
-    [recipe_id]
-  ) as any[]
-
-  if (!recipes || recipes.length === 0) {
-    return NextResponse.json({ nutrition: null })
-  }
-
+  const [recipes] = await pool.query("SELECT nutrition FROM recipes WHERE id = ?", [recipe_id]) as any[]
+  if (!recipes || recipes.length === 0) return NextResponse.json({ nutrition: null })
   const nutrition = recipes[0].nutrition
   return NextResponse.json({ nutrition: typeof nutrition === "string" ? JSON.parse(nutrition) : nutrition })
 }
