@@ -331,7 +331,8 @@ export default function AdminPage() {
                           ) : (
                             <span className="truncate">{user.name}</span>
                           )}
-                          {user.is_admin === 1 && <span className="text-xs bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full flex-shrink-0">Admin</span>}
+                          {user.is_owner && <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full flex-shrink-0 font-semibold">Founder</span>}
+                          {!user.is_owner && user.is_admin === 1 && <span className="text-xs bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full flex-shrink-0">Admin</span>}
                           {user.plan === "premium" && <span className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full flex-shrink-0 font-semibold">Premium</span>}
                           {user.plan === "pro" && <span className="text-xs bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full flex-shrink-0 font-semibold">Pro</span>}
                           {user.status === "suspended" && <span className="text-xs bg-yellow-50 text-yellow-600 px-2 py-0.5 rounded-full flex-shrink-0">Suspended</span>}
