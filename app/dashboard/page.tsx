@@ -21,7 +21,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { ClockIcon, UserIcon, StarIcon, LinkIcon, DocumentIcon, CameraIcon, PrintIcon, ListIcon, CheckIcon, PencilIcon, GlobeIcon, LockIcon, SparkleIcon, SortIcon } from "@/app/components/Icons"
+import { ClockIcon, UserIcon, StarIcon, LinkIcon, DocumentIcon, CameraIcon, PrintIcon, ListIcon, CheckIcon, PencilIcon, GlobeIcon, LockIcon, SparkleIcon } from "@/app/components/Icons"
 
 const COLORS = [
   "#F97316", "#EF4444", "#8B5CF6", "#3B82F6",
@@ -51,23 +51,19 @@ function SortableGroceryItem({ item, onToggle, onDelete }: any) {
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-3 py-3.5 px-4 rounded-2xl border border-transparent hover:border-gray-100 hover:bg-gray-50 transition group ${item.checked ? "opacity-40" : ""}`}>
-      <span {...attributes} {...listeners} className="text-gray-300 cursor-grab flex-shrink-0 hover:text-gray-400">
-        <SortIcon size={14} />
-      </span>
+      className={`flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-gray-50 transition group ${item.checked ? "opacity-50" : ""}`}>
+      <span {...attributes} {...listeners} className="text-gray-300 cursor-grab text-sm flex-shrink-0">⠿</span>
       <div
         onClick={() => onToggle(item.id, !item.checked)}
-        className={`w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center transition cursor-pointer ${item.checked ? "bg-orange-500 border-orange-500" : "border-gray-300 hover:border-orange-400"}`}>
-        {item.checked && <CheckIcon size={11} className="text-white" />}
+        className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition cursor-pointer ${item.checked ? "bg-orange-500 border-orange-500" : "border-gray-300"}`}>
+        {item.checked ? <span className="text-white text-xs">✓</span> : null}
       </div>
       <span
         onClick={() => onToggle(item.id, !item.checked)}
-        className={`text-sm flex-1 cursor-pointer leading-snug ${item.checked ? "line-through text-gray-400" : "text-gray-800"}`}>
+        className={`text-sm flex-1 cursor-pointer ${item.checked ? "line-through text-gray-400" : "text-gray-900"}`}>
         {displayText}
       </span>
-      <button onClick={() => onDelete(item.id)} className="text-gray-200 hover:text-red-400 transition flex-shrink-0 opacity-0 group-hover:opacity-100">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
+      <button onClick={() => onDelete(item.id)} className="text-gray-300 hover:text-red-400 text-xs transition flex-shrink-0">✕</button>
     </div>
   )
 }
@@ -528,84 +524,63 @@ export default function Dashboard() {
         <div
           className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
           onClick={e => { if (e.target === e.currentTarget) { setShowGroceryListModal(false); setActiveGroceryList(null); setEditItemInput("") } }}>
-          <div className="bg-white rounded-2xl w-full max-w-lg mx-4 max-h-[90vh] flex flex-col">
-
-            {/* Header */}
-            <div className="px-6 pt-6 pb-4 border-b border-gray-100 flex-shrink-0">
-              <div className="flex items-start justify-between gap-3 mb-3">
-                {editingListName ? (
-                  <input value={listNameInput} onChange={e => setListNameInput(e.target.value)}
-                    onBlur={async () => {
-                      if (listNameInput.trim() && listNameInput !== activeGroceryList.name) {
-                        await fetch("/api/grocery-lists", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: activeGroceryList.id, name: listNameInput.trim() }) })
-                        setActiveGroceryList((prev: any) => ({ ...prev, name: listNameInput.trim() }))
-                        setGroceryLists(prev => prev.map((l: any) => l.id === activeGroceryList.id ? { ...l, name: listNameInput.trim() } : l))
-                      }
-                      setEditingListName(false)
-                    }}
-                    onKeyDown={e => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-                    autoFocus className="text-xl font-semibold border-b-2 border-orange-400 outline-none flex-1"/>
-                ) : (
-                  <h2 onClick={() => { setListNameInput(activeGroceryList.name); setEditingListName(true) }}
-                    className="text-xl font-semibold text-gray-900 cursor-pointer hover:text-orange-500 transition flex items-center gap-2 flex-1" title="Click to rename">
-                    {activeGroceryList.name}
-                    <PencilIcon size={14} className="text-gray-300 flex-shrink-0" />
-                  </h2>
-                )}
-                <button onClick={() => deleteGroceryList(activeGroceryList.id)} className="text-xs text-red-400 hover:text-red-600 border border-red-100 hover:border-red-300 rounded-lg px-3 py-1.5 transition flex-shrink-0">Delete</button>
-              </div>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-gray-400">{activeGroceryList.items?.filter((i: any) => i.checked).length} of {activeGroceryList.items?.length || 0} items checked</p>
-                <div className="flex gap-3">
-                  <button onClick={printGroceryList} className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1.5 transition"><PrintIcon size={13} />Print</button>
-                  <button onClick={copyGroceryText} className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1.5 transition">{groceryCopied ? <><CheckIcon size={13} />Copied!</> : <><ListIcon size={13} />Copy</>}</button>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4 max-h-[85vh] overflow-y-auto">
+            {/* List name */}
+            <div className="mb-3">
+              {editingListName ? (
+                <input value={listNameInput} onChange={e => setListNameInput(e.target.value)}
+                  onBlur={async () => {
+                    if (listNameInput.trim() && listNameInput !== activeGroceryList.name) {
+                      await fetch("/api/grocery-lists", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: activeGroceryList.id, name: listNameInput.trim() }) })
+                      setActiveGroceryList((prev: any) => ({ ...prev, name: listNameInput.trim() }))
+                      setGroceryLists(prev => prev.map((l: any) => l.id === activeGroceryList.id ? { ...l, name: listNameInput.trim() } : l))
+                    }
+                    setEditingListName(false)
+                  }}
+                  onKeyDown={e => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+                  autoFocus className="text-lg font-medium border-b border-orange-300 outline-none w-full"/>
+              ) : (
+                <h2 onClick={() => { setListNameInput(activeGroceryList.name); setEditingListName(true) }} className="text-lg font-medium cursor-pointer hover:text-orange-500 transition flex items-center gap-2" title="Click to rename">
+                  {activeGroceryList.name} <PencilIcon size={13} className="text-gray-300" />
+                </h2>
+              )}
+            </div>
+            {/* Actions row */}
+            <div className="flex items-center gap-2 mb-4">
+              <button onClick={() => deleteGroceryList(activeGroceryList.id)} className="text-xs text-red-400 hover:text-red-600 border border-red-100 hover:border-red-300 rounded-lg px-3 py-2 transition">Delete list</button>
+              <div className="flex-1" />
+              <button onClick={printGroceryList} className="text-xs text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg px-3 py-2 flex items-center gap-1.5 transition"><PrintIcon size={12} />Print</button>
+              <button onClick={copyGroceryText} className="text-xs text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg px-3 py-2 flex items-center gap-1.5 transition">{groceryCopied ? <><CheckIcon size={12} />Copied!</> : <><ListIcon size={12} />Copy</>}</button>
+            </div>
+            <p className="text-xs text-gray-400 mb-2">{activeGroceryList.items?.filter((i: any) => i.checked).length} of {activeGroceryList.items?.length} items checked</p>
+            <div className="w-full bg-gray-100 rounded-full h-1.5 mb-4">
+              <div className="bg-orange-400 h-1.5 rounded-full transition-all" style={{ width: `${activeGroceryList.items?.length > 0 ? Math.round((activeGroceryList.items.filter((i: any) => i.checked).length / activeGroceryList.items.length) * 100) : 0}%` }}/>
+            </div>
+            <div className="flex gap-2 mb-4">
+              <a href="https://www.hy-vee.com/aisles-online/" target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-100 rounded-xl transition">
+                <LinkIcon size={13} /><span className="text-xs font-medium text-gray-600">Hy-Vee</span>
+              </a>
+              <a href="https://www.walmart.com" target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-100 rounded-xl transition">
+                <LinkIcon size={13} /><span className="text-xs font-medium text-gray-600">Walmart</span>
+              </a>
+              <a href="https://shop.fareway.com" target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-100 rounded-xl transition">
+                <LinkIcon size={13} /><span className="text-xs font-medium text-gray-600">Fareway</span>
+              </a>
+            </div>
+            <div className="flex gap-2 mb-4">
+              <input value={editItemInput} onChange={e => setEditItemInput(e.target.value)} onKeyDown={e => e.key === "Enter" && addItemToList()} placeholder="Add an item..." className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none"/>
+              <button onClick={addItemToList} className="px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-medium hover:bg-orange-600">Add</button>
+            </div>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleGroceryDragEnd}>
+              <SortableContext items={activeGroceryList.items?.map((i: any) => i.id) || []} strategy={verticalListSortingStrategy}>
+                <div className="space-y-0.5 mb-6">
+                  {activeGroceryList.items?.map((item: any) => (
+                    <SortableGroceryItem key={item.id} item={item} onToggle={toggleGroceryItem} onDelete={deleteGroceryItem}/>
+                  ))}
                 </div>
-              </div>
-              <div className="w-full bg-gray-100 rounded-full h-2">
-                <div className="bg-orange-400 h-2 rounded-full transition-all" style={{ width: `${activeGroceryList.items?.length > 0 ? Math.round((activeGroceryList.items.filter((i: any) => i.checked).length / activeGroceryList.items.length) * 100) : 0}%` }}/>
-              </div>
-            </div>
-
-            {/* Store shortcuts */}
-            <div className="px-6 py-3 border-b border-gray-100 flex-shrink-0">
-              <div className="flex gap-2">
-                <a href="https://www.hy-vee.com/aisles-online/" target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-100 rounded-xl transition">
-                  <LinkIcon size={13} /><span className="text-xs font-medium text-gray-600">Hy-Vee</span>
-                </a>
-                <a href="https://www.walmart.com" target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-100 rounded-xl transition">
-                  <LinkIcon size={13} /><span className="text-xs font-medium text-gray-600">Walmart</span>
-                </a>
-                <a href="https://shop.fareway.com" target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-100 rounded-xl transition">
-                  <LinkIcon size={13} /><span className="text-xs font-medium text-gray-600">Fareway</span>
-                </a>
-              </div>
-            </div>
-
-            {/* Add item */}
-            <div className="px-6 py-4 border-b border-gray-100 flex-shrink-0">
-              <div className="flex gap-2">
-                <input value={editItemInput} onChange={e => setEditItemInput(e.target.value)} onKeyDown={e => e.key === "Enter" && addItemToList()} placeholder="Add an item..." className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-orange-300 transition"/>
-                <button onClick={addItemToList} className="px-5 py-3 bg-orange-500 text-white rounded-xl text-sm font-semibold hover:bg-orange-600 transition">Add</button>
-              </div>
-            </div>
-
-            {/* Items list */}
-            <div className="flex-1 overflow-y-auto px-3 py-3">
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleGroceryDragEnd}>
-                <SortableContext items={activeGroceryList.items?.map((i: any) => i.id) || []} strategy={verticalListSortingStrategy}>
-                  <div className="space-y-1">
-                    {activeGroceryList.items?.map((item: any) => (
-                      <SortableGroceryItem key={item.id} item={item} onToggle={toggleGroceryItem} onDelete={deleteGroceryItem}/>
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
-            </div>
-
-            {/* Footer */}
-            <div className="px-6 py-4 border-t border-gray-100 flex-shrink-0">
-              <button onClick={() => { setShowGroceryListModal(false); setActiveGroceryList(null); setEditItemInput("") }} className="w-full bg-gray-900 text-white rounded-xl py-3 text-sm font-semibold hover:bg-gray-800 transition">Done</button>
-            </div>
+              </SortableContext>
+            </DndContext>
+            <button onClick={() => { setShowGroceryListModal(false); setActiveGroceryList(null); setEditItemInput("") }} className="w-full border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Done</button>
           </div>
         </div>
       )}
