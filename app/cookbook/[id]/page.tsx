@@ -235,13 +235,15 @@ export default function CookbookPage() {
   async function saveRecipe() {
     if (!edited) return
     setSaving(true)
+    const toSave = { ...edited, title: edited.title?.trim() || "New Recipe" }
     await fetch(`/api/recipes/${edited.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(edited),
+      body: JSON.stringify(toSave),
     })
-    setSelectedRecipe(edited)
-    setRecipes(prev => prev.map(r => r.id === edited.id ? edited : r))
+    setSelectedRecipe(toSave)
+    setRecipes(prev => prev.map(r => r.id === toSave.id ? toSave : r))
+    setEdited(toSave)
     setSaving(false)
     setLastSaved("Saved just now")
     setEditMode(false)
@@ -1057,7 +1059,7 @@ export default function CookbookPage() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Description</div>
                         <button onClick={() => aiAssist("description")} disabled={aiLoading === "description"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1">
-                          {aiLoading === "description" ? "Writing..." : "<SparkleIcon size={13} /> AI write"}
+                          {aiLoading === "description" ? "Writing..." : <><SparkleIcon size={13} /> AI write</>}
                         </button>
                       </div>
                       <textarea value={edited.description || ""} onChange={e => updateEdited("description", e.target.value)} placeholder="Add a description..." className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none outline-none" rows={2}/>
@@ -1066,7 +1068,7 @@ export default function CookbookPage() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Ingredients</div>
                         <button onClick={() => aiAssist("ingredients")} disabled={aiLoading === "ingredients"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1">
-                          {aiLoading === "ingredients" ? "Suggesting..." : "<SparkleIcon size={13} /> AI suggest"}
+                          {aiLoading === "ingredients" ? "Suggesting..." : <><SparkleIcon size={13} /> AI suggest</>}
                         </button>
                       </div>
                       <div className="border border-gray-200 rounded-xl overflow-hidden">
@@ -1129,7 +1131,7 @@ export default function CookbookPage() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Instructions <span className="text-gray-300 font-normal normal-case">(one step per line)</span></div>
                         <button onClick={() => aiAssist("instructions")} disabled={aiLoading === "instructions"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1">
-                          {aiLoading === "instructions" ? "Improving..." : "<SparkleIcon size={13} /> AI improve"}
+                          {aiLoading === "instructions" ? "Improving..." : <><SparkleIcon size={13} /> AI improve</>}
                         </button>
                       </div>
                       <textarea value={edited.instructions || ""} onChange={e => updateEdited("instructions", e.target.value)} placeholder="Boil water&#10;Add pasta&#10;Drain and serve" className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none outline-none" rows={8}/>
@@ -1138,7 +1140,7 @@ export default function CookbookPage() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Notes</div>
                         <button onClick={() => aiAssist("notes")} disabled={aiLoading === "notes"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1">
-                          {aiLoading === "notes" ? "Generating..." : "<SparkleIcon size={13} /> AI generate"}
+                          {aiLoading === "notes" ? "Generating..." : <><SparkleIcon size={13} /> AI generate</>}
                         </button>
                       </div>
                       <textarea value={edited.notes || ""} onChange={e => updateEdited("notes", e.target.value)} placeholder="Tips, variations, substitutions..." className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none outline-none" rows={3}/>
