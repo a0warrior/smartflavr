@@ -44,32 +44,32 @@ export default function HomePage() {
     {
       icon: <SearchIcon size={24} />,
       title: "Paste a link. Get a clean recipe.",
-      desc: "Any recipe website — paste the URL and SmartFlavr strips out the clutter. Just the ingredients and steps, no ads, no life story before the recipe.",
+      desc: "Drop any recipe URL and SmartFlavr pulls in the title, ingredients, and steps — no ads, no scroll-past-my-whole-life-story, no pop-ups. Just the recipe, ready to use.",
     },
     {
       icon: <BookIcon size={24} />,
       title: "Build beautiful cookbooks.",
-      desc: "Create themed collections for weeknight dinners, holiday baking, or whatever your family loves most. Add cover photos, sort by category, make it feel like yours.",
+      desc: "Organize recipes into themed collections with cover art and custom categories. Weeknight dinners, holiday bakes, family classics — each cookbook feels like something you actually made.",
     },
     {
       icon: <PlateIcon size={24} />,
       title: "Cook mode keeps you on track.",
-      desc: "Step through the recipe one instruction at a time, check off ingredients as you use them, and keep your screen awake. Built for messy hands in a real kitchen.",
+      desc: "Walk through each step one at a time, check off ingredients as you go, and keep your screen from locking mid-recipe. Designed for people cooking with flour on their hands.",
     },
     {
       icon: <LinkIcon size={24} />,
       title: "Share with anyone, instantly.",
-      desc: "Make a cookbook public and share one link — no app required to view it. Send family recipes, swap ideas with friends, or show off your collection.",
+      desc: "Make a cookbook public and share one clean link — no account or app needed to browse it. Great for sending family recipes, planning a dinner party, or showing off what you've built.",
     },
     {
       icon: <SparkleIcon size={24} />,
-      title: "AI that actually helps you cook.",
-      desc: "Tell it what's in your fridge, what you're craving, or who you're cooking for. It suggests recipes from your own cookbooks and helps you plan the week.",
+      title: "AI that actually does something.",
+      desc: "Import recipes from photos, scanned pages, and PDFs. Generate nutrition facts, sharpen your instructions, and turn any recipe into an organized grocery list — all in one tap.",
     },
     {
       icon: <PencilIcon size={24} />,
       title: "Edit recipes to match how you cook.",
-      desc: "Added more garlic? Swapped the oil? Save your version so next time it's already perfect. Your tweaks, stored forever.",
+      desc: "More garlic, less salt, different pan — save your version of every recipe so next time it's already exactly how you make it. No sticky notes required.",
     },
   ]
 
@@ -255,28 +255,30 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Bottom CTA */}
+      {/* Contact */}
       <div className="relative bg-orange-500 py-16 px-6 text-center text-white overflow-hidden">
         <div className="absolute -top-10 -right-10 w-64 h-64 bg-orange-400 rounded-full blur-3xl opacity-40 pointer-events-none" />
         <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-orange-600 rounded-full blur-3xl opacity-30 pointer-events-none" />
         <div className="relative z-10">
-          <h2 className="text-3xl font-bold mb-3">Got an invite code?</h2>
-          <p className="text-orange-100 mb-8 text-base max-w-xs mx-auto">
-            Join the people already cooking smarter.
+          <h2 className="text-3xl font-bold mb-3">Have a question or idea?</h2>
+          <p className="text-orange-100 mb-2 text-base max-w-sm mx-auto">
+            SmartFlavr is in private beta and we&apos;re actively shaping it. Bug reports, feature ideas, feedback — all of it is welcome.
           </p>
-          <button
-            onClick={() => {
-              window.scrollTo({ top: 0, behavior: "smooth" })
-              setTimeout(() => setShowInvite(true), 400)
-            }}
-            className="px-8 py-3 bg-white text-orange-500 rounded-xl font-bold hover:bg-orange-50 active:scale-95 transition-all text-sm shadow-md">
-            Create your account
-          </button>
+          <p className="text-orange-200/70 text-sm mb-8">We read every message.</p>
+          <a
+            href="mailto:contact@smartflavr.com"
+            className="inline-block px-8 py-3 bg-white text-orange-500 rounded-xl font-bold hover:bg-orange-50 active:scale-95 transition-all text-sm shadow-md">
+            contact@smartflavr.com
+          </a>
         </div>
       </div>
 
-      <div className="border-t border-gray-100 py-6 text-center">
-        <p className="text-xs text-gray-400">© 2026 SmartFlavr · Private beta</p>
+      <div className="border-t border-gray-100 py-6 px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-400">
+        <span>© 2026 SmartFlavr · Private beta</span>
+        <div className="flex gap-4">
+          <button onClick={() => { window.scrollTo({ top: 0, behavior: "smooth" }); setTimeout(() => setShowInvite(true), 400) }} className="hover:text-orange-500 transition">Create account</button>
+          <button onClick={() => router.push("/login?code=returning")} className="hover:text-orange-500 transition">Sign in</button>
+        </div>
       </div>
     </div>
   )
