@@ -14,6 +14,7 @@ const pool = mysql.createPool({
   const cols = [
     "ALTER TABLE users ADD COLUMN post_timeout_until DATETIME NULL",
     "ALTER TABLE posts ADD COLUMN updated_at DATETIME NULL",
+    "ALTER TABLE posts ADD COLUMN content_warning TINYINT(1) NOT NULL DEFAULT 0",
     "ALTER TABLE post_comments ADD COLUMN updated_at DATETIME NULL",
   ]
   for (const sql of cols) {
