@@ -28,12 +28,21 @@ import { CSS } from "@dnd-kit/utilities"
 
 import { HeartIcon, ShareIcon, PeopleIcon, PrintIcon, SearchIcon, ClockIcon, ChevronRightIcon, SortIcon, ListIcon, LeaveIcon, SparkleIcon, UserIcon, StarIcon, LightBulbIcon, CameraIcon, PlateIcon, TrashIcon } from "@/app/components/Icons"
 
-function SortableRecipeItem({ recipe, isSelected, onClick, isOwner, isFavorited, onToggleFavorite }: any) {
+function SortableRecipeItem({ recipe, isSelected, onClick, isOwner, isFavorited, onToggleFavorite, onRename, onDelete }: any) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: recipe.id })
   const style = { transform: CSS.Transform.toString(transform), transition }
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [renaming, setRenaming] = useState(false)
+  const [renameVal, setRenameVal] = useState(recipe.title || "")
+
+  function submitRename() {
+    const title = renameVal.trim() || "New Recipe"
+    onRename(recipe.id, title)
+    setRenaming(false)
+  }
 
   return (
-    <div ref={setNodeRef} style={style} onClick={onClick}
+    <div ref={setNodeRef} style={style} onClick={renaming ? undefined : onClick}
       className={`mx-2 mb-0.5 px-3 py-2.5 rounded-xl cursor-pointer flex items-center gap-3 group transition-colors md:rounded-xl ${
         isSelected ? "bg-orange-50 border border-orange-100" : "hover:bg-gray-50 border border-transparent"
       } md:mx-2 mx-1 md:py-2.5 py-3.5 md:gap-3 gap-2`}>
@@ -43,22 +52,61 @@ function SortableRecipeItem({ recipe, isSelected, onClick, isOwner, isFavorited,
           <SortIcon size={12} />
         </span>
       )}
-      {/* Mobile-only chevron on left */}
-      <svg className="w-3 h-3 text-gray-300 flex-shrink-0 md:hidden rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
       <div className="flex-1 min-w-0">
-        <p className={`text-sm font-medium truncate leading-tight ${isSelected ? "text-orange-700" : "text-gray-800"}`}>{recipe.title || "New Recipe"}</p>
-        {recipe.prep_time && (
-          <p className="text-xs text-gray-400 mt-0.5 hidden md:flex items-center gap-1">
-            <ClockIcon size={10} />{recipe.prep_time}
-          </p>
+        {renaming ? (
+          <input
+            autoFocus
+            value={renameVal}
+            onChange={e => setRenameVal(e.target.value)}
+            onBlur={submitRename}
+            onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); submitRename() } if (e.key === "Escape") setRenaming(false) }}
+            onClick={e => e.stopPropagation()}
+            className={`text-sm font-medium w-full outline-none border-b pb-0.5 bg-transparent ${isSelected ? "border-orange-300 text-orange-700" : "border-gray-300 text-gray-800"}`}
+            placeholder="Recipe name..."
+          />
+        ) : (
+          <>
+            <p className={`text-sm font-medium truncate leading-tight ${isSelected ? "text-orange-700" : "text-gray-800"}`}>{recipe.title || "New Recipe"}</p>
+            {recipe.prep_time && (
+              <p className="text-xs text-gray-400 mt-0.5 hidden md:flex items-center gap-1">
+                <ClockIcon size={10} />{recipe.prep_time}
+              </p>
+            )}
+          </>
         )}
       </div>
+      {/* Favourite */}
       <button
         onClick={e => { e.stopPropagation(); onToggleFavorite(recipe.id) }}
-        className={`flex-shrink-0 transition ${isFavorited ? "text-red-400" : "text-gray-200 md:opacity-0 md:group-hover:opacity-100 hover:text-red-300"}`}>
+        className={`flex-shrink-0 transition hidden md:block ${isFavorited ? "text-red-400" : "text-gray-200 opacity-0 group-hover:opacity-100 hover:text-red-300"}`}>
         <HeartIcon filled={isFavorited} size={14} />
       </button>
-      <svg className="w-3 h-3 text-gray-300 flex-shrink-0 md:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
+      {/* ... context menu (always visible on mobile, hover on desktop) */}
+      {isOwner && (
+        <div className="relative flex-shrink-0" onClick={e => e.stopPropagation()}>
+          <button
+            onClick={() => setMenuOpen(o => !o)}
+            className="md:opacity-0 md:group-hover:opacity-100 text-gray-400 hover:text-gray-600 transition rounded p-0.5 text-base leading-none font-bold"
+          >⋯</button>
+          {menuOpen && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
+              <div className="absolute right-0 top-full mt-1 bg-white border border-gray-100 rounded-xl shadow-lg z-50 py-1 min-w-[120px]">
+                <button
+                  onClick={() => { setMenuOpen(false); setRenameVal(recipe.title || ""); setRenaming(true) }}
+                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-t-xl">
+                  Rename
+                </button>
+                <button
+                  onClick={() => { setMenuOpen(false); onDelete(recipe.id) }}
+                  className="w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-red-50 rounded-b-xl">
+                  Delete
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -280,6 +328,17 @@ export default function CookbookPage() {
       setMobileView("detail")
     }
     await notifyFirebase()
+  }
+
+  async function renameRecipe(id: string, title: string) {
+    await fetch(`/api/recipes/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title }),
+    })
+    setRecipes(prev => prev.map(r => r.id === id ? { ...r, title } : r))
+    if (selectedRecipe?.id === id) setSelectedRecipe((prev: any) => prev ? { ...prev, title } : prev)
+    if (edited?.id === id) setEdited((prev: any) => prev ? { ...prev, title } : prev)
   }
 
   async function deleteRecipe(id: string) {
@@ -863,6 +922,8 @@ export default function CookbookPage() {
                     isOwner={canEdit}
                     isFavorited={favorites.has(r.id)}
                     onToggleFavorite={toggleFavorite}
+                    onRename={renameRecipe}
+                    onDelete={deleteRecipe}
                   />
                 ))}
               </SortableContext>
@@ -1026,7 +1087,13 @@ export default function CookbookPage() {
                     <div className="flex gap-2 mb-4 flex-wrap">
                       <input value={edited.prep_time || ""} onChange={e => updateEdited("prep_time", e.target.value)} placeholder="Time" className="bg-white border border-gray-200 rounded-full px-3 py-1 text-xs w-28 outline-none"/>
                       <input value={edited.servings || ""} onChange={e => updateEdited("servings", e.target.value)} placeholder="Servings" className="bg-white border border-gray-200 rounded-full px-3 py-1 text-xs w-28 outline-none"/>
-                      <input value={edited.difficulty || ""} onChange={e => updateEdited("difficulty", e.target.value)} placeholder="Difficulty" className="bg-white border border-gray-200 rounded-full px-3 py-1 text-xs w-28 outline-none"/>
+                      <select value={edited.difficulty || ""} onChange={e => updateEdited("difficulty", e.target.value)} className="bg-white border border-gray-200 rounded-full px-3 py-1 text-xs outline-none cursor-pointer">
+                        <option value="">Difficulty</option>
+                        <option value="Easy">Easy</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Hard">Hard</option>
+                        <option value="Expert">Expert</option>
+                      </select>
                       <select value={edited.category_id || ""} onChange={e => updateEdited("category_id", e.target.value)} className="bg-white border border-gray-200 rounded-full px-3 py-1 text-xs outline-none">
                         <option value="">No category</option>
                         {categories.map((cat: any) => (
