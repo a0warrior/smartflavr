@@ -59,6 +59,7 @@ export default function MealPlannerPage() {
   const [saveMode, setSaveMode] = useState<"new" | "existing">("new")
   const [existingLists, setExistingLists] = useState<any[]>([])
   const [selectedExistingList, setSelectedExistingList] = useState("")
+  const [mobileDate, setMobileDate] = useState<Date>(new Date())
 
   const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
@@ -79,7 +80,11 @@ export default function MealPlannerPage() {
   }, [currentWeek])
 
   useEffect(() => {
-    if (weekDates.length > 0) fetchMeals()
+    if (weekDates.length > 0) {
+      fetchMeals()
+      const inWeek = weekDates.some(d => d.toDateString() === mobileDate.toDateString())
+      if (!inWeek) setMobileDate(weekDates[0])
+    }
   }, [weekDates])
 
   useEffect(() => {
@@ -392,48 +397,143 @@ export default function MealPlannerPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      <div className="max-w-7xl mx-auto px-6 py-8">
 
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <button onClick={prevWeek} className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 bg-white">←</button>
+      {/* ── SHARED HEADER ── */}
+      <div className="max-w-7xl mx-auto px-4 md:px-6 pt-6 pb-4">
+        {/* Week nav row */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <button onClick={prevWeek} className="w-9 h-9 flex items-center justify-center border border-gray-200 rounded-xl text-gray-500 hover:bg-gray-50 bg-white text-base">←</button>
             <div>
-              <h1 className="text-lg font-medium text-gray-900">Meal planner</h1>
+              <h1 className="text-base font-semibold text-gray-900">Meal Planner</h1>
               <p className="text-xs text-gray-400">
-                {weekDates.length > 0 && `${formatDateDisplay(weekDates[0])} – ${formatDateDisplay(weekDates[6])}, ${weekDates[0]?.getFullYear()}`}
+                {weekDates.length > 0 && `${formatDateDisplay(weekDates[0])} – ${formatDateDisplay(weekDates[6])}`}
               </p>
             </div>
-            <button onClick={nextWeek} className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 bg-white">→</button>
+            <button onClick={nextWeek} className="w-9 h-9 flex items-center justify-center border border-gray-200 rounded-xl text-gray-500 hover:bg-gray-50 bg-white text-base">→</button>
           </div>
-          <div className="flex gap-3 items-center flex-wrap justify-end">
-            <button
-              onClick={() => setShowCategoryModal(true)}
-              className="border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 bg-white">
-              + Category
-            </button>
+          {/* Desktop-only action buttons */}
+          <div className="hidden md:flex gap-3 items-center flex-wrap justify-end">
+            <button onClick={() => setShowCategoryModal(true)} className="border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 bg-white">+ Category</button>
             {hasMissingNutrition && (
-              <button
-                onClick={generateMissingNutrition}
-                disabled={generatingNutrition}
-                className="border border-orange-200 text-orange-500 px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-50 disabled:opacity-50 transition bg-white">
-                {generatingNutrition ? "Generating..." : <><SparkleIcon size={13} /> Generate missing nutrition</>}
+              <button onClick={generateMissingNutrition} disabled={generatingNutrition} className="border border-orange-200 text-orange-500 px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-50 disabled:opacity-50 transition bg-white">
+                {generatingNutrition ? "Generating..." : <><SparkleIcon size={13} /> Generate nutrition</>}
               </button>
             )}
-            <button
-              onClick={generateGroceryList}
-              disabled={generatingGrocery || meals.length === 0}
-              className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 disabled:opacity-50 transition">
+            <button onClick={generateGroceryList} disabled={generatingGrocery || meals.length === 0} className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 disabled:opacity-50 transition">
               {generatingGrocery ? "Generating..." : "Grocery list"}
             </button>
-            <button
-              onClick={toggleLiveSync}
-              disabled={syncing}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition border ${liveSync ? "bg-blue-500 text-white border-blue-500 hover:bg-blue-600" : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"}`}>
+            <button onClick={toggleLiveSync} disabled={syncing} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition border ${liveSync ? "bg-blue-500 text-white border-blue-500 hover:bg-blue-600" : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"}`}>
               <div className={`w-3 h-3 rounded-full ${liveSync ? "bg-white" : "bg-gray-300"}`}/>
-              {syncing ? "Syncing..." : liveSync ? "Google Calendar: On" : "Google Calendar: Off"}
+              {syncing ? "Syncing..." : liveSync ? "Cal: On" : "Cal: Off"}
+            </button>
+          </div>
+          {/* Mobile-only quick actions */}
+          <div className="flex md:hidden gap-2">
+            <button onClick={generateGroceryList} disabled={generatingGrocery || meals.length === 0} className="px-3 py-2 bg-orange-500 text-white rounded-xl text-xs font-semibold hover:bg-orange-600 disabled:opacity-50 transition">
+              {generatingGrocery ? "..." : "Grocery"}
             </button>
           </div>
         </div>
+      </div>
+
+      {/* ── MOBILE VIEW ── */}
+      <div className="md:hidden px-4 pb-8">
+
+        {/* Day picker */}
+        <div className="bg-white border border-gray-100 rounded-2xl p-3 mb-4">
+          <div className="flex gap-1">
+            {weekDates.map((date, i) => {
+              const isSelected = date.toDateString() === mobileDate.toDateString()
+              const isT = isToday(date)
+              const dayCount = meals.filter(m => m.meal_date?.split("T")[0] === formatDate(date)).length
+              return (
+                <button
+                  key={i}
+                  onClick={() => setMobileDate(date)}
+                  className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 rounded-xl transition ${
+                    isSelected ? "bg-orange-500 text-white" : isT ? "bg-orange-50 text-orange-500" : "text-gray-500 hover:bg-gray-50"
+                  }`}>
+                  <span className="text-[10px] font-semibold uppercase">{DAYS[i]}</span>
+                  <span className="text-base font-bold leading-tight">{date.getDate()}</span>
+                  <span className={`w-1.5 h-1.5 rounded-full ${dayCount > 0 ? (isSelected ? "bg-white/70" : "bg-orange-400") : "bg-transparent"}`} />
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Day nutrition summary */}
+        {(() => {
+          const n = getDayNutrition(mobileDate)
+          if (n.calories === 0) return null
+          return (
+            <div className="grid grid-cols-4 gap-2 mb-4">
+              {[
+                { label: "Cal", val: n.calories.toLocaleString() },
+                { label: "Protein", val: `${n.protein}g` },
+                { label: "Carbs", val: `${n.carbs}g` },
+                { label: "Fat", val: `${n.fat}g` },
+              ].map(s => (
+                <div key={s.label} className="bg-white border border-gray-100 rounded-xl p-2.5 text-center">
+                  <div className="text-sm font-bold text-gray-900">{s.val}</div>
+                  <div className="text-[10px] text-gray-400 mt-0.5">{s.label}</div>
+                </div>
+              ))}
+            </div>
+          )
+        })()}
+
+        {/* Meal categories for selected day */}
+        {categories.length === 0 ? (
+          <div className="bg-white border border-dashed border-gray-200 rounded-2xl p-10 text-center">
+            <p className="text-sm text-gray-400 mb-4">Add a meal category to get started — like Breakfast, Lunch, or Dinner.</p>
+            <button onClick={() => setShowCategoryModal(true)} className="px-5 py-2.5 bg-orange-500 text-white rounded-xl text-sm font-semibold hover:bg-orange-600 transition">+ Add Category</button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {categories.map((cat: any) => {
+              const cellMeals = getMealsForCell(mobileDate, cat.name)
+              return (
+                <div key={cat.id} className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
+                    <span className="text-sm font-semibold text-gray-900">{cat.name}</span>
+                    <button onClick={() => deleteCategory(cat.id)} className="text-gray-300 hover:text-red-400 text-lg leading-none transition px-1">×</button>
+                  </div>
+                  <div className="p-3 space-y-2">
+                    {cellMeals.map((meal: any) => (
+                      <div key={meal.id} className="flex items-center gap-3 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2.5">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-orange-800 truncate">{meal.recipe_title}</p>
+                          {meal.nutrition && (() => {
+                            const n = typeof meal.nutrition === "string" ? JSON.parse(meal.nutrition) : meal.nutrition
+                            return <p className="text-xs text-orange-400 mt-0.5">{Math.round(n.calories)} cal</p>
+                          })()}
+                        </div>
+                        <button onClick={() => removeMeal(meal)} className="text-orange-300 hover:text-red-400 transition flex-shrink-0 text-lg leading-none px-1">×</button>
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => { setSelectedDate(formatDate(mobileDate)); setSelectedCategory(cat.name); setShowAddModal(true) }}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-gray-200 text-sm text-gray-400 hover:border-orange-300 hover:text-orange-400 hover:bg-orange-50 transition">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                      Add meal
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+            <button
+              onClick={() => setShowCategoryModal(true)}
+              className="w-full py-3 rounded-2xl border border-dashed border-gray-200 text-sm text-gray-400 hover:border-orange-200 hover:text-orange-400 hover:bg-orange-50 transition">
+              + Add category
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* ── DESKTOP VIEW ── */}
+      <div className="hidden md:block max-w-7xl mx-auto px-6 pb-8">
 
         {weekAvg && (
           <div className="grid grid-cols-4 gap-4 mb-6">
@@ -457,9 +557,7 @@ export default function MealPlannerPage() {
             {weekDates.map((date, i) => (
               <div key={i} className={`p-3 border-b border-r border-gray-100 text-center last:border-r-0 ${isToday(date) ? "bg-orange-50" : ""}`}>
                 <div className="text-xs font-medium text-gray-500">{DAYS[i]}</div>
-                <div className={`text-sm font-medium mt-0.5 ${isToday(date) ? "text-orange-500" : "text-gray-900"}`}>
-                  {date.getDate()}
-                </div>
+                <div className={`text-sm font-medium mt-0.5 ${isToday(date) ? "text-orange-500" : "text-gray-900"}`}>{date.getDate()}</div>
               </div>
             ))}
 
@@ -467,18 +565,12 @@ export default function MealPlannerPage() {
               <React.Fragment key={cat.id}>
                 <div className="p-3 border-b border-r border-gray-100 flex items-center justify-between group">
                   <span className="text-xs font-medium text-gray-600">{cat.name}</span>
-                  <button
-                    onClick={() => deleteCategory(cat.id)}
-                    className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 text-xs transition">
-                    ✕
-                  </button>
+                  <button onClick={() => deleteCategory(cat.id)} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 text-xs transition">×</button>
                 </div>
                 {weekDates.map((date, i) => {
                   const cellMeals = getMealsForCell(date, cat.name)
                   return (
-                    <div
-                      key={`${cat.id}-${i}`}
-                      className={`p-2 border-b border-r border-gray-100 last:border-r-0 min-h-16 ${isToday(date) ? "bg-orange-50/30" : ""}`}>
+                    <div key={`${cat.id}-${i}`} className={`p-2 border-b border-r border-gray-100 last:border-r-0 min-h-16 ${isToday(date) ? "bg-orange-50/30" : ""}`}>
                       <div className="space-y-1">
                         {cellMeals.map((meal: any) => (
                           <div key={meal.id} className="bg-orange-50 border border-orange-100 rounded-lg p-1.5 group relative">
@@ -487,25 +579,11 @@ export default function MealPlannerPage() {
                               const n = typeof meal.nutrition === "string" ? JSON.parse(meal.nutrition) : meal.nutrition
                               return <div className="text-xs text-orange-500 mt-0.5">{Math.round(n.calories)} cal</div>
                             })()}
-                            {meal.synced_to_calendar === 1 && (
-                              <div className="text-xs text-blue-400 mt-0.5">📅 Synced</div>
-                            )}
-                            <button
-                              onClick={() => removeMeal(meal)}
-                              className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-orange-300 hover:text-red-400 text-xs transition">
-                              ✕
-                            </button>
+                            {meal.synced_to_calendar === 1 && <div className="text-xs text-blue-400 mt-0.5">Synced</div>}
+                            <button onClick={() => removeMeal(meal)} className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-orange-300 hover:text-red-400 text-xs transition">×</button>
                           </div>
                         ))}
-                        <button
-                          onClick={() => {
-                            setSelectedDate(formatDate(date))
-                            setSelectedCategory(cat.name)
-                            setShowAddModal(true)
-                          }}
-                          className="w-full text-center text-gray-300 hover:text-orange-400 text-lg leading-none py-1 transition">
-                          +
-                        </button>
+                        <button onClick={() => { setSelectedDate(formatDate(date)); setSelectedCategory(cat.name); setShowAddModal(true) }} className="w-full text-center text-gray-300 hover:text-orange-400 text-lg leading-none py-1 transition">+</button>
                       </div>
                     </div>
                   )
@@ -513,9 +591,7 @@ export default function MealPlannerPage() {
               </React.Fragment>
             ))}
 
-            <div className="p-3 border-r border-gray-100">
-              <span className="text-xs font-medium text-gray-400">Totals</span>
-            </div>
+            <div className="p-3 border-r border-gray-100"><span className="text-xs font-medium text-gray-400">Totals</span></div>
             {weekDates.map((date, i) => {
               const n = getDayNutrition(date)
               return (

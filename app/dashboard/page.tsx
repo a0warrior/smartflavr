@@ -414,14 +414,14 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="bg-white border border-gray-100 rounded-2xl p-5">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 mb-3"><DocumentIcon size={20} /></div>
+              <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-orange-500 mb-3"><DocumentIcon size={20} /></div>
               <h3 className="text-sm font-medium text-gray-900 mb-1">Import from file</h3>
               <p className="text-xs text-gray-400 mb-4 leading-relaxed">Upload a photo of a recipe card, a PDF cookbook page, or a text file — AI will do the reading.</p>
               <p className="text-xs text-gray-400 mb-2">Supported formats</p>
               <div className="flex flex-wrap gap-1.5 mb-4">
-                <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 flex items-center gap-1"><CameraIcon size={11} />Photo</span>
-                <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 flex items-center gap-1"><DocumentIcon size={11} />PDF</span>
-                <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 flex items-center gap-1"><DocumentIcon size={11} />Text file</span>
+                <span className="text-xs px-2.5 py-1 rounded-full bg-orange-50 text-orange-600 flex items-center gap-1"><CameraIcon size={11} />Photo</span>
+                <span className="text-xs px-2.5 py-1 rounded-full bg-orange-50 text-orange-600 flex items-center gap-1"><DocumentIcon size={11} />PDF</span>
+                <span className="text-xs px-2.5 py-1 rounded-full bg-orange-50 text-orange-600 flex items-center gap-1"><DocumentIcon size={11} />Text file</span>
               </div>
               <button onClick={() => document.getElementById("file-import")?.click()} className="w-full border border-gray-200 text-gray-600 px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 transition text-center">Choose a file to import</button>
               <input type="file" id="file-import" accept="image/*,.pdf,.txt" onChange={handleFileImport} className="hidden"/>
@@ -446,7 +446,7 @@ export default function Dashboard() {
                 </div>
                 <div className="p-3 pr-9">
                   <div className="font-medium text-sm text-gray-900 truncate">{book.title}</div>
-                  {book.is_public === 1 && <span className="text-xs text-green-500 font-medium">Public</span>}
+                  {book.is_public === 1 && <span className="text-xs text-orange-500 font-medium">Public</span>}
                 </div>
               </Link>
               <button
@@ -649,7 +649,7 @@ export default function Dashboard() {
               <label className="text-sm text-gray-500 mb-2 block">Visibility</label>
               <div className="flex gap-3">
                 <button onClick={() => setIsPublic(0)} className={`flex-1 py-2 rounded-xl text-sm border transition flex items-center justify-center gap-1.5 ${isPublic === 0 ? "bg-gray-900 text-white border-gray-900" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}><LockIcon size={13} />Private</button>
-                <button onClick={() => setIsPublic(1)} className={`flex-1 py-2 rounded-xl text-sm border transition flex items-center justify-center gap-1.5 ${isPublic === 1 ? "bg-green-500 text-white border-green-500" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}><GlobeIcon size={13} />Public</button>
+                <button onClick={() => setIsPublic(1)} className={`flex-1 py-2 rounded-xl text-sm border transition flex items-center justify-center gap-1.5 ${isPublic === 1 ? "bg-orange-500 text-white border-orange-500" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}><GlobeIcon size={13} />Public</button>
               </div>
             </div>
             <div className="flex gap-3">
@@ -694,7 +694,7 @@ export default function Dashboard() {
               <label className="text-sm text-gray-500 mb-2 block">Visibility</label>
               <div className="flex gap-3">
                 <button onClick={() => setEditingCookbook({ ...editingCookbook, is_public: 0 })} className={`flex-1 py-2 rounded-xl text-sm border transition flex items-center justify-center gap-1.5 ${editingCookbook.is_public === 0 || !editingCookbook.is_public ? "bg-gray-900 text-white border-gray-900" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}><LockIcon size={13} />Private</button>
-                <button onClick={() => setEditingCookbook({ ...editingCookbook, is_public: 1 })} className={`flex-1 py-2 rounded-xl text-sm border transition flex items-center justify-center gap-1.5 ${editingCookbook.is_public === 1 ? "bg-green-500 text-white border-green-500" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}><GlobeIcon size={13} />Public</button>
+                <button onClick={() => setEditingCookbook({ ...editingCookbook, is_public: 1 })} className={`flex-1 py-2 rounded-xl text-sm border transition flex items-center justify-center gap-1.5 ${editingCookbook.is_public === 1 ? "bg-orange-500 text-white border-orange-500" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}><GlobeIcon size={13} />Public</button>
               </div>
             </div>
             <div className="flex gap-3">

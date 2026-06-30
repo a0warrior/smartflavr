@@ -3,16 +3,18 @@ import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Navbar from "@/app/components/Navbar"
+import { ListIcon, PlateIcon, FlameIcon, ClockIcon, SparkleIcon, ChefIcon } from "@/app/components/Icons"
+import type { ReactElement } from "react"
 
 const CATEGORIES = ["Pantry", "Produce", "Proteins", "Dairy", "Frozen", "Spices"]
 
-const CATEGORY_ICONS: Record<string, string> = {
-  Pantry: "🧅",
-  Produce: "🥦",
-  Proteins: "🥩",
-  Dairy: "🥛",
-  Frozen: "🧊",
-  Spices: "🌿",
+const CATEGORY_ICONS: Record<string, ReactElement> = {
+  Pantry:   <ListIcon size={13} />,
+  Produce:  <SparkleIcon size={13} />,
+  Proteins: <PlateIcon size={13} />,
+  Dairy:    <ClockIcon size={13} />,
+  Frozen:   <ChefIcon size={13} />,
+  Spices:   <FlameIcon size={13} />,
 }
 
 function daysUntilDelete(usedAt: string) {
@@ -272,7 +274,7 @@ export default function InventoryPage() {
           <div className="text-center py-16 text-sm text-gray-400">Loading inventory...</div>
         ) : inStock.length === 0 ? (
           <div className="bg-white border border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center p-16 text-center">
-            <span className="text-4xl mb-3">🧺</span>
+            <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-300 mb-3"><ListIcon size={28} /></div>
             <p className="text-sm text-gray-500 font-medium mb-1">Your inventory is empty</p>
             <p className="text-xs text-gray-400">Add items above or import from a grocery list</p>
           </div>
@@ -283,7 +285,7 @@ export default function InventoryPage() {
             {Object.entries(grouped).map(([cat, catItems]: any) => (
               <div key={cat}>
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="text-sm">{CATEGORY_ICONS[cat]}</span>
+                  <span className="text-gray-400">{CATEGORY_ICONS[cat]}</span>
                   <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">{cat}</span>
                   <span className="text-xs text-gray-300">{catItems.length} items</span>
                 </div>
@@ -332,12 +334,12 @@ export default function InventoryPage() {
                     <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end">
                       <button
                         onClick={() => markRestocked(item.id)}
-                        className="text-xs px-3 py-1.5 rounded-full bg-green-50 text-green-700 hover:bg-green-100 transition">
+                        className="text-xs px-3 py-1.5 rounded-full bg-orange-50 text-orange-600 hover:bg-orange-100 transition">
                         Back in stock
                       </button>
                       <button
                         onClick={() => { setGroceryItem(item); setTargetListId(groceryLists[0]?.id?.toString() || ""); setShowGroceryModal(true) }}
-                        className="text-xs px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 transition">
+                        className="text-xs px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition">
                         + Grocery list
                       </button>
                       <button

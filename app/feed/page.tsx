@@ -342,6 +342,11 @@ function PostCard({ post, currentUserId, isAdmin, isTimedOut, onDelete, onUpdate
                 )}
               </div>
             )}
+            {post.type === "video" && post.image_url && (
+              <div className="rounded-xl overflow-hidden mb-3 bg-black">
+                <video src={post.image_url} className="w-full max-h-[480px] object-contain" controls playsInline />
+              </div>
+            )}
             {post.type === "recipe" && post.recipe_id && (
               <Link href={`/cookbook/${post.cookbook_id}?recipe=${post.recipe_id}`} className="block border border-gray-100 rounded-xl overflow-hidden mb-3 hover:shadow-sm transition">
                 {post.image_url ? <img src={post.image_url} className="w-full object-contain rounded-t-xl" />
@@ -499,10 +504,11 @@ export default function FeedPage() {
   const [currentUserId, setCurrentUserId] = useState<number | null>(null)
   const [postTimeoutUntil, setPostTimeoutUntil] = useState<string | null>(null)
   const [showPostModal, setShowPostModal] = useState(false)
-  const [postType, setPostType] = useState<"text" | "photo" | "recipe" | "cookbook" | "question">("text")
+  const [postType, setPostType] = useState<"text" | "photo" | "video" | "recipe" | "cookbook" | "question">("text")
   const [postVisibility, setPostVisibility] = useState<"everyone" | "followers">("everyone")
   const [postContent, setPostContent] = useState("")
   const [postImage, setPostImage] = useState("")
+  const [postVideo, setPostVideo] = useState("")
   const [postRecipeId, setPostRecipeId] = useState("")
   const [postCookbookId, setPostCookbookId] = useState("")
   const [myCookbooks, setMyCookbooks] = useState([])
@@ -574,15 +580,34 @@ export default function FeedPage() {
     reader.readAsDataURL(file)
   }
 
+  async function uploadVideo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    const reader = new FileReader()
+    reader.onloadend = async () => {
+      const res = await fetch("/api/upload-video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ video: reader.result }),
+      })
+      const data = await res.json()
+      if (data.success) setPostVideo(data.url)
+      setUploading(false)
+    }
+    reader.readAsDataURL(file)
+  }
+
   async function submitPost() {
-    if (!postContent && !postImage && !postRecipeId && !postCookbookId) return
+    if (!postContent && !postImage && !postVideo && !postRecipeId && !postCookbookId) return
     setSubmitting(true)
     await fetch("/api/posts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         type: postType, content: postContent,
-        image_url: postImage, recipe_id: postRecipeId || null,
+        image_url: postType === "video" ? postVideo : postImage,
+        recipe_id: postRecipeId || null,
         cookbook_id: postCookbookId || null, visibility: postVisibility,
       }),
     })
@@ -603,7 +628,7 @@ export default function FeedPage() {
 
   function resetModal() {
     setShowPostModal(false)
-    setPostContent(""); setPostImage(""); setPostRecipeId(""); setPostCookbookId("")
+    setPostContent(""); setPostImage(""); setPostVideo(""); setPostRecipeId(""); setPostCookbookId("")
     setPostType("text"); setPostVisibility("everyone")
   }
 
@@ -686,12 +711,17 @@ export default function FeedPage() {
             <h2 className="text-lg font-semibold mb-4">New Post</h2>
 
             <div className="flex gap-2 mb-4 flex-wrap">
-              {(["text", "photo", "recipe", "cookbook", "question"] as const).map(t => (
+              {(["text", "photo", "video", "recipe", "cookbook", "question"] as const).map(t => (
                 <button
                   key={t}
-                  onClick={() => { setPostType(t); setPostImage(""); setPostRecipeId(""); setPostCookbookId("") }}
+                  onClick={() => { setPostType(t); setPostImage(""); setPostVideo(""); setPostRecipeId(""); setPostCookbookId("") }}
                   className={`px-3 py-1 rounded-full text-xs border transition ${postType === t ? "bg-orange-500 text-white border-orange-500" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
-                  {t === "text" ? <span className="flex items-center gap-1"><PencilIcon size={12} />Text</span> : t === "photo" ? <span className="flex items-center gap-1"><CameraIcon size={12} />Photo</span> : t === "recipe" ? <span className="flex items-center gap-1"><PlateIcon size={12} />Recipe</span> : t === "cookbook" ? <span className="flex items-center gap-1"><BookIcon size={12} />Cookbook</span> : <span className="flex items-center gap-1"><QuestionIcon size={12} />Question</span>}
+                  {t === "text" ? <span className="flex items-center gap-1"><PencilIcon size={12} />Text</span>
+                    : t === "photo" ? <span className="flex items-center gap-1"><CameraIcon size={12} />Photo</span>
+                    : t === "video" ? <span className="flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Video</span>
+                    : t === "recipe" ? <span className="flex items-center gap-1"><PlateIcon size={12} />Recipe</span>
+                    : t === "cookbook" ? <span className="flex items-center gap-1"><BookIcon size={12} />Cookbook</span>
+                    : <span className="flex items-center gap-1"><QuestionIcon size={12} />Question</span>}
                 </button>
               ))}
             </div>
@@ -703,6 +733,7 @@ export default function FeedPage() {
                 placeholder={
                   postType === "text" ? "What's cooking?"
                   : postType === "photo" ? "Add a caption..."
+                  : postType === "video" ? "Add a caption..."
                   : postType === "recipe" ? "Say something about this recipe..."
                   : postType === "cookbook" ? "Tell people about this cookbook..."
                   : "Ask the community a cooking question..."
@@ -724,6 +755,23 @@ export default function FeedPage() {
                 </div>
                 <input type="file" id="post-image-upload" accept="image/*" onChange={uploadImage} className="hidden" />
                 {postImage && <button onClick={() => setPostImage("")} className="text-xs text-red-400 mt-1">Remove photo</button>}
+              </div>
+            )}
+
+            {postType === "video" && (
+              <div className="mb-4">
+                <div
+                  onClick={() => !postVideo && document.getElementById("post-video-upload")?.click()}
+                  className="border-2 border-dashed border-gray-100 rounded-xl h-40 flex items-center justify-center cursor-pointer hover:bg-gray-50 overflow-hidden bg-black">
+                  {postVideo
+                    ? <video src={postVideo} className="w-full h-full object-contain" controls />
+                    : <span className="text-xs text-gray-400 flex items-center gap-1.5">
+                        {uploading ? "Uploading..." : <><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-gray-400"><path d="M8 5v14l11-7z"/></svg>Click to add video</>}
+                      </span>}
+                </div>
+                <input type="file" id="post-video-upload" accept="video/*" onChange={uploadVideo} className="hidden" />
+                {postVideo && <button onClick={() => setPostVideo("")} className="text-xs text-red-400 mt-1">Remove video</button>}
+                <p className="text-xs text-gray-400 mt-1">Keep videos short — large files may take a moment to upload.</p>
               </div>
             )}
 
@@ -775,7 +823,7 @@ export default function FeedPage() {
               <button onClick={resetModal} className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm text-gray-500 hover:bg-gray-50">Cancel</button>
               <button
                 onClick={submitPost}
-                disabled={submitting || (!postContent && !postImage && !postRecipeId && !postCookbookId)}
+                disabled={submitting || (!postContent && !postImage && !postVideo && !postRecipeId && !postCookbookId)}
                 className="flex-1 bg-orange-500 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-orange-600 disabled:opacity-50">
                 {submitting ? "Posting..." : "Post"}
               </button>
