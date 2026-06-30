@@ -3,11 +3,15 @@ import Stripe from "stripe"
 import pool from "@/lib/db"
 import { auth } from "@/auth"
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!)
+}
 
-const PRICE_IDS: Record<string, string> = {
-  pro: process.env.STRIPE_PRO_PRICE_ID!,
-  premium: process.env.STRIPE_PREMIUM_PRICE_ID!,
+function getPriceIds(): Record<string, string> {
+  return {
+    pro: process.env.STRIPE_PRO_PRICE_ID!,
+    premium: process.env.STRIPE_PREMIUM_PRICE_ID!,
+  }
 }
 
 export async function POST(req: Request) {
@@ -15,8 +19,10 @@ export async function POST(req: Request) {
   if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const { plan } = await req.json()
-  if (!PRICE_IDS[plan]) return NextResponse.json({ error: "Invalid plan" }, { status: 400 })
+  const priceIds = getPriceIds()
+  if (!priceIds[plan]) return NextResponse.json({ error: "Invalid plan" }, { status: 400 })
 
+  const stripe = getStripe()
   const [users]: any = await pool.query("SELECT id, stripe_customer_id FROM users WHERE email = ?", [session.user.email])
   if (!users.length) return NextResponse.json({ error: "User not found" }, { status: 404 })
 
@@ -32,7 +38,7 @@ export async function POST(req: Request) {
     customer: customerId,
     payment_method_types: ["card"],
     mode: "subscription",
-    line_items: [{ price: PRICE_IDS[plan], quantity: 1 }],
+    line_items: [{ price: priceIds[plan], quantity: 1 }],
     success_url: `${origin}/settings?plan_success=1`,
     cancel_url: `${origin}/settings`,
     metadata: { plan },
