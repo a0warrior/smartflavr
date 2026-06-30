@@ -3,7 +3,7 @@ import { signOut, useSession } from "next-auth/react"
 import Link from "next/link"
 import Image from "next/image"
 import { useState, useEffect } from "react"
-import { BellIcon, HeartIcon, UserIcon, CommentIcon, BookIcon, BanIcon, WarningIcon } from "@/app/components/Icons"
+import { BellIcon, HeartIcon, UserIcon, CommentIcon, BookIcon, BanIcon, WarningIcon, SparkleIcon } from "@/app/components/Icons"
 
 const navLinks = [
   { href: "/feed", label: "Feed" },
@@ -105,6 +105,7 @@ export default function Navbar() {
       case "collab_invite":  return { icon: <BookIcon size={16} />,    link: null, rowBg: !n.read_at ? "bg-orange-50/60" : "" }
       case "post_removed":   return { icon: <BanIcon size={16} />,     link: null, rowBg: "bg-red-50" }
       case "content_warning_added": return { icon: <WarningIcon size={16} />, link: null, rowBg: "bg-yellow-50" }
+      case "plan_granted":   return { icon: <SparkleIcon size={16} />, link: "/profile/settings?tab=plan", rowBg: !n.read_at ? "bg-orange-50/60" : "" }
       default:               return { icon: <BellIcon size={16} />,    link: null, rowBg: !n.read_at ? "bg-orange-50/60" : "" }
     }
   }

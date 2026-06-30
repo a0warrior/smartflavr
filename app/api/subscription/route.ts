@@ -43,10 +43,20 @@ export async function POST(req: Request) {
     const { user_id, plan } = body
     if (!["free", "pro", "premium"].includes(plan)) return NextResponse.json({ error: "Invalid plan" }, { status: 400 })
     await runMigrations()
-    await pool.query(
-      "UPDATE users SET plan = ?, plan_expires_at = NULL WHERE id = ?",
-      [plan, user_id]
-    )
+    await pool.query("UPDATE users SET plan = ?, plan_expires_at = NULL WHERE id = ?", [plan, user_id])
+
+    const messages: Record<string, string> = {
+      pro: "You've been granted Pro access! Enjoy 25 AI uses per week.",
+      premium: "You've been granted Premium access! You now have unlimited AI uses.",
+      free: "Your plan has been updated to Free.",
+    }
+    try {
+      await pool.query(
+        "INSERT INTO notifications (user_id, type, message, data) VALUES (?, 'plan_granted', ?, ?)",
+        [user_id, messages[plan], JSON.stringify({ plan })]
+      )
+    } catch {}
+
     return NextResponse.json({ success: true })
   }
 
