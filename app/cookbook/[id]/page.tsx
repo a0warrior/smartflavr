@@ -46,7 +46,7 @@ function SortableRecipeItem({ recipe, isSelected, onClick, isOwner, isFavorited,
       {/* Mobile-only chevron on left */}
       <svg className="w-3 h-3 text-gray-300 flex-shrink-0 md:hidden rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
       <div className="flex-1 min-w-0">
-        <p className={`text-sm font-medium truncate leading-tight ${isSelected ? "text-orange-700" : "text-gray-800"}`}>{recipe.title}</p>
+        <p className={`text-sm font-medium truncate leading-tight ${isSelected ? "text-orange-700" : "text-gray-800"}`}>{recipe.title || "New Recipe"}</p>
         {recipe.prep_time && (
           <p className="text-xs text-gray-400 mt-0.5 hidden md:flex items-center gap-1">
             <ClockIcon size={10} />{recipe.prep_time}
@@ -255,7 +255,7 @@ export default function CookbookPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        title: "New Recipe",
+        title: "",
         cookbook_id: params.id,
         ingredients: "",
         instructions: "",
@@ -627,7 +627,7 @@ export default function CookbookPage() {
                         <img src={r.image_url} alt="" className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-900 text-[15px] leading-snug truncate">{r.title}</p>
+                        <p className="font-semibold text-gray-900 text-[15px] leading-snug truncate">{r.title || "New Recipe"}</p>
                         {r.prep_time && (
                           <p className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
                             <ClockIcon size={11} />
@@ -915,7 +915,7 @@ export default function CookbookPage() {
           <div className="hidden md:flex bg-white border-b border-gray-100 px-6 py-3 items-center gap-4 flex-shrink-0">
             <div className="flex-1 min-w-0">
               {recipe && !editMode && (
-                <p className="text-sm font-semibold text-gray-900 truncate">{recipe.title}</p>
+                <p className="text-sm font-semibold text-gray-900 truncate">{recipe.title || "New Recipe"}</p>
               )}
               {editMode && <p className="text-sm text-gray-400 font-medium">Editing recipe</p>}
               {lastSaved && <p className="text-xs text-gray-400 mt-0.5">{lastSaved}</p>}
@@ -958,7 +958,7 @@ export default function CookbookPage() {
                 {!editMode ? (
                   <>
                     <div className="flex items-center justify-between mb-3">
-                      <h1 className="text-2xl font-medium">{recipe.title}</h1>
+                      <h1 className="text-2xl font-medium">{recipe.title || "New Recipe"}</h1>
                       <button onClick={() => toggleFavorite(recipe.id)} className={`transition ${favorites.has(recipe.id) ? "text-red-400" : "text-gray-300 hover:text-red-300"}`}>
                         <HeartIcon filled={favorites.has(recipe.id)} size={24} />
                       </button>
@@ -1239,7 +1239,7 @@ export default function CookbookPage() {
             {recipe && (
               <div className="px-4 pb-3 border-b border-gray-100 mb-1">
                 <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Recipe</p>
-                <p className="text-sm font-medium text-gray-900 truncate">{recipe.title}</p>
+                <p className="text-sm font-medium text-gray-900 truncate">{recipe.title || "New Recipe"}</p>
               </div>
             )}
             <div className="px-2">
