@@ -583,21 +583,21 @@ export default function CookbookPage() {
               </div>
             </div>
 
-            {/* Scrollable recipe cards */}
-            <div className="flex-1 overflow-y-auto min-h-0 bg-gray-50 px-4 pt-2 pb-4">
-              {filteredRecipes.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-white shadow-sm flex items-center justify-center mb-4 text-gray-300">
-                    <ListIcon size={28} />
-                  </div>
-                  <p className="text-gray-500 font-medium text-sm">{search ? "No matching recipes" : "No recipes yet"}</p>
-                  {canEdit && !search && (
-                    <button onClick={createRecipe} className="mt-4 px-5 py-2.5 bg-orange-500 text-white rounded-xl text-sm font-semibold shadow-sm">
-                      Add your first recipe
-                    </button>
-                  )}
+            {/* Scrollable recipe cards — or static empty state */}
+            {filteredRecipes.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-center bg-gray-50 px-8">
+                <div className="w-16 h-16 rounded-2xl bg-white shadow-sm flex items-center justify-center mb-4 text-gray-300">
+                  <ListIcon size={28} />
                 </div>
-              ) : (
+                <p className="text-gray-500 font-medium text-sm">{search ? "No matching recipes" : "No recipes yet"}</p>
+                {canEdit && !search && (
+                  <button onClick={createRecipe} className="mt-4 px-5 py-2.5 bg-orange-500 text-white rounded-xl text-sm font-semibold shadow-sm">
+                    Add your first recipe
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="flex-1 overflow-y-auto min-h-0 bg-gray-50 px-4 pt-2 pb-4">
                 <div className="space-y-2">
                   {filteredRecipes.map((r: any) => (
                     <button
@@ -629,8 +629,8 @@ export default function CookbookPage() {
                     </button>
                   ))}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Pinned add recipe footer */}
             {canEdit && (
