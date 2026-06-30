@@ -441,27 +441,27 @@ export default function CookbookPage() {
                 </div>
               )}
             </div>
-            {/* Cookbook-level actions */}
-            <div className="mt-3 space-y-1">
+            {/* Cookbook-level actions — wrapping row on mobile, stacked on desktop */}
+            <div className="mt-3 flex flex-wrap gap-1.5 md:flex-col md:flex-nowrap md:gap-1">
               {isPublic && isOwner && (
                 <button
                   onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/share/cookbook/${params.id}`); alert("Link copied!") }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
-                  <span>🔗</span> Share cookbook
+                  className="whitespace-nowrap md:w-full flex items-center justify-center md:justify-start gap-2 px-3 py-2 text-xs text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+                  🔗 Share
                 </button>
               )}
               {isOwner && (
                 <button
                   onClick={() => setShowCollaboratorModal(true)}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
-                  <span>👥</span> Collaborators
+                  className="whitespace-nowrap md:w-full flex items-center justify-center md:justify-start gap-2 px-3 py-2 text-xs text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+                  👥 Collabs
                 </button>
               )}
               <CookbookPDFButton
                 cookbook={cookbookInfo}
                 recipes={recipes}
                 authorName={session?.user?.name || ""}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition"
+                className="whitespace-nowrap md:w-full flex items-center justify-center md:justify-start gap-2 px-3 py-2 text-xs text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition"
               />
               {isCollaborator && !isOwner && (
                 <button
@@ -470,7 +470,7 @@ export default function CookbookPage() {
                     await fetch("/api/collaborators", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cookbook_id: params.id, user_id: "self" }) })
                     router.push("/dashboard")
                   }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-red-400 border border-red-100 rounded-lg hover:bg-red-50 transition">
+                  className="whitespace-nowrap md:w-full flex items-center justify-center md:justify-start gap-2 px-3 py-2 text-xs text-red-400 border border-red-100 rounded-lg hover:bg-red-50 transition">
                   Leave cookbook
                 </button>
               )}

@@ -438,17 +438,21 @@ export default function Dashboard() {
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-10">
           {cookbooks.map((book: any) => (
-            <div key={book.id} className="bg-white border border-gray-100 rounded-2xl overflow-hidden cursor-pointer hover:shadow-sm transition group relative">
-              <div onClick={() => router.push(`/cookbook/${book.id}`)} className="h-24 flex items-center justify-center overflow-hidden" style={{ backgroundColor: book.cover_image ? "transparent" : book.cover_color + "22" }}>
-                {book.cover_image ? <img src={book.cover_image} className="w-full h-full object-cover"/> : <span className="text-4xl">{book.cover_emoji}</span>}
-              </div>
-              <div className="p-3 flex items-center justify-between">
-                <div onClick={() => router.push(`/cookbook/${book.id}`)} className="font-medium text-sm text-gray-900 flex-1 truncate">{book.title}</div>
-                <div className="flex items-center gap-1">
-                  {book.is_public === 1 && <span className="text-xs text-green-500 font-medium">Public</span>}
-                  <button onClick={e => { e.stopPropagation(); setEditingCookbook({ ...book }); setShowEditModal(true) }} className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 text-xs px-2 transition">✏️</button>
+            <div key={book.id} className="bg-white border border-gray-100 rounded-2xl overflow-hidden hover:shadow-sm transition relative">
+              <Link href={`/cookbook/${book.id}`} className="block">
+                <div className="h-24 flex items-center justify-center overflow-hidden" style={{ backgroundColor: book.cover_image ? "transparent" : book.cover_color + "22" }}>
+                  {book.cover_image ? <img src={book.cover_image} className="w-full h-full object-cover"/> : <span className="text-4xl">{book.cover_emoji}</span>}
                 </div>
-              </div>
+                <div className="p-3 pr-9">
+                  <div className="font-medium text-sm text-gray-900 truncate">{book.title}</div>
+                  {book.is_public === 1 && <span className="text-xs text-green-500 font-medium">Public</span>}
+                </div>
+              </Link>
+              <button
+                onClick={() => { setEditingCookbook({ ...book }); setShowEditModal(true) }}
+                className="absolute top-2 right-2 w-7 h-7 bg-white/90 shadow-sm rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 text-xs transition">
+                ✏️
+              </button>
             </div>
           ))}
           <div onClick={() => setShowModal(true)} className="bg-white border border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center p-8 cursor-pointer hover:bg-gray-50 transition">
