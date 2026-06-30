@@ -53,7 +53,7 @@ function ProfileSettingsContent() {
     if (status === "authenticated") {
       fetchProfile()
       fetchPlan()
-      if (searchParams.get("plan_success") === "1") setActiveTab("plan")
+      if (searchParams.get("plan_success") === "1" || searchParams.get("tab") === "plan") setActiveTab("plan")
     }
   }, [status])
 

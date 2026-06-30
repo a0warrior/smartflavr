@@ -401,13 +401,13 @@ export default function Dashboard() {
             <span className="text-xs text-gray-400">
               Free plan &mdash; <span className="text-gray-700 font-medium">{planStatus.aiUsesThisWeek ?? 0} of {planStatus.weeklyLimit ?? 5}</span> AI uses this week
             </span>
-            <Link href="/profile/settings" className="text-xs text-orange-500 hover:text-orange-600 font-medium transition">View plan &rarr;</Link>
+            <Link href="/profile/settings?tab=plan" className="text-xs text-orange-500 hover:text-orange-600 font-medium transition">View plan &rarr;</Link>
           </div>
         )}
         {planStatus?.plan === "pro" && planStatus?.trialUsed && planStatus?.plan_expires_at && (
           <div className="flex items-center justify-between bg-orange-50 border border-orange-100 rounded-xl px-4 py-2.5 mb-6">
             <span className="text-xs text-orange-700 font-medium">Pro trial active</span>
-            <Link href="/profile/settings" className="text-xs text-orange-500 hover:text-orange-600 font-medium transition">View plan &rarr;</Link>
+            <Link href="/profile/settings?tab=plan" className="text-xs text-orange-500 hover:text-orange-600 font-medium transition">View plan &rarr;</Link>
           </div>
         )}
 
