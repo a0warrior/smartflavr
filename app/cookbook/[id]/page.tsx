@@ -26,6 +26,90 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 
+function HeartIcon({ filled, size = 16 }: { filled?: boolean; size?: number }) {
+  return filled ? (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="#f87171" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+    </svg>
+  ) : (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+    </svg>
+  )
+}
+function ShareIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+    </svg>
+  )
+}
+function PeopleIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  )
+}
+function PrintIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="6 9 6 2 18 2 18 9"/>
+      <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+      <rect x="6" y="14" width="12" height="8"/>
+    </svg>
+  )
+}
+function SearchIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+  )
+}
+function ClockIcon({ size = 13 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+    </svg>
+  )
+}
+function ChevronRightIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="9 18 15 12 9 6"/>
+    </svg>
+  )
+}
+function SortIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/>
+    </svg>
+  )
+}
+function ListIcon({ size = 13 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+      <circle cx="3" cy="6" r="1.2" fill="currentColor" stroke="none"/><circle cx="3" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="3" cy="18" r="1.2" fill="currentColor" stroke="none"/>
+    </svg>
+  )
+}
+function LeaveIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+      <polyline points="16 17 21 12 16 7"/>
+      <line x1="21" y1="12" x2="9" y2="12"/>
+    </svg>
+  )
+}
+
 function SortableRecipeItem({ recipe, isSelected, onClick, isOwner, isFavorited, onToggleFavorite }: any) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: recipe.id })
   const style = { transform: CSS.Transform.toString(transform), transition }
@@ -36,8 +120,8 @@ function SortableRecipeItem({ recipe, isSelected, onClick, isOwner, isFavorited,
       <span className="flex-1 truncate">{recipe.title}</span>
       <button
         onClick={e => { e.stopPropagation(); onToggleFavorite(recipe.id) }}
-        className={`flex-shrink-0 text-sm md:text-xs transition ${isFavorited ? "text-red-400" : "text-gray-300 hover:text-red-300"}`}>
-        {isFavorited ? "♥" : "♡"}
+        className={`flex-shrink-0 transition ${isFavorited ? "text-red-400" : "text-gray-300 hover:text-red-300"}`}>
+        <HeartIcon filled={isFavorited} size={14} />
       </button>
       <svg className="w-3 h-3 text-gray-300 flex-shrink-0 md:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
     </div>
@@ -78,6 +162,7 @@ export default function CookbookPage() {
   const [recipeCropSrc, setRecipeCropSrc] = useState("")
   const [mobileView, setMobileView] = useState<"list" | "detail">("list")
   const [showMobileActions, setShowMobileActions] = useState(false)
+  const [showMobileSort, setShowMobileSort] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -442,7 +527,245 @@ export default function CookbookPage() {
       <Navbar />
       <div className="flex flex-1 overflow-hidden" style={{ height: "calc(100svh - 57px)" }}>
 
-        <div className={`bg-white border-r border-gray-100 flex-col overflow-hidden flex-shrink-0 ${mobileView === "list" ? "flex w-full" : "hidden"} md:flex md:w-52`} style={{ height: "calc(100svh - 57px)" }}>
+        {/* ── MOBILE COOKBOOK LIST (full-screen, replaces sidebar on mobile) ── */}
+        {mobileView === "list" && (
+          <div className="md:hidden flex flex-col w-full" style={{ height: "calc(100svh - 57px)" }}>
+
+            {/* Pinned header */}
+            <div className="flex-shrink-0 bg-white">
+              {/* Hero with cover */}
+              <div className="relative h-44">
+                {cookbookInfo?.cover_image ? (
+                  <img src={cookbookInfo.cover_image} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full" style={{ background: cookbookInfo?.cover_color || "#F97316" }} />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/20 to-black/10" />
+                {!cookbookInfo?.cover_image && cookbookInfo?.cover_emoji && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
+                    <span className="text-7xl opacity-20">{cookbookInfo.cover_emoji}</span>
+                  </div>
+                )}
+                <button
+                  onClick={() => withUnsavedCheck(() => router.push("/dashboard"))}
+                  className="absolute top-4 left-4 flex items-center gap-1.5 bg-white/90 backdrop-blur-sm rounded-xl px-3 py-2 text-xs font-medium text-gray-700 shadow-sm">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                  Dashboard
+                </button>
+                <div className="absolute bottom-0 left-0 right-0 px-4 pb-4">
+                  <h1 className="text-xl font-bold text-white leading-tight line-clamp-2">{cookbookInfo?.title || "Cookbook"}</h1>
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className="text-sm text-white/75">{recipes.length} recipe{recipes.length !== 1 ? "s" : ""}</span>
+                    {activeUsers.length > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                        <span className="text-xs text-white/60">{activeUsers.length} viewing</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex gap-2 px-4 pt-3 pb-2">
+                {isPublic && isOwner && (
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/share/cookbook/${params.id}`); alert("Link copied!") }}
+                    className="flex-1 flex flex-col items-center gap-1 py-3 bg-gray-50 rounded-2xl text-xs text-gray-600 active:bg-gray-100 transition">
+                    <ShareIcon size={18} />
+                    <span>Share</span>
+                  </button>
+                )}
+                {isOwner && (
+                  <button
+                    onClick={() => setShowCollaboratorModal(true)}
+                    className="flex-1 flex flex-col items-center gap-1 py-3 bg-gray-50 rounded-2xl text-xs text-gray-600 active:bg-gray-100 transition">
+                    <PeopleIcon size={18} />
+                    <span>Collabs</span>
+                  </button>
+                )}
+                <CookbookPDFButton
+                  cookbook={cookbookInfo}
+                  recipes={recipes}
+                  authorName={session?.user?.name || ""}
+                  className="flex-1 flex flex-col items-center gap-1 py-3 bg-gray-50 rounded-2xl text-xs text-gray-600 active:bg-gray-100 transition">
+                  <PrintIcon size={18} />
+                  <span>Print</span>
+                </CookbookPDFButton>
+                {isCollaborator && !isOwner && (
+                  <button
+                    onClick={async () => {
+                      if (!confirm("Leave this cookbook?")) return
+                      await fetch("/api/collaborators", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cookbook_id: params.id, user_id: "self" }) })
+                      router.push("/dashboard")
+                    }}
+                    className="flex-1 flex flex-col items-center gap-1 py-3 bg-gray-50 rounded-2xl text-xs text-red-400 active:bg-red-50 transition">
+                    <LeaveIcon size={18} />
+                    <span>Leave</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Search + Sort */}
+              <div className="flex gap-2 px-4 pb-2">
+                <div className="flex-1 relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                    <SearchIcon size={15} />
+                  </div>
+                  <input
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Search recipes…"
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-9 pr-3 py-2.5 text-sm outline-none"
+                  />
+                </div>
+                <button
+                  onClick={() => setShowMobileSort(true)}
+                  className={`flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-xl border transition ${sortBy !== "default" ? "bg-orange-50 border-orange-200 text-orange-500" : "bg-gray-50 border-gray-100 text-gray-500"}`}>
+                  <SortIcon size={18} />
+                </button>
+              </div>
+
+              {/* Category chips — horizontal scroll */}
+              <div className="flex gap-2 px-4 pb-3 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+                <button
+                  onClick={() => { setActiveCategory("all"); setShowFavoritesOnly(false) }}
+                  className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition ${activeCategory === "all" && !showFavoritesOnly ? "bg-orange-500 text-white" : "bg-gray-50 border border-gray-100 text-gray-600"}`}>
+                  <ListIcon size={13} />
+                  All
+                  <span className={`text-xs ${activeCategory === "all" && !showFavoritesOnly ? "text-orange-100" : "text-gray-400"}`}>{recipes.length}</span>
+                </button>
+                <button
+                  onClick={() => { setActiveCategory("all"); setShowFavoritesOnly(!showFavoritesOnly) }}
+                  className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition ${showFavoritesOnly ? "bg-red-400 text-white" : "bg-gray-50 border border-gray-100 text-gray-600"}`}>
+                  <HeartIcon filled={showFavoritesOnly} size={13} />
+                  Saved
+                  <span className={`text-xs ${showFavoritesOnly ? "text-red-100" : "text-gray-400"}`}>{favCount}</span>
+                </button>
+                {categories.map((cat: any) => {
+                  const count = recipes.filter((r: any) => r.category_id == cat.id).length
+                  const isActive = activeCategory === cat.id && !showFavoritesOnly
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => { setActiveCategory(cat.id); setShowFavoritesOnly(false) }}
+                      className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition ${isActive ? "bg-orange-500 text-white" : "bg-gray-50 border border-gray-100 text-gray-600"}`}>
+                      {cat.emoji} {cat.name}
+                      <span className={`text-xs ${isActive ? "text-orange-100" : "text-gray-400"}`}>{count}</span>
+                    </button>
+                  )
+                })}
+                {isOwner && (
+                  <button
+                    onClick={() => setShowCategoryModal(true)}
+                    className="flex-shrink-0 px-3 py-1.5 rounded-full text-sm text-orange-400 border border-dashed border-orange-200 whitespace-nowrap">
+                    + Category
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Scrollable recipe cards */}
+            <div className="flex-1 overflow-y-auto min-h-0 bg-gray-50 px-4 pt-2 pb-4">
+              {filteredRecipes.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-white shadow-sm flex items-center justify-center mb-4 text-gray-300">
+                    <ListIcon size={28} />
+                  </div>
+                  <p className="text-gray-500 font-medium text-sm">{search ? "No matching recipes" : "No recipes yet"}</p>
+                  {canEdit && !search && (
+                    <button onClick={createRecipe} className="mt-4 px-5 py-2.5 bg-orange-500 text-white rounded-xl text-sm font-semibold shadow-sm">
+                      Add your first recipe
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {filteredRecipes.map((r: any) => (
+                    <button
+                      key={r.id}
+                      onClick={() => scrollToRecipe(r.id)}
+                      className={`w-full text-left flex items-center gap-3 p-3.5 rounded-2xl bg-white shadow-sm border transition active:bg-gray-50 ${selectedRecipe?.id === r.id ? "border-orange-200" : "border-transparent"}`}>
+                      {r.image_url && (
+                        <img src={r.image_url} alt="" className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 text-[15px] leading-snug truncate">{r.title}</p>
+                        {r.prep_time && (
+                          <p className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
+                            <ClockIcon size={11} />
+                            {r.prep_time}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2.5 flex-shrink-0">
+                        <button
+                          onClick={e => { e.stopPropagation(); toggleFavorite(r.id) }}
+                          className={`transition ${favorites.has(r.id) ? "text-red-400" : "text-gray-200 active:text-red-300"}`}>
+                          <HeartIcon filled={favorites.has(r.id)} size={18} />
+                        </button>
+                        <div className="text-gray-300">
+                          <ChevronRightIcon size={16} />
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Pinned add recipe footer */}
+            {canEdit && (
+              <div className="flex-shrink-0 bg-white border-t border-gray-100 px-4 py-3">
+                <button
+                  onClick={createRecipe}
+                  className="w-full bg-orange-500 text-white rounded-2xl py-3.5 text-[15px] font-semibold active:bg-orange-600 transition flex items-center justify-center gap-2">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  Add Recipe
+                </button>
+              </div>
+            )}
+
+            {/* Sort bottom sheet */}
+            {showMobileSort && (
+              <div className="fixed inset-0 z-50 flex flex-col justify-end">
+                <div className="absolute inset-0 bg-black/40" onClick={() => setShowMobileSort(false)} />
+                <div className="relative bg-white rounded-t-3xl px-4 pt-5 pb-10 z-10">
+                  <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
+                  <h3 className="text-base font-semibold text-gray-900 mb-3">Sort recipes</h3>
+                  <div className="space-y-0.5">
+                    {([
+                      ["default", "Default order"],
+                      ["az", "A → Z"],
+                      ["za", "Z → A"],
+                      ["time_asc", "Shortest prep time"],
+                      ["time_desc", "Longest prep time"],
+                      ["servings_asc", "Fewest servings"],
+                      ["servings_desc", "Most servings"],
+                      ["difficulty_asc", "Easiest first"],
+                      ["difficulty_desc", "Hardest first"],
+                    ] as [string, string][]).map(([value, label]) => (
+                      <button
+                        key={value}
+                        onClick={() => { setSortBy(value); setShowMobileSort(false) }}
+                        className={`w-full text-left px-4 py-3 rounded-xl text-sm transition flex items-center justify-between ${sortBy === value ? "bg-orange-50 text-orange-600 font-medium" : "text-gray-700 active:bg-gray-50"}`}>
+                        {label}
+                        {sortBy === value && (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── DESKTOP SIDEBAR (hidden on mobile) ── */}
+        <div className="hidden md:flex flex-col bg-white border-r border-gray-100 overflow-hidden flex-shrink-0 md:w-52" style={{ height: "calc(100svh - 57px)" }}>
           <div className="p-3 border-b border-gray-100 flex-shrink-0">
             <button onClick={() => withUnsavedCheck(() => router.push("/dashboard"))} className="text-xs text-orange-500 mb-2 block">← Dashboard</button>
             <div className="text-sm font-medium truncate">{cookbookInfo?.title || "Cookbook"}</div>
@@ -455,28 +778,28 @@ export default function CookbookPage() {
                 </div>
               )}
             </div>
-            {/* Cookbook-level actions — wrapping row on mobile, stacked on desktop */}
-            <div className="mt-3 flex flex-wrap gap-1.5 md:flex-col md:flex-nowrap md:gap-1">
+            <div className="mt-3 flex flex-col gap-1">
               {isPublic && isOwner && (
                 <button
                   onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/share/cookbook/${params.id}`); alert("Link copied!") }}
-                  className="whitespace-nowrap md:w-full flex items-center justify-center md:justify-start gap-2 px-3 py-2 text-xs text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
-                  🔗 Share
+                  className="w-full flex items-center justify-start gap-2 px-3 py-2 text-xs text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+                  <ShareIcon size={13} /> Share
                 </button>
               )}
               {isOwner && (
                 <button
                   onClick={() => setShowCollaboratorModal(true)}
-                  className="whitespace-nowrap md:w-full flex items-center justify-center md:justify-start gap-2 px-3 py-2 text-xs text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
-                  👥 Collabs
+                  className="w-full flex items-center justify-start gap-2 px-3 py-2 text-xs text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+                  <PeopleIcon size={13} /> Collabs
                 </button>
               )}
               <CookbookPDFButton
                 cookbook={cookbookInfo}
                 recipes={recipes}
                 authorName={session?.user?.name || ""}
-                className="whitespace-nowrap md:w-full flex items-center justify-center md:justify-start gap-2 px-3 py-2 text-xs text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition"
-              />
+                className="w-full flex items-center justify-start gap-2 px-3 py-2 text-xs text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+                <PrintIcon size={13} /> Print cookbook
+              </CookbookPDFButton>
               {isCollaborator && !isOwner && (
                 <button
                   onClick={async () => {
@@ -484,16 +807,16 @@ export default function CookbookPage() {
                     await fetch("/api/collaborators", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cookbook_id: params.id, user_id: "self" }) })
                     router.push("/dashboard")
                   }}
-                  className="whitespace-nowrap md:w-full flex items-center justify-center md:justify-start gap-2 px-3 py-2 text-xs text-red-400 border border-red-100 rounded-lg hover:bg-red-50 transition">
-                  Leave cookbook
+                  className="w-full flex items-center justify-start gap-2 px-3 py-2 text-xs text-red-400 border border-red-100 rounded-lg hover:bg-red-50 transition">
+                  <LeaveIcon size={13} /> Leave cookbook
                 </button>
               )}
             </div>
           </div>
           <div className="flex-1 overflow-y-auto min-h-0">
-            <div className="p-3 md:p-2 border-b border-gray-100 space-y-2">
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search recipes..." className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-2.5 md:px-2 md:py-1.5 text-sm md:text-xs"/>
-              <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-2.5 md:px-2 md:py-1.5 text-sm md:text-xs outline-none">
+            <div className="p-2 border-b border-gray-100 space-y-2">
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search recipes..." className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2 py-1.5 text-xs"/>
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2 py-1.5 text-xs outline-none">
                 <option value="default">Sort: Default</option>
                 <option value="az">A → Z</option>
                 <option value="za">Z → A</option>
@@ -505,7 +828,7 @@ export default function CookbookPage() {
                 <option value="difficulty_desc">Difficulty: Hardest first</option>
               </select>
             </div>
-            <div className="px-3 md:px-2 pt-3 md:pt-2 pb-1 text-xs font-medium text-gray-400 uppercase tracking-wide flex items-center justify-between">
+            <div className="px-2 pt-2 pb-1 text-xs font-medium text-gray-400 uppercase tracking-wide flex items-center justify-between">
               Categories
               {isOwner && (
                 <button onClick={() => setShowCategoryModal(true)} className="text-orange-400 font-normal normal-case text-xs">+ Add</button>
@@ -513,13 +836,13 @@ export default function CookbookPage() {
             </div>
             <div
               onClick={() => { setActiveCategory("all"); setShowFavoritesOnly(false); setSelectedRecipe(recipes[0] || null) }}
-              className={`mx-1 px-3 py-3 md:px-2 md:py-1.5 rounded-lg text-sm md:text-xs cursor-pointer flex items-center gap-2 ${activeCategory === "all" && !showFavoritesOnly ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-600 md:text-gray-500 hover:bg-gray-50"}`}>
-              📋 All <span className="ml-auto text-gray-400">{recipes.length}</span>
+              className={`mx-1 px-2 py-1.5 rounded-lg text-xs cursor-pointer flex items-center gap-2 ${activeCategory === "all" && !showFavoritesOnly ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-500 hover:bg-gray-50"}`}>
+              <ListIcon size={13} /> All <span className="ml-auto text-gray-400">{recipes.length}</span>
             </div>
             <div
               onClick={() => { setActiveCategory("all"); setShowFavoritesOnly(!showFavoritesOnly); setSelectedRecipe(null) }}
-              className={`mx-1 px-3 py-3 md:px-2 md:py-1.5 rounded-lg text-sm md:text-xs cursor-pointer flex items-center gap-2 ${showFavoritesOnly ? "bg-red-50 text-red-500 font-medium" : "text-gray-600 md:text-gray-500 hover:bg-gray-50"}`}>
-              ♥ Favorites <span className="ml-auto text-gray-400">{favCount}</span>
+              className={`mx-1 px-2 py-1.5 rounded-lg text-xs cursor-pointer flex items-center gap-2 ${showFavoritesOnly ? "bg-red-50 text-red-500 font-medium" : "text-gray-500 hover:bg-gray-50"}`}>
+              <HeartIcon filled={showFavoritesOnly} size={13} /> Favorites <span className="ml-auto text-gray-400">{favCount}</span>
             </div>
             {categories.map((cat: any) => {
               const count = recipes.filter(r => r.category_id == cat.id).length
@@ -527,13 +850,13 @@ export default function CookbookPage() {
                 <div
                   key={cat.id}
                   onClick={() => { setActiveCategory(cat.id); setShowFavoritesOnly(false); setSelectedRecipe(null) }}
-                  className={`mx-1 px-3 py-3 md:px-2 md:py-1.5 rounded-lg text-sm md:text-xs cursor-pointer flex items-center gap-2 ${activeCategory === cat.id && !showFavoritesOnly ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-600 md:text-gray-500 hover:bg-gray-50"}`}>
+                  className={`mx-1 px-2 py-1.5 rounded-lg text-xs cursor-pointer flex items-center gap-2 ${activeCategory === cat.id && !showFavoritesOnly ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-500 hover:bg-gray-50"}`}>
                   {cat.emoji} {cat.name} <span className="ml-auto text-gray-400">{count}</span>
                 </div>
               )
             })}
-            <div className="border-t-2 border-gray-400 mx-3 mt-3" />
-            <div className="px-3 md:px-2 pt-3 pb-1 text-xs font-medium text-gray-400 uppercase tracking-wide">Recipes</div>
+            <div className="border-t border-gray-100 mx-2 mt-2" />
+            <div className="px-2 pt-2 pb-1 text-xs font-medium text-gray-400 uppercase tracking-wide">Recipes</div>
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={filteredRecipes.map(r => r.id)} strategy={verticalListSortingStrategy}>
                 {filteredRecipes.map((r: any) => (
@@ -551,8 +874,8 @@ export default function CookbookPage() {
             </DndContext>
           </div>
           {canEdit && (
-            <div className="p-3 md:p-2 border-t border-gray-100 flex-shrink-0">
-              <button onClick={createRecipe} className="w-full bg-orange-500 text-white rounded-lg py-3 md:py-1.5 text-sm md:text-xs font-medium hover:bg-orange-600 transition">
+            <div className="p-2 border-t border-gray-100 flex-shrink-0">
+              <button onClick={createRecipe} className="w-full bg-orange-500 text-white rounded-lg py-1.5 text-xs font-medium hover:bg-orange-600 transition">
                 + Add Recipe
               </button>
             </div>

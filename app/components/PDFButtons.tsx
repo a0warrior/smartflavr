@@ -1,4 +1,5 @@
 "use client"
+import type { ReactNode } from "react"
 
 const CSS = `
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -73,7 +74,7 @@ function printHtml(body: string, title: string) {
   setTimeout(() => { win.print() }, 400)
 }
 
-export function RecipePDFButton({ recipe, className }: { recipe: any; className?: string }) {
+export function RecipePDFButton({ recipe, className, children }: { recipe: any; className?: string; children?: ReactNode }) {
   function print() {
     printHtml(`<div>${recipeHtml(recipe, new Date().toLocaleDateString())}</div>`, recipe.title)
   }
@@ -82,12 +83,12 @@ export function RecipePDFButton({ recipe, className }: { recipe: any; className?
       onClick={print}
       className={className ?? "px-3 py-1.5 border border-gray-200 text-gray-500 rounded-lg text-xs hover:bg-gray-50 transition flex items-center gap-1.5"}
     >
-      📄 Print / Save PDF
+      {children ?? "Print / Save PDF"}
     </button>
   )
 }
 
-export function CookbookPDFButton({ cookbook, recipes, authorName, className }: { cookbook: any; recipes: any[]; authorName: string; className?: string }) {
+export function CookbookPDFButton({ cookbook, recipes, authorName, className, children }: { cookbook: any; recipes: any[]; authorName: string; className?: string; children?: ReactNode }) {
   function print() {
     const today = new Date().toLocaleDateString()
     const cover = `
@@ -113,7 +114,7 @@ export function CookbookPDFButton({ cookbook, recipes, authorName, className }: 
       onClick={print}
       className={className ?? "px-3 py-1.5 border border-gray-200 text-gray-500 rounded-lg text-xs hover:bg-gray-50 transition flex items-center gap-1.5"}
     >
-      📚 Print cookbook
+      {children ?? "Print cookbook"}
     </button>
   )
 }
