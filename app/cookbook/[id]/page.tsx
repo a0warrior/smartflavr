@@ -146,6 +146,8 @@ export default function CookbookPage() {
   const [mobileView, setMobileView] = useState<"list" | "detail">("list")
   const [showMobileActions, setShowMobileActions] = useState(false)
   const [showMobileSort, setShowMobileSort] = useState(false)
+  const [mobileCardMenuId, setMobileCardMenuId] = useState<string | null>(null)
+  const [mobileCardRename, setMobileCardRename] = useState("")
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -348,12 +350,16 @@ export default function CookbookPage() {
 
   async function confirmDelete() {
     if (!recipeToDelete) return
+    const idx = recipes.findIndex((r: any) => r.id === recipeToDelete)
+    const remaining = recipes.filter((r: any) => r.id !== recipeToDelete)
+    const nextRecipe = remaining[Math.min(idx, remaining.length - 1)] || null
     await fetch(`/api/recipes/${recipeToDelete}`, { method: "DELETE" })
     setShowDeleteModal(false)
     setRecipeToDelete(null)
-    setSelectedRecipe(null)
+    setRecipes(remaining)
+    setSelectedRecipe(nextRecipe)
+    setEdited(nextRecipe ? { ...nextRecipe } : null)
     setEditMode(false)
-    await fetchRecipes()
     await notifyFirebase()
   }
 
@@ -694,12 +700,19 @@ export default function CookbookPage() {
                           </p>
                         )}
                       </div>
-                      <div className="flex items-center gap-2.5 flex-shrink-0">
+                      <div className="flex items-center gap-2 flex-shrink-0">
                         <button
                           onClick={e => { e.stopPropagation(); toggleFavorite(r.id) }}
                           className={`transition ${favorites.has(r.id) ? "text-red-400" : "text-gray-200 active:text-red-300"}`}>
                           <HeartIcon filled={favorites.has(r.id)} size={18} />
                         </button>
+                        {canEdit && (
+                          <button
+                            onClick={e => { e.stopPropagation(); setMobileCardRename(r.title || ""); setMobileCardMenuId(r.id) }}
+                            className="text-gray-400 active:text-gray-600 text-lg font-bold px-1 leading-none">
+                            ⋯
+                          </button>
+                        )}
                         <div className="text-gray-300">
                           <ChevronRightIcon size={16} />
                         </div>
@@ -1298,6 +1311,51 @@ export default function CookbookPage() {
       )}
 
       {/* Mobile actions bottom sheet */}
+      {/* Mobile card ⋯ bottom sheet */}
+      {mobileCardMenuId && (() => {
+        const r = recipes.find((r: any) => r.id === mobileCardMenuId)
+        if (!r) return null
+        return (
+          <div className="md:hidden fixed inset-0 z-50 flex flex-col justify-end">
+            <div className="absolute inset-0 bg-black/40" onClick={() => setMobileCardMenuId(null)} />
+            <div className="relative bg-white rounded-t-2xl pt-2 pb-8 z-10">
+              <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
+              <div className="px-4 pb-3 border-b border-gray-100 mb-1">
+                <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-0.5">Recipe</p>
+                <p className="text-sm font-semibold text-gray-900 truncate">{r.title || "New Recipe"}</p>
+              </div>
+              <div className="px-4 py-3 border-b border-gray-100">
+                <p className="text-xs text-gray-500 mb-2">Rename</p>
+                <div className="flex gap-2">
+                  <input
+                    value={mobileCardRename}
+                    onChange={e => setMobileCardRename(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") { const t = mobileCardRename.trim() || "New Recipe"; renameRecipe(mobileCardMenuId, t); setMobileCardMenuId(null) } }}
+                    placeholder="Recipe name..."
+                    className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-orange-300"
+                  />
+                  <button
+                    onClick={() => { const t = mobileCardRename.trim() || "New Recipe"; renameRecipe(mobileCardMenuId, t); setMobileCardMenuId(null) }}
+                    className="px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-semibold active:bg-orange-600">
+                    Save
+                  </button>
+                </div>
+              </div>
+              <div className="px-2 pt-1">
+                <button
+                  onClick={() => { deleteRecipe(mobileCardMenuId); setMobileCardMenuId(null) }}
+                  className="w-full text-left px-4 py-3.5 text-sm text-red-500 active:bg-red-50 rounded-xl flex items-center gap-3">
+                  <TrashIcon size={16} /> Delete recipe
+                </button>
+              </div>
+              <button onClick={() => setMobileCardMenuId(null)} className="w-full mt-2 py-3 text-sm text-gray-400 border-t border-gray-100">
+                Cancel
+              </button>
+            </div>
+          </div>
+        )
+      })()}
+
       {showMobileActions && (
         <div className="md:hidden fixed inset-0 z-50 flex flex-col justify-end">
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowMobileActions(false)} />
