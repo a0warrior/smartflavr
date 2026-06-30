@@ -740,6 +740,7 @@ export default function CookbookPage() {
           <div className="flex border-b border-gray-100 flex-shrink-0">
             {isPublic && isOwner && (
               <button
+                title="Copy share link"
                 onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/share/cookbook/${params.id}`); alert("Link copied!") }}
                 className="flex-1 flex flex-col items-center gap-1 py-3 text-xs text-gray-500 hover:bg-gray-50 hover:text-orange-500 transition">
                 <ShareIcon size={17} />Share
@@ -747,6 +748,7 @@ export default function CookbookPage() {
             )}
             {isOwner && (
               <button
+                title="Manage collaborators"
                 onClick={() => setShowCollaboratorModal(true)}
                 className="flex-1 flex flex-col items-center gap-1 py-3 text-xs text-gray-500 hover:bg-gray-50 hover:text-orange-500 transition">
                 <PeopleIcon size={17} />Collabs
@@ -803,13 +805,8 @@ export default function CookbookPage() {
           <div className="flex-1 overflow-y-auto min-h-0 border-t border-gray-100">
 
             {/* Categories */}
-            <div className="px-3 pt-3 pb-1">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Categories</span>
-                {isOwner && (
-                  <button onClick={() => setShowCategoryModal(true)} className="text-xs text-orange-400 hover:text-orange-600 transition">+ Add</button>
-                )}
-              </div>
+            <div className="px-3 pt-3 pb-2">
+              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Categories</p>
               <div className="space-y-0.5">
                 <button
                   onClick={() => { setActiveCategory("all"); setShowFavoritesOnly(false); setSelectedRecipe(recipes[0] || null) }}
@@ -839,14 +836,24 @@ export default function CookbookPage() {
                     </button>
                   )
                 })}
+                {isOwner && (
+                  <button
+                    onClick={() => setShowCategoryModal(true)}
+                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm text-orange-400 border border-dashed border-orange-200 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-500 transition mt-1">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    New category
+                  </button>
+                )}
               </div>
             </div>
 
             {/* Recipes section */}
-            <div className="px-3 pt-3 pb-1 flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
-                Recipes {filteredRecipes.length !== recipes.length && <span className="normal-case font-normal">({filteredRecipes.length})</span>}
-              </span>
+            <div className="px-3 pt-2 pb-1 border-t border-gray-100">
+              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider py-2">
+                Recipes {filteredRecipes.length !== recipes.length && <span className="normal-case font-normal text-gray-400">({filteredRecipes.length} shown)</span>}
+              </p>
             </div>
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={filteredRecipes.map(r => r.id)} strategy={verticalListSortingStrategy}>
