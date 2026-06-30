@@ -38,7 +38,18 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   }
 
   const { id } = await params
-  await pool.query("DELETE FROM cookbooks WHERE id=?", [id])
+
+  // Cascade: clean up everything inside the cookbook before deleting it
+  const [recipes]: any = await pool.query("SELECT id FROM recipes WHERE cookbook_id = ?", [id])
+  if (recipes.length > 0) {
+    const recipeIds = recipes.map((r: any) => r.id)
+    await pool.query("DELETE FROM favorites WHERE recipe_id IN (?)", [recipeIds])
+    await pool.query("DELETE FROM meal_plans WHERE recipe_id IN (?)", [recipeIds])
+    await pool.query("UPDATE posts SET recipe_id = NULL WHERE recipe_id IN (?)", [recipeIds])
+  }
+  await pool.query("DELETE FROM recipes WHERE cookbook_id = ?", [id])
+  await pool.query("DELETE FROM cookbook_collaborators WHERE cookbook_id = ?", [id])
+  await pool.query("DELETE FROM cookbooks WHERE id = ?", [id])
 
   return NextResponse.json({ success: true })
 }

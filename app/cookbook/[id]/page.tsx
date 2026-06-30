@@ -1020,7 +1020,7 @@ export default function CookbookPage() {
                   </>
                 ) : (
                   <>
-                    <input value={edited.title || ""} onChange={e => updateEdited("title", e.target.value)} className="text-2xl font-medium bg-transparent border-b border-gray-200 outline-none w-full mb-4 pb-2" placeholder="Recipe title"/>
+                    <input value={edited.title || ""} onChange={e => updateEdited("title", e.target.value)} className="text-2xl font-medium bg-transparent border-b border-gray-200 outline-none w-full mb-4 pb-2 placeholder:text-gray-300" placeholder="Type recipe name here..."/>
                     <div className="flex gap-2 mb-4 flex-wrap">
                       <input value={edited.prep_time || ""} onChange={e => updateEdited("prep_time", e.target.value)} placeholder="Time" className="bg-white border border-gray-200 rounded-full px-3 py-1 text-xs w-28 outline-none"/>
                       <input value={edited.servings || ""} onChange={e => updateEdited("servings", e.target.value)} placeholder="Servings" className="bg-white border border-gray-200 rounded-full px-3 py-1 text-xs w-28 outline-none"/>
@@ -1064,12 +1064,66 @@ export default function CookbookPage() {
                     </div>
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
-                        <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Ingredients <span className="text-gray-300 font-normal normal-case">(one per line)</span></div>
+                        <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Ingredients</div>
                         <button onClick={() => aiAssist("ingredients")} disabled={aiLoading === "ingredients"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1">
                           {aiLoading === "ingredients" ? "Suggesting..." : "<SparkleIcon size={13} /> AI suggest"}
                         </button>
                       </div>
-                      <textarea value={edited.ingredients || ""} onChange={e => updateEdited("ingredients", e.target.value)} placeholder="200g pasta&#10;100g cheese&#10;Salt" className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none outline-none" rows={6}/>
+                      <div className="border border-gray-200 rounded-xl overflow-hidden">
+                        {(edited.ingredients || "").split("\n").concat(edited.ingredients ? [] : [""]).map((ing: string, i: number, arr: string[]) => (
+                          <div key={i} className="flex items-center gap-2.5 px-3 border-b border-gray-100 last:border-0 group">
+                            <div className="w-4 h-4 rounded-full border-2 border-gray-200 flex-shrink-0" />
+                            <input
+                              data-ing={i}
+                              value={ing}
+                              onChange={e => {
+                                const lines = (edited.ingredients || "").split("\n")
+                                if (!edited.ingredients && lines.length === 1 && lines[0] === "") lines[0] = ""
+                                lines[i] = e.target.value
+                                updateEdited("ingredients", lines.join("\n"))
+                              }}
+                              onKeyDown={e => {
+                                const lines = (edited.ingredients || "").split("\n").length > 0 ? (edited.ingredients || "").split("\n") : [""]
+                                if (e.key === "Enter") {
+                                  e.preventDefault()
+                                  const arr2 = [...lines]
+                                  arr2.splice(i + 1, 0, "")
+                                  updateEdited("ingredients", arr2.join("\n"))
+                                  setTimeout(() => { const els = document.querySelectorAll<HTMLInputElement>("[data-ing]"); els[i + 1]?.focus() }, 0)
+                                } else if (e.key === "Backspace" && ing === "" && lines.length > 1) {
+                                  e.preventDefault()
+                                  const arr2 = [...lines]
+                                  arr2.splice(i, 1)
+                                  updateEdited("ingredients", arr2.join("\n"))
+                                  setTimeout(() => { const els = document.querySelectorAll<HTMLInputElement>("[data-ing]"); els[Math.max(0, i - 1)]?.focus() }, 0)
+                                }
+                              }}
+                              placeholder={i === 0 ? "e.g. 200g pasta" : "Add ingredient..."}
+                              className="flex-1 text-sm outline-none bg-transparent py-2.5 min-w-0"
+                            />
+                            {arr.length > 1 && (
+                              <button
+                                onClick={() => {
+                                  const lines = (edited.ingredients || "").split("\n")
+                                  lines.splice(i, 1)
+                                  updateEdited("ingredients", lines.join("\n"))
+                                }}
+                                className="text-gray-200 hover:text-red-400 text-xs flex-shrink-0 transition opacity-0 group-hover:opacity-100 focus:opacity-100 p-1"
+                              >✕</button>
+                            )}
+                          </div>
+                        ))}
+                        <button
+                          onClick={() => {
+                            const current = edited.ingredients || ""
+                            updateEdited("ingredients", current ? current + "\n" : "")
+                            setTimeout(() => { const els = document.querySelectorAll<HTMLInputElement>("[data-ing]"); els[els.length - 1]?.focus() }, 0)
+                          }}
+                          className="w-full py-2 text-xs text-gray-400 hover:text-orange-500 hover:bg-orange-50 transition flex items-center justify-center gap-1"
+                        >
+                          <span className="text-base leading-none">+</span> Add ingredient
+                        </button>
+                      </div>
                     </div>
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
