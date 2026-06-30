@@ -441,13 +441,13 @@ export default function CookbookPage() {
   const recipe = editMode ? edited : selectedRecipe
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex flex-col overflow-hidden" style={{ height: "100svh" }}>
       <Navbar />
-      <div className="flex flex-1 overflow-hidden" style={{ height: "calc(100svh - 57px)" }}>
+      <div className="flex flex-1 overflow-hidden min-h-0">
 
         {/* ── MOBILE COOKBOOK LIST (full-screen, replaces sidebar on mobile) ── */}
         {mobileView === "list" && (
-          <div className="md:hidden flex flex-col w-full" style={{ height: "calc(100svh - 57px)" }}>
+          <div className="md:hidden flex flex-col w-full min-h-0 flex-1">
 
             {/* Pinned header */}
             <div className="flex-shrink-0 bg-white">
