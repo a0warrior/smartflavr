@@ -12,13 +12,19 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const { username } = await params
 
   const [users]: any = await pool.query(
-    "SELECT id, name, email, image, username, bio, profile_image, plan FROM users WHERE username = ?",
+    "SELECT id, name, email, image, username, bio, profile_image FROM users WHERE username = ?",
     [username]
   )
 
   if (users.length === 0) notFound()
 
   const user = users[0]
+
+  let userPlan = "free"
+  try {
+    const [planRows]: any = await pool.query("SELECT plan FROM users WHERE id = ?", [user.id])
+    userPlan = planRows[0]?.plan || "free"
+  } catch {}
   const displayImage = user.profile_image || null
   const initials = user.name?.charAt(0).toUpperCase() || "?"
 
@@ -91,13 +97,13 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-0.5">
                 <h1 className="text-xl sm:text-2xl font-medium text-gray-900 truncate">{user.name}</h1>
-                {user.plan === "pro" && (
+                {userPlan === "pro" && (
                   <span className="sf-pro-badge inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold text-white flex-shrink-0">
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
                     Pro
                   </span>
                 )}
-                {user.plan === "premium" && (
+                {userPlan === "premium" && (
                   <span className="sf-premium-badge inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold text-white flex-shrink-0">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l3.5 7L12 2l3.5 8L19 3l1 18H4L5 3z"/></svg>
                     Premium
