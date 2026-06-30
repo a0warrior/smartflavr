@@ -93,6 +93,30 @@ export default function Navbar() {
     setUnreadCount(prev => Math.max(0, prev - 1))
   }
 
+  function timeAgo(date: string) {
+    const diff = Date.now() - new Date(date).getTime()
+    const m = Math.floor(diff / 60000)
+    if (m < 1) return "just now"
+    if (m < 60) return `${m}m ago`
+    const h = Math.floor(m / 60)
+    if (h < 24) return `${h}h ago`
+    const d = Math.floor(h / 24)
+    if (d < 7) return `${d}d ago`
+    return new Date(date).toLocaleDateString()
+  }
+
+  function notificationMeta(n: any, nData: any) {
+    switch (n.type) {
+      case "new_follower":   return { icon: "👤", link: nData.follower_username   ? `/u/${nData.follower_username}`   : null, rowBg: !n.read_at ? "bg-orange-50/60" : "" }
+      case "post_like":      return { icon: "❤️", link: nData.liker_username      ? `/u/${nData.liker_username}`      : null, rowBg: !n.read_at ? "bg-orange-50/60" : "" }
+      case "post_comment":   return { icon: "💬", link: nData.commenter_username  ? `/u/${nData.commenter_username}`  : null, rowBg: !n.read_at ? "bg-orange-50/60" : "" }
+      case "collab_invite":  return { icon: "📚", link: null, rowBg: !n.read_at ? "bg-orange-50/60" : "" }
+      case "post_removed":   return { icon: "🚫", link: null, rowBg: "bg-red-50" }
+      case "content_warning_added": return { icon: "⚠️", link: null, rowBg: "bg-yellow-50" }
+      default:               return { icon: "🔔", link: null, rowBg: !n.read_at ? "bg-orange-50/60" : "" }
+    }
+  }
+
   function handleBellClick() {
     if (!showNotifications) {
       setBellRinging(true)
@@ -135,20 +159,26 @@ export default function Navbar() {
         ) : (
           notifications.map((n: any) => {
             const nData = (() => { try { return typeof n.data === "string" ? JSON.parse(n.data) : (n.data || {}) } catch { return {} } })()
-            const profileLink = n.type === "new_follower" && nData.follower_username ? `/u/${nData.follower_username}` : null
+            const { icon, link, rowBg } = notificationMeta(n, nData)
             return (
-              <div key={n.id} className={`px-4 py-3 ${!n.read_at ? "bg-orange-50/60" : ""}`}>
+              <div key={n.id} className={`px-4 py-3 ${rowBg}`}>
                 <div className="flex items-start gap-2">
+                  <span className="text-base flex-shrink-0 mt-0.5">{icon}</span>
+                  <div className="flex-1 min-w-0">
+                    {link ? (
+                      <Link href={link} onClick={() => { markOneRead(n.id); setShowNotifications(false) }} className="text-sm text-gray-700 leading-snug hover:text-orange-500 transition block">
+                        {n.message}
+                      </Link>
+                    ) : (
+                      <p className="text-sm text-gray-700 leading-snug">{n.message}</p>
+                    )}
+                    <p className="text-xs text-gray-400 mt-0.5">{timeAgo(n.created_at)}</p>
+                  </div>
                   {!n.read_at && <span className="w-2 h-2 rounded-full bg-orange-500 mt-1.5 flex-shrink-0" />}
-                  {profileLink ? (
-                    <Link href={profileLink} onClick={() => { markOneRead(n.id); setShowNotifications(false) }} className={`text-sm text-gray-700 flex-1 leading-snug hover:text-orange-500 transition ${n.read_at ? "pl-4" : ""}`}>{n.message}</Link>
-                  ) : (
-                    <p className={`text-sm text-gray-700 flex-1 leading-snug ${n.read_at ? "pl-4" : ""}`}>{n.message}</p>
-                  )}
                   <button onClick={() => deleteNotification(n.id)} className="text-gray-300 hover:text-red-400 transition flex-shrink-0 text-xs mt-0.5">✕</button>
                 </div>
                 {n.type === "collab_invite" && !n.read_at && (
-                  <div className="flex gap-2 mt-2 pl-4">
+                  <div className="flex gap-2 mt-2 pl-6">
                     <button onClick={() => respondToInvite(n, "accept")} className="flex-1 bg-orange-500 text-white rounded-lg py-1.5 text-xs font-semibold hover:bg-orange-600 transition">
                       Accept
                     </button>
@@ -158,9 +188,8 @@ export default function Navbar() {
                   </div>
                 )}
                 {n.type === "collab_invite" && n.read_at && (
-                  <p className="text-xs text-gray-400 mt-1 pl-4 italic">✓ Responded</p>
+                  <p className="text-xs text-gray-400 mt-1 pl-6 italic">✓ Responded</p>
                 )}
-                <p className="text-xs text-gray-400 mt-1 pl-4">{new Date(n.created_at).toLocaleDateString()}</p>
               </div>
             )
           })

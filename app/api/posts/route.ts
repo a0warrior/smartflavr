@@ -113,6 +113,15 @@ export async function PUT(req: Request) {
       "UPDATE posts SET content_warning = ? WHERE id = ?",
       [content_warning ? 1 : 0, id]
     )
+    if (content_warning) {
+      const [postInfo] = await pool.query("SELECT user_id FROM posts WHERE id = ?", [id]) as any[]
+      if (postInfo.length > 0 && postInfo[0].user_id !== currentUser[0].id) {
+        await pool.query(
+          "INSERT INTO notifications (user_id, type, message) VALUES (?, 'content_warning_added', ?)",
+          [postInfo[0].user_id, "A moderator added a content warning to one of your posts"]
+        )
+      }
+    }
     return NextResponse.json({ success: true })
   }
 
@@ -139,9 +148,15 @@ export async function DELETE(req: Request) {
   const { id } = await req.json()
   const isAdmin = currentUser[0]?.is_admin === 1
 
-  // Admins can delete any post; authors can only delete their own
   if (isAdmin) {
+    const [postInfo] = await pool.query("SELECT user_id FROM posts WHERE id = ?", [id]) as any[]
     await pool.query("DELETE FROM posts WHERE id = ?", [id])
+    if (postInfo.length > 0 && postInfo[0].user_id !== currentUser[0].id) {
+      await pool.query(
+        "INSERT INTO notifications (user_id, type, message) VALUES (?, 'post_removed', ?)",
+        [postInfo[0].user_id, "A moderator removed one of your posts"]
+      )
+    }
   } else {
     await pool.query("DELETE FROM posts WHERE id = ? AND user_id = ?", [id, currentUser[0].id])
   }
