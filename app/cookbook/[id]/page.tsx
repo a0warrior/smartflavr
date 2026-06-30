@@ -33,12 +33,34 @@ function SortableRecipeItem({ recipe, isSelected, onClick, isOwner, isFavorited,
   const style = { transform: CSS.Transform.toString(transform), transition }
 
   return (
-    <div ref={setNodeRef} style={style} onClick={onClick} className={`mx-1 px-3 py-3.5 md:px-2 md:py-1.5 rounded-lg text-sm md:text-xs cursor-pointer flex items-center gap-2 md:gap-1 ${isSelected ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-600 md:text-gray-500 hover:bg-gray-50"}`}>
-      {isOwner && <span {...attributes} {...listeners} onClick={e => e.stopPropagation()} className="text-gray-300 cursor-grab text-xs mr-1 hidden md:block">⠿</span>}
-      <span className="flex-1 truncate">{recipe.title}</span>
+    <div ref={setNodeRef} style={style} onClick={onClick}
+      className={`mx-2 mb-0.5 px-3 py-2.5 rounded-xl cursor-pointer flex items-center gap-3 group transition-colors md:rounded-xl ${
+        isSelected ? "bg-orange-50 border border-orange-100" : "hover:bg-gray-50 border border-transparent"
+      } md:mx-2 mx-1 md:py-2.5 py-3.5 md:gap-3 gap-2`}>
+      {isOwner && (
+        <span {...attributes} {...listeners} onClick={e => e.stopPropagation()}
+          className="text-gray-300 cursor-grab hidden md:flex items-center flex-shrink-0 -ml-1 hover:text-gray-400">
+          <SortIcon size={12} />
+        </span>
+      )}
+      {/* Mobile-only chevron on left */}
+      <svg className="w-3 h-3 text-gray-300 flex-shrink-0 md:hidden rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
+      {recipe.image_url ? (
+        <img src={recipe.image_url} alt="" className="hidden md:block w-9 h-9 rounded-lg object-cover flex-shrink-0" />
+      ) : (
+        <div className={`hidden md:block w-9 h-9 rounded-lg flex-shrink-0 ${isSelected ? "bg-orange-100" : "bg-gray-100"}`} />
+      )}
+      <div className="flex-1 min-w-0">
+        <p className={`text-sm font-medium truncate leading-tight ${isSelected ? "text-orange-700" : "text-gray-800"}`}>{recipe.title}</p>
+        {recipe.prep_time && (
+          <p className="text-xs text-gray-400 mt-0.5 hidden md:flex items-center gap-1">
+            <ClockIcon size={10} />{recipe.prep_time}
+          </p>
+        )}
+      </div>
       <button
         onClick={e => { e.stopPropagation(); onToggleFavorite(recipe.id) }}
-        className={`flex-shrink-0 transition ${isFavorited ? "text-red-400" : "text-gray-300 hover:text-red-300"}`}>
+        className={`flex-shrink-0 transition ${isFavorited ? "text-red-400" : "text-gray-200 md:opacity-0 md:group-hover:opacity-100 hover:text-red-300"}`}>
         <HeartIcon filled={isFavorited} size={14} />
       </button>
       <svg className="w-3 h-3 text-gray-300 flex-shrink-0 md:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
@@ -682,99 +704,150 @@ export default function CookbookPage() {
           </div>
         )}
 
-        {/* ── DESKTOP SIDEBAR (hidden on mobile) ── */}
-        <div className="hidden md:flex flex-col bg-white border-r border-gray-100 overflow-hidden flex-shrink-0 md:w-52" style={{ height: "calc(100svh - 57px)" }}>
-          <div className="p-3 border-b border-gray-100 flex-shrink-0">
-            <button onClick={() => withUnsavedCheck(() => router.push("/dashboard"))} className="text-xs text-orange-500 mb-2 block">← Dashboard</button>
-            <div className="text-sm font-medium truncate">{cookbookInfo?.title || "Cookbook"}</div>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-xs text-gray-400">{recipes.length} recipes</span>
-              {activeUsers.length > 0 && (
-                <div className="flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-400"/>
-                  <span className="text-xs text-gray-400">{activeUsers.length} viewing</span>
-                </div>
-              )}
-            </div>
-            <div className="mt-3 flex flex-col gap-1">
-              {isPublic && isOwner && (
-                <button
-                  onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/share/cookbook/${params.id}`); alert("Link copied!") }}
-                  className="w-full flex items-center justify-start gap-2 px-3 py-2 text-xs text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
-                  <ShareIcon size={13} /> Share
-                </button>
-              )}
-              {isOwner && (
-                <button
-                  onClick={() => setShowCollaboratorModal(true)}
-                  className="w-full flex items-center justify-start gap-2 px-3 py-2 text-xs text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
-                  <PeopleIcon size={13} /> Collabs
-                </button>
-              )}
-              <CookbookPDFButton
-                cookbook={cookbookInfo}
-                recipes={recipes}
-                authorName={session?.user?.name || ""}
-                className="w-full flex items-center justify-start gap-2 px-3 py-2 text-xs text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
-                <PrintIcon size={13} /> Print cookbook
-              </CookbookPDFButton>
-              {isCollaborator && !isOwner && (
-                <button
-                  onClick={async () => {
-                    if (!confirm("Leave this cookbook?")) return
-                    await fetch("/api/collaborators", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cookbook_id: params.id, user_id: "self" }) })
-                    router.push("/dashboard")
-                  }}
-                  className="w-full flex items-center justify-start gap-2 px-3 py-2 text-xs text-red-400 border border-red-100 rounded-lg hover:bg-red-50 transition">
-                  <LeaveIcon size={13} /> Leave cookbook
-                </button>
-              )}
+        {/* ── DESKTOP SIDEBAR ── */}
+        <div className="hidden md:flex flex-col bg-white border-r border-gray-100 overflow-hidden flex-shrink-0 w-72">
+
+          {/* Cookbook hero */}
+          <div className="relative h-36 flex-shrink-0 overflow-hidden">
+            {cookbookInfo?.cover_image ? (
+              <img src={cookbookInfo.cover_image} className="w-full h-full object-cover" alt="" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: (cookbookInfo?.cover_color || "#F97316") + "22" }}>
+                <span className="text-6xl">{cookbookInfo?.cover_emoji || "📖"}</span>
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
+            <button
+              onClick={() => withUnsavedCheck(() => router.push("/dashboard"))}
+              className="absolute top-3 left-3 flex items-center gap-1 bg-black/30 hover:bg-black/50 text-white text-xs px-2.5 py-1 rounded-lg backdrop-blur-sm transition">
+              ← Dashboard
+            </button>
+            <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
+              <h2 className="text-white font-semibold text-[15px] leading-tight truncate drop-shadow">{cookbookInfo?.title || "Cookbook"}</h2>
+              <p className="text-white/70 text-xs mt-0.5 flex items-center gap-2">
+                {recipes.length} recipe{recipes.length !== 1 ? "s" : ""}
+                {activeUsers.length > 0 && (
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
+                    {activeUsers.length} viewing
+                  </span>
+                )}
+              </p>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto min-h-0">
-            <div className="p-2 border-b border-gray-100 space-y-2">
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search recipes..." className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2 py-1.5 text-xs"/>
-              <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2 py-1.5 text-xs outline-none">
-                <option value="default">Sort: Default</option>
-                <option value="az">A → Z</option>
-                <option value="za">Z → A</option>
-                <option value="time_asc">Time: Shortest first</option>
-                <option value="time_desc">Time: Longest first</option>
-                <option value="servings_asc">Servings: Least first</option>
-                <option value="servings_desc">Servings: Most first</option>
-                <option value="difficulty_asc">Difficulty: Easiest first</option>
-                <option value="difficulty_desc">Difficulty: Hardest first</option>
-              </select>
+
+          {/* Action buttons row */}
+          <div className="flex border-b border-gray-100 flex-shrink-0">
+            {isPublic && isOwner && (
+              <button
+                onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/share/cookbook/${params.id}`); alert("Link copied!") }}
+                className="flex-1 flex flex-col items-center gap-1 py-3 text-xs text-gray-500 hover:bg-gray-50 hover:text-orange-500 transition">
+                <ShareIcon size={17} />Share
+              </button>
+            )}
+            {isOwner && (
+              <button
+                onClick={() => setShowCollaboratorModal(true)}
+                className="flex-1 flex flex-col items-center gap-1 py-3 text-xs text-gray-500 hover:bg-gray-50 hover:text-orange-500 transition">
+                <PeopleIcon size={17} />Collabs
+              </button>
+            )}
+            <CookbookPDFButton
+              cookbook={cookbookInfo}
+              recipes={recipes}
+              authorName={session?.user?.name || ""}
+              className="flex-1 flex flex-col items-center gap-1 py-3 text-xs text-gray-500 hover:bg-gray-50 hover:text-orange-500 transition">
+              <PrintIcon size={17} />Print
+            </CookbookPDFButton>
+            {isCollaborator && !isOwner && (
+              <button
+                onClick={async () => {
+                  if (!confirm("Leave this cookbook?")) return
+                  await fetch("/api/collaborators", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cookbook_id: params.id, user_id: "self" }) })
+                  router.push("/dashboard")
+                }}
+                className="flex-1 flex flex-col items-center gap-1 py-3 text-xs text-red-400 hover:bg-red-50 transition">
+                <LeaveIcon size={17} />Leave
+              </button>
+            )}
+          </div>
+
+          {/* Search */}
+          <div className="px-3 pt-3 pb-2 flex-shrink-0">
+            <div className="relative">
+              <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"><SearchIcon size={13} /></div>
+              <input
+                value={search} onChange={e => setSearch(e.target.value)}
+                placeholder="Search recipes..."
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-7 pr-3 py-2 text-sm outline-none focus:border-orange-200 focus:bg-white transition placeholder:text-gray-400"
+              />
             </div>
-            <div className="px-2 pt-2 pb-1 text-xs font-medium text-gray-400 uppercase tracking-wide flex items-center justify-between">
-              Categories
-              {isOwner && (
-                <button onClick={() => setShowCategoryModal(true)} className="text-orange-400 font-normal normal-case text-xs">+ Add</button>
-              )}
+          </div>
+
+          {/* Sort */}
+          <div className="px-3 pb-3 flex-shrink-0">
+            <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-sm outline-none text-gray-600 cursor-pointer">
+              <option value="default">Sort: Default</option>
+              <option value="az">A → Z</option>
+              <option value="za">Z → A</option>
+              <option value="time_asc">Time: Shortest first</option>
+              <option value="time_desc">Time: Longest first</option>
+              <option value="servings_asc">Servings: Least first</option>
+              <option value="servings_desc">Servings: Most first</option>
+              <option value="difficulty_asc">Difficulty: Easiest first</option>
+              <option value="difficulty_desc">Difficulty: Hardest first</option>
+            </select>
+          </div>
+
+          {/* Scrollable nav: categories + recipes */}
+          <div className="flex-1 overflow-y-auto min-h-0 border-t border-gray-100">
+
+            {/* Categories */}
+            <div className="px-3 pt-3 pb-1">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Categories</span>
+                {isOwner && (
+                  <button onClick={() => setShowCategoryModal(true)} className="text-xs text-orange-400 hover:text-orange-600 transition">+ Add</button>
+                )}
+              </div>
+              <div className="space-y-0.5">
+                <button
+                  onClick={() => { setActiveCategory("all"); setShowFavoritesOnly(false); setSelectedRecipe(recipes[0] || null) }}
+                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm transition ${activeCategory === "all" && !showFavoritesOnly ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-600 hover:bg-gray-50"}`}>
+                  <ListIcon size={14} />
+                  <span className="flex-1 text-left">All</span>
+                  <span className="text-xs text-gray-400 tabular-nums">{recipes.length}</span>
+                </button>
+                <button
+                  onClick={() => { setActiveCategory("all"); setShowFavoritesOnly(!showFavoritesOnly); setSelectedRecipe(null) }}
+                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm transition ${showFavoritesOnly ? "bg-red-50 text-red-500 font-medium" : "text-gray-600 hover:bg-gray-50"}`}>
+                  <HeartIcon filled={showFavoritesOnly} size={14} />
+                  <span className="flex-1 text-left">Saved</span>
+                  <span className="text-xs text-gray-400 tabular-nums">{favCount}</span>
+                </button>
+                {categories.map((cat: any) => {
+                  const count = recipes.filter(r => r.category_id == cat.id).length
+                  const isActive = activeCategory === cat.id && !showFavoritesOnly
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => { setActiveCategory(cat.id); setShowFavoritesOnly(false); setSelectedRecipe(null) }}
+                      className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm transition ${isActive ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-600 hover:bg-gray-50"}`}>
+                      <span className="text-base leading-none flex-shrink-0">{cat.emoji}</span>
+                      <span className="flex-1 text-left truncate">{cat.name}</span>
+                      <span className="text-xs text-gray-400 tabular-nums">{count}</span>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
-            <div
-              onClick={() => { setActiveCategory("all"); setShowFavoritesOnly(false); setSelectedRecipe(recipes[0] || null) }}
-              className={`mx-1 px-2 py-1.5 rounded-lg text-xs cursor-pointer flex items-center gap-2 ${activeCategory === "all" && !showFavoritesOnly ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-500 hover:bg-gray-50"}`}>
-              <ListIcon size={13} /> All <span className="ml-auto text-gray-400">{recipes.length}</span>
+
+            {/* Recipes section */}
+            <div className="px-3 pt-3 pb-1 flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                Recipes {filteredRecipes.length !== recipes.length && <span className="normal-case font-normal">({filteredRecipes.length})</span>}
+              </span>
             </div>
-            <div
-              onClick={() => { setActiveCategory("all"); setShowFavoritesOnly(!showFavoritesOnly); setSelectedRecipe(null) }}
-              className={`mx-1 px-2 py-1.5 rounded-lg text-xs cursor-pointer flex items-center gap-2 ${showFavoritesOnly ? "bg-red-50 text-red-500 font-medium" : "text-gray-500 hover:bg-gray-50"}`}>
-              <HeartIcon filled={showFavoritesOnly} size={13} /> Favorites <span className="ml-auto text-gray-400">{favCount}</span>
-            </div>
-            {categories.map((cat: any) => {
-              const count = recipes.filter(r => r.category_id == cat.id).length
-              return (
-                <div
-                  key={cat.id}
-                  onClick={() => { setActiveCategory(cat.id); setShowFavoritesOnly(false); setSelectedRecipe(null) }}
-                  className={`mx-1 px-2 py-1.5 rounded-lg text-xs cursor-pointer flex items-center gap-2 ${activeCategory === cat.id && !showFavoritesOnly ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-500 hover:bg-gray-50"}`}>
-                  {cat.emoji} {cat.name} <span className="ml-auto text-gray-400">{count}</span>
-                </div>
-              )
-            })}
-            <div className="border-t border-gray-100 mx-2 mt-2" />
-            <div className="px-2 pt-2 pb-1 text-xs font-medium text-gray-400 uppercase tracking-wide">Recipes</div>
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={filteredRecipes.map(r => r.id)} strategy={verticalListSortingStrategy}>
                 {filteredRecipes.map((r: any) => (
@@ -790,11 +863,19 @@ export default function CookbookPage() {
                 ))}
               </SortableContext>
             </DndContext>
+            <div className="h-2" />
           </div>
+
+          {/* Add Recipe */}
           {canEdit && (
-            <div className="p-2 border-t border-gray-100 flex-shrink-0">
-              <button onClick={createRecipe} className="w-full bg-orange-500 text-white rounded-lg py-1.5 text-xs font-medium hover:bg-orange-600 transition">
-                + Add Recipe
+            <div className="flex-shrink-0 px-3 py-3 border-t border-gray-100">
+              <button
+                onClick={createRecipe}
+                className="w-full bg-orange-500 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-orange-600 transition flex items-center justify-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Add Recipe
               </button>
             </div>
           )}
@@ -826,38 +907,44 @@ export default function CookbookPage() {
             )}
           </div>
 
-          {/* Desktop toolbar — recipe-level actions only */}
-          <div className="hidden md:flex bg-white border-b border-gray-100 px-4 py-2 items-center gap-2 flex-shrink-0">
-            {canEdit && !editMode && recipe && (
-              <button onClick={startEdit} className="px-3 py-1 border border-orange-300 text-orange-500 rounded-lg text-xs hover:bg-orange-50">
-                Edit
-              </button>
-            )}
-            {canEdit && editMode && (
-              <>
-                <button onClick={cancelEdit} className="px-3 py-1 border border-gray-200 text-gray-500 rounded-lg text-xs hover:bg-gray-50">Cancel</button>
-                <button onClick={saveRecipe} disabled={saving} className="px-3 py-1 bg-orange-500 text-white rounded-lg text-xs font-medium hover:bg-orange-600 disabled:opacity-50">
-                  {saving ? "Saving..." : "Save"}
-                </button>
-              </>
-            )}
-            {isOwner && recipe && !editMode && (
-              <button onClick={() => deleteRecipe(recipe.id)} className="px-3 py-1 border border-red-200 text-red-400 rounded-lg text-xs hover:bg-red-50">
-                Delete
-              </button>
-            )}
-            <div className="ml-auto flex items-center gap-2">
+          {/* Desktop toolbar */}
+          <div className="hidden md:flex bg-white border-b border-gray-100 px-6 py-3 items-center gap-4 flex-shrink-0">
+            <div className="flex-1 min-w-0">
+              {recipe && !editMode && (
+                <p className="text-sm font-semibold text-gray-900 truncate">{recipe.title}</p>
+              )}
+              {editMode && <p className="text-sm text-gray-400 font-medium">Editing recipe</p>}
+              {lastSaved && <p className="text-xs text-gray-400 mt-0.5">{lastSaved}</p>}
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
               {activeUsers.length > 0 && (
-                <div className="flex items-center gap-1">
+                <div className="flex items-center mr-1">
                   {activeUsers.slice(0, 3).map((u: any, i: number) => (
-                    <div key={i} className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs border-2 border-white" title={u.name}>
+                    <div key={i} className="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs border-2 border-white -ml-1 first:ml-0 shadow-sm" title={u.name}>
                       {u.name?.charAt(0)}
                     </div>
                   ))}
                 </div>
               )}
               {recipe && !editMode && <RecipePDFButton recipe={recipe} />}
-              <span className="text-xs text-gray-400">{lastSaved}</span>
+              {isOwner && recipe && !editMode && (
+                <button onClick={() => deleteRecipe(recipe.id)} className="px-3 py-1.5 border border-red-100 text-red-400 rounded-lg text-sm hover:bg-red-50 transition">
+                  Delete
+                </button>
+              )}
+              {canEdit && !editMode && recipe && (
+                <button onClick={startEdit} className="px-4 py-1.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition">
+                  Edit
+                </button>
+              )}
+              {canEdit && editMode && (
+                <>
+                  <button onClick={cancelEdit} className="px-4 py-1.5 border border-gray-200 text-gray-500 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
+                  <button onClick={saveRecipe} disabled={saving} className="px-4 py-1.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-50 transition">
+                    {saving ? "Saving..." : "Save"}
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
