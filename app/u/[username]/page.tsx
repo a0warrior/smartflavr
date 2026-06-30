@@ -165,7 +165,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
             {/* Content */}
             <div className="relative z-10 px-6 py-10 text-center">
-              <p className="text-xs text-indigo-400/60 uppercase tracking-[0.35em] font-semibold mb-3">SmartFlavr · Est. 2025</p>
+              <p className="text-xs text-indigo-400/60 uppercase tracking-[0.35em] font-semibold mb-3">SmartFlavr · Est. 2026</p>
 
               {/* Crown + Founder title */}
               <div className="flex items-center justify-center gap-3 mb-3">
