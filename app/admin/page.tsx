@@ -131,14 +131,20 @@ export default function AdminPage() {
   }
 
   async function grantPlan(userId: string, plan: string) {
-    await fetch("/api/subscription", {
+    const res = await fetch("/api/subscription", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "admin_grant", user_id: userId, plan }),
     })
-    setSuccess(`Plan updated to ${plan}`)
-    setTimeout(() => setSuccess(""), 2000)
-    fetchData()
+    const data = await res.json()
+    if (data.success) {
+      setSuccess(`Plan updated to ${plan}`)
+      setTimeout(() => setSuccess(""), 3000)
+      fetchData()
+    } else {
+      setError(data.error || "Failed to update plan")
+      setTimeout(() => setError(""), 4000)
+    }
   }
 
   async function confirmDeleteUser() {

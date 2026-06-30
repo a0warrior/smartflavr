@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import pool from "@/lib/db"
 import { auth } from "@/auth"
-import { getPlanStatus } from "@/lib/subscription"
+import { getPlanStatus, runMigrations } from "@/lib/subscription"
 
 async function isAdmin(email: string) {
   const [rows]: any = await pool.query("SELECT is_admin FROM users WHERE email = ?", [email])
@@ -42,6 +42,7 @@ export async function POST(req: Request) {
     if (!await isAdmin(session.user.email)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     const { user_id, plan } = body
     if (!["free", "pro", "premium"].includes(plan)) return NextResponse.json({ error: "Invalid plan" }, { status: 400 })
+    await runMigrations()
     await pool.query(
       "UPDATE users SET plan = ?, plan_expires_at = NULL WHERE id = ?",
       [plan, user_id]

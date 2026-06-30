@@ -30,7 +30,6 @@ function ProfileSettingsContent() {
   // Plan state
   const [planStatus, setPlanStatus] = useState<any>(null)
   const [planLoading, setPlanLoading] = useState(false)
-  const [upgrading, setUpgrading] = useState("")
 
   // Privacy state
   const [profileVisibility, setProfileVisibility] = useState("everyone")
@@ -101,16 +100,7 @@ function ProfileSettingsContent() {
     setPlanLoading(false)
   }
 
-  async function upgrade(plan: string) {
-    setUpgrading(plan)
-    const res = await fetch("/api/stripe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan }) })
-    const data = await res.json()
-    if (data.url) window.location.href = data.url
-    else setError("Could not start checkout")
-    setUpgrading("")
-  }
-
-  function selectProfilePhoto(e: React.ChangeEvent<HTMLInputElement>) {
+function selectProfilePhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
     const reader = new FileReader()
@@ -452,7 +442,7 @@ function ProfileSettingsContent() {
               {planStatus?.plan === "free" && !planStatus?.trialUsed && (
                 <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 mb-4">
                   <p className="text-sm font-medium text-orange-800 mb-1">Try Pro free for 7 days</p>
-                  <p className="text-xs text-orange-600 mb-3">Get 50 AI uses/week, no credit card required.</p>
+                  <p className="text-xs text-orange-600 mb-3">Get 25 AI uses/week, no credit card required.</p>
                   <button onClick={startTrial} disabled={planLoading} className="w-full bg-orange-500 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-orange-600 transition disabled:opacity-50">
                     {planLoading ? "Starting..." : "Start free trial"}
                   </button>
@@ -460,65 +450,16 @@ function ProfileSettingsContent() {
               )}
 
               {planStatus?.plan === "free" && planStatus?.trialUsed && (
-                <p className="text-xs text-gray-400 mb-4">Your 7-day trial has ended. Upgrade to keep AI features.</p>
+                <p className="text-xs text-gray-400 mb-4">Your 7-day trial has ended. Paid plans coming soon.</p>
               )}
             </div>
 
-            {/* Upgrade cards */}
-            {planStatus?.plan !== "premium" && (
-              <div className="grid grid-cols-1 gap-3">
-
-                {planStatus?.plan !== "pro" && (
-                  <div className="bg-white border border-orange-100 rounded-2xl p-5">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <div className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                          Pro
-                          <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "linear-gradient(135deg,#f97316,#ea580c)" }}>$4/mo</span>
-                        </div>
-                        <p className="text-xs text-gray-400 mt-0.5">50 AI uses per week</p>
-                      </div>
-                    </div>
-                    <ul className="text-xs text-gray-500 space-y-1 mb-4">
-                      <li>✓ URL recipe import</li>
-                      <li>✓ Photo &amp; file import</li>
-                      <li>✓ AI recipe assist</li>
-                      <li>✓ Nutrition generation</li>
-                      <li>✓ Smart grocery lists</li>
-                    </ul>
-                    <button onClick={() => upgrade("pro")} disabled={upgrading === "pro"} className="w-full bg-orange-500 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-orange-600 transition disabled:opacity-50">
-                      {upgrading === "pro" ? "Redirecting..." : "Upgrade to Pro"}
-                    </button>
-                  </div>
-                )}
-
-                <div className="bg-white border border-purple-100 rounded-2xl p-5">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <div className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                        Premium
-                        <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>$8/mo</span>
-                      </div>
-                      <p className="text-xs text-gray-400 mt-0.5">Unlimited AI uses</p>
-                    </div>
-                  </div>
-                  <ul className="text-xs text-gray-500 space-y-1 mb-4">
-                    <li>✓ Everything in Pro</li>
-                    <li>✓ No weekly AI limit</li>
-                    <li>✓ Animated Premium badge on profile</li>
-                    <li>✓ Priority support</li>
-                  </ul>
-                  <button onClick={() => upgrade("premium")} disabled={upgrading === "premium"} className="w-full text-white rounded-xl py-2.5 text-sm font-semibold transition disabled:opacity-50" style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>
-                    {upgrading === "premium" ? "Redirecting..." : "Upgrade to Premium"}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {planStatus?.plan === "premium" && (
+            {(planStatus?.plan === "pro" || planStatus?.plan === "premium") && (
               <div className="bg-white border border-gray-100 rounded-2xl p-5 text-center">
-                <p className="text-sm font-medium text-gray-700 mb-1">You're on Premium</p>
-                <p className="text-xs text-gray-400">To manage or cancel your subscription, visit the Stripe billing portal.</p>
+                <p className="text-sm font-medium text-gray-700 mb-1">
+                  {planStatus?.plan === "premium" ? "You're on Premium" : "You're on Pro"}
+                </p>
+                <p className="text-xs text-gray-400">Enjoy your AI features. Paid plan management coming soon.</p>
               </div>
             )}
 

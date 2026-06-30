@@ -27,16 +27,32 @@ export async function GET(req: Request) {
      ORDER BY invite_codes.created_at DESC`
   )
 
-  const [users]: any = await pool.query(
-    `SELECT users.*, 
-      COUNT(DISTINCT cookbooks.id) as cookbook_count,
-      COUNT(DISTINCT recipes.id) as recipe_count
-     FROM users
-     LEFT JOIN cookbooks ON cookbooks.user_id = users.id
-     LEFT JOIN recipes ON recipes.user_id = users.id
-     GROUP BY users.id
-     ORDER BY users.created_at DESC`
-  )
+  let users: any[] = []
+  try {
+    const [rows]: any = await pool.query(
+      `SELECT users.*,
+        COUNT(DISTINCT cookbooks.id) as cookbook_count,
+        COUNT(DISTINCT recipes.id) as recipe_count
+       FROM users
+       LEFT JOIN cookbooks ON cookbooks.user_id = users.id
+       LEFT JOIN recipes ON recipes.user_id = users.id
+       GROUP BY users.id
+       ORDER BY users.created_at DESC`
+    )
+    users = rows
+  } catch {
+    const [rows]: any = await pool.query(
+      `SELECT users.id, users.name, users.email, users.username, users.profile_image, users.is_admin, users.status, users.post_timeout_until, users.created_at,
+        COUNT(DISTINCT cookbooks.id) as cookbook_count,
+        COUNT(DISTINCT recipes.id) as recipe_count
+       FROM users
+       LEFT JOIN cookbooks ON cookbooks.user_id = users.id
+       LEFT JOIN recipes ON recipes.user_id = users.id
+       GROUP BY users.id
+       ORDER BY users.created_at DESC`
+    )
+    users = rows
+  }
 
   return NextResponse.json({ codes, users })
 }
