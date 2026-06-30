@@ -72,7 +72,7 @@ export default function CookbookPage() {
   const [activeUsers, setActiveUsers] = useState<any[]>([])
   const [aiLoading, setAiLoading] = useState<string | null>(null)
   const [showUnsavedModal, setShowUnsavedModal] = useState(false)
-  const [pendingRecipe, setPendingRecipe] = useState<any>(null)
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null)
   const [favorites, setFavorites] = useState<Set<number>>(new Set())
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
   const [recipeCropSrc, setRecipeCropSrc] = useState("")
@@ -361,31 +361,45 @@ export default function CookbookPage() {
     setEdited((prev: any) => ({ ...prev, [field]: value }))
   }
 
-  function scrollToRecipe(id: string) {
-    const target = recipes.find(r => r.id === id)
+  function withUnsavedCheck(action: () => void) {
     if (editMode) {
-      setPendingRecipe(target)
+      setPendingAction(() => action)
       setShowUnsavedModal(true)
       return
     }
-    setSelectedRecipe(target)
-    setMobileView("detail")
+    action()
+  }
+
+  function scrollToRecipe(id: string) {
+    const target = recipes.find(r => r.id === id)
+    withUnsavedCheck(() => {
+      setSelectedRecipe(target)
+      setMobileView("detail")
+    })
   }
 
   async function handleUnsavedSave() {
     await saveRecipe()
     setShowUnsavedModal(false)
-    setSelectedRecipe(pendingRecipe)
-    setPendingRecipe(null)
+    const action = pendingAction
+    setPendingAction(null)
+    if (action) action()
   }
 
   function handleUnsavedDiscard() {
-    setEditMode(false)
-    setEdited(null)
+    cancelEdit()
     setShowUnsavedModal(false)
-    setSelectedRecipe(pendingRecipe)
-    setPendingRecipe(null)
+    const action = pendingAction
+    setPendingAction(null)
+    if (action) action()
   }
+
+  useEffect(() => {
+    if (!editMode) return
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault() }
+    window.addEventListener("beforeunload", handler)
+    return () => window.removeEventListener("beforeunload", handler)
+  }, [editMode])
 
   const filteredRecipes = recipes
     .filter(r => {
@@ -426,11 +440,11 @@ export default function CookbookPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      <div className="flex flex-1 overflow-hidden" style={{ height: "calc(100vh - 57px)" }}>
+      <div className="flex flex-1 overflow-hidden" style={{ height: "calc(100svh - 57px)" }}>
 
-        <div className={`bg-white border-r border-gray-100 flex-col overflow-hidden flex-shrink-0 ${mobileView === "list" ? "flex w-full" : "hidden"} md:flex md:w-52`} style={{ height: "calc(100vh - 57px)" }}>
+        <div className={`bg-white border-r border-gray-100 flex-col overflow-hidden flex-shrink-0 ${mobileView === "list" ? "flex w-full" : "hidden"} md:flex md:w-52`} style={{ height: "calc(100svh - 57px)" }}>
           <div className="p-3 border-b border-gray-100 flex-shrink-0">
-            <button onClick={() => router.push("/dashboard")} className="text-xs text-orange-500 mb-2 block">← Dashboard</button>
+            <button onClick={() => withUnsavedCheck(() => router.push("/dashboard"))} className="text-xs text-orange-500 mb-2 block">← Dashboard</button>
             <div className="text-sm font-medium truncate">{cookbookInfo?.title || "Cookbook"}</div>
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-xs text-gray-400">{recipes.length} recipes</span>
@@ -548,7 +562,7 @@ export default function CookbookPage() {
         <div className={`flex-col overflow-hidden bg-gray-50 ${mobileView === "detail" ? "flex flex-1" : "hidden"} md:flex md:flex-1`}>
           {/* Mobile header — back + title + primary action + overflow */}
           <div className="md:hidden flex items-center gap-2 px-3 py-3 bg-white border-b border-gray-100 flex-shrink-0">
-            <button onClick={() => { setMobileView("list"); if (editMode) cancelEdit() }} className="p-1.5 -ml-1 rounded-lg text-orange-500 flex-shrink-0">
+            <button onClick={() => withUnsavedCheck(() => setMobileView("list"))} className="p-1.5 -ml-1 rounded-lg text-orange-500 flex-shrink-0">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
             </button>
             <span className="flex-1 font-medium text-gray-900 truncate text-sm">{recipe?.title || cookbookInfo?.title}</span>
@@ -780,9 +794,14 @@ export default function CookbookPage() {
       {showUnsavedModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm mx-4">
-            <h2 className="text-lg font-medium mb-2">Unsaved Changes</h2>
-            <p className="text-sm text-gray-500 mb-6">You have unsaved changes to <span className="font-medium text-gray-700">{edited?.title}</span>. Would you like to save before switching recipes?</p>
-            <div className="flex gap-3">
+            <h2 className="text-lg font-medium mb-2">Save changes?</h2>
+            <p className="text-sm text-gray-500 mb-6">You have unsaved changes to <span className="font-medium text-gray-700">{edited?.title}</span>.</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setShowUnsavedModal(false); setPendingAction(null) }}
+                className="px-3 py-2 text-sm text-gray-400 hover:text-gray-600 transition">
+                Keep editing
+              </button>
               <button onClick={handleUnsavedDiscard} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Discard</button>
               <button onClick={handleUnsavedSave} disabled={saving} className="flex-1 bg-orange-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-orange-600">
                 {saving ? "Saving..." : "Save"}
