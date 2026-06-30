@@ -148,7 +148,7 @@ export default function Navbar() {
           </button>
         )}
       </div>
-      <div className="max-h-96 overflow-y-auto divide-y divide-gray-50">
+      <div className="max-h-96 overflow-y-auto">
         {notifications.length === 0 ? (
           <div className="px-4 py-10 text-center">
             <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
@@ -156,44 +156,71 @@ export default function Navbar() {
             </div>
             <p className="text-sm text-gray-400">You're all caught up</p>
           </div>
-        ) : (
-          notifications.map((n: any) => {
-            const nData = (() => { try { return typeof n.data === "string" ? JSON.parse(n.data) : (n.data || {}) } catch { return {} } })()
-            const { icon, link, rowBg } = notificationMeta(n, nData)
-            return (
-              <div key={n.id} className={`px-4 py-3 ${rowBg}`}>
-                <div className="flex items-start gap-2">
-                  <span className="text-base flex-shrink-0 mt-0.5">{icon}</span>
-                  <div className="flex-1 min-w-0">
-                    {link ? (
-                      <Link href={link} onClick={() => { markOneRead(n.id); setShowNotifications(false) }} className="text-sm text-gray-700 leading-snug hover:text-orange-500 transition block">
-                        {n.message}
-                      </Link>
-                    ) : (
-                      <p className="text-sm text-gray-700 leading-snug">{n.message}</p>
-                    )}
-                    <p className="text-xs text-gray-400 mt-0.5">{timeAgo(n.created_at)}</p>
-                  </div>
-                  {!n.read_at && <span className="w-2 h-2 rounded-full bg-orange-500 mt-1.5 flex-shrink-0" />}
-                  <button onClick={() => deleteNotification(n.id)} className="text-gray-300 hover:text-red-400 transition flex-shrink-0 text-xs mt-0.5">✕</button>
+        ) : (() => {
+          const priority = notifications.filter((n: any) => n.type === "collab_invite" && !n.read_at)
+          const rest = notifications.filter((n: any) => !(n.type === "collab_invite" && !n.read_at))
+          return (
+            <>
+              {priority.length > 0 && (
+                <div className="px-3 pt-3 pb-1 space-y-2">
+                  <p className="text-[10px] font-semibold text-orange-500 uppercase tracking-wide px-1">Action required</p>
+                  {priority.map((n: any) => {
+                    return (
+                      <div key={n.id} className="rounded-xl border border-orange-200 bg-orange-50 px-3 py-3">
+                        <div className="flex items-start gap-2">
+                          <span className="text-base flex-shrink-0 mt-0.5">📚</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-800 leading-snug">{n.message}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">{timeAgo(n.created_at)}</p>
+                          </div>
+                          <button onClick={() => deleteNotification(n.id)} className="text-gray-300 hover:text-red-400 transition flex-shrink-0 text-xs mt-0.5">✕</button>
+                        </div>
+                        <div className="flex gap-2 mt-2.5">
+                          <button onClick={() => respondToInvite(n, "accept")} className="flex-1 bg-orange-500 text-white rounded-lg py-1.5 text-xs font-semibold hover:bg-orange-600 transition">
+                            Accept
+                          </button>
+                          <button onClick={() => respondToInvite(n, "decline")} className="flex-1 border border-orange-200 text-orange-600 rounded-lg py-1.5 text-xs hover:bg-orange-100 transition">
+                            Decline
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
-                {n.type === "collab_invite" && !n.read_at && (
-                  <div className="flex gap-2 mt-2 pl-6">
-                    <button onClick={() => respondToInvite(n, "accept")} className="flex-1 bg-orange-500 text-white rounded-lg py-1.5 text-xs font-semibold hover:bg-orange-600 transition">
-                      Accept
-                    </button>
-                    <button onClick={() => respondToInvite(n, "decline")} className="flex-1 border border-gray-200 text-gray-500 rounded-lg py-1.5 text-xs hover:bg-gray-50 transition">
-                      Decline
-                    </button>
-                  </div>
-                )}
-                {n.type === "collab_invite" && n.read_at && (
-                  <p className="text-xs text-gray-400 mt-1 pl-6 italic">✓ Responded</p>
-                )}
-              </div>
-            )
-          })
-        )}
+              )}
+              {rest.length > 0 && (
+                <div className={`divide-y divide-gray-50 ${priority.length > 0 ? "border-t border-gray-100 mt-2" : ""}`}>
+                  {rest.map((n: any) => {
+                    const nData = (() => { try { return typeof n.data === "string" ? JSON.parse(n.data) : (n.data || {}) } catch { return {} } })()
+                    const { icon, link, rowBg } = notificationMeta(n, nData)
+                    return (
+                      <div key={n.id} className={`px-4 py-3 ${rowBg}`}>
+                        <div className="flex items-start gap-2">
+                          <span className="text-base flex-shrink-0 mt-0.5">{icon}</span>
+                          <div className="flex-1 min-w-0">
+                            {link ? (
+                              <Link href={link} onClick={() => { markOneRead(n.id); setShowNotifications(false) }} className="text-sm text-gray-700 leading-snug hover:text-orange-500 transition block">
+                                {n.message}
+                              </Link>
+                            ) : (
+                              <p className="text-sm text-gray-700 leading-snug">{n.message}</p>
+                            )}
+                            <p className="text-xs text-gray-400 mt-0.5">{timeAgo(n.created_at)}</p>
+                          </div>
+                          {!n.read_at && <span className="w-2 h-2 rounded-full bg-orange-500 mt-1.5 flex-shrink-0" />}
+                          <button onClick={() => deleteNotification(n.id)} className="text-gray-300 hover:text-red-400 transition flex-shrink-0 text-xs mt-0.5">✕</button>
+                        </div>
+                        {n.type === "collab_invite" && n.read_at && (
+                          <p className="text-xs text-gray-400 mt-1 pl-6 italic">✓ Responded</p>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </>
+          )
+        })()}
       </div>
     </div>
   )
