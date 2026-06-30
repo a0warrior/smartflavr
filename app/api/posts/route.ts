@@ -99,12 +99,24 @@ export async function PUT(req: Request) {
   }
 
   const [currentUser] = await pool.query(
-    "SELECT id FROM users WHERE email = ?",
+    "SELECT id, is_admin FROM users WHERE email = ?",
     [session.user.email]
   ) as any[]
 
-  const { id, content, image_url } = await req.json()
+  const { id, content, image_url, content_warning } = await req.json()
+  const isAdmin = currentUser[0]?.is_admin === 1
 
+  // Admins can set content_warning on any post
+  if (content_warning !== undefined) {
+    if (!isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    await pool.query(
+      "UPDATE posts SET content_warning = ? WHERE id = ?",
+      [content_warning ? 1 : 0, id]
+    )
+    return NextResponse.json({ success: true })
+  }
+
+  // Authors can edit their own post's content
   await pool.query(
     "UPDATE posts SET content = ?, image_url = ?, updated_at = NOW() WHERE id = ? AND user_id = ?",
     [content ?? null, image_url ?? null, id, currentUser[0].id]
@@ -120,16 +132,19 @@ export async function DELETE(req: Request) {
   }
 
   const [currentUser] = await pool.query(
-    "SELECT id FROM users WHERE email = ?",
+    "SELECT id, is_admin FROM users WHERE email = ?",
     [session.user.email]
   ) as any[]
 
   const { id } = await req.json()
+  const isAdmin = currentUser[0]?.is_admin === 1
 
-  await pool.query(
-    "DELETE FROM posts WHERE id = ? AND user_id = ?",
-    [id, currentUser[0].id]
-  )
+  // Admins can delete any post; authors can only delete their own
+  if (isAdmin) {
+    await pool.query("DELETE FROM posts WHERE id = ?", [id])
+  } else {
+    await pool.query("DELETE FROM posts WHERE id = ? AND user_id = ?", [id, currentUser[0].id])
+  }
 
   return NextResponse.json({ success: true })
 }

@@ -189,12 +189,14 @@ function PostCard({ post, currentUserId, isAdmin, isTimedOut, onDelete, onUpdate
   const isOwn = post.user_id === currentUserId
 
   async function setContentWarning(on: boolean) {
-    await fetch("/api/posts", {
+    const res = await fetch("/api/posts", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: post.id, content_warning: on }),
     })
-    onUpdate(post.id, { content_warning: on ? 1 : 0 })
+    if (res.ok) {
+      onUpdate(post.id, { content_warning: on ? 1 : 0 })
+    }
     setShowMenu(false)
   }
 
