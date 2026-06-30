@@ -91,7 +91,7 @@ function SortableRecipeItem({ recipe, isSelected, onClick, isOwner, isFavorited,
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-full mt-1 bg-white border border-gray-100 rounded-xl shadow-lg z-50 py-1 min-w-[120px]">
+              <div className="absolute right-0 bottom-full mb-1 bg-white border border-gray-100 rounded-xl shadow-lg z-50 py-1 min-w-[120px]">
                 <button
                   onClick={() => { setMenuOpen(false); setRenameVal(recipe.title || ""); setRenaming(true) }}
                   className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-t-xl">
