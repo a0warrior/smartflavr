@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react"
 import Navbar from "@/app/components/Navbar"
 import FollowButton from "@/app/components/FollowButton"
 import Link from "next/link"
-import { BookIcon, UserIcon } from "@/app/components/Icons"
+import { BookIcon, UserIcon, PlateIcon, ClockIcon } from "@/app/components/Icons"
 
 function CookbookCard({ cookbook }: { cookbook: any }) {
   return (
@@ -76,13 +76,39 @@ function UserCard({ user }: { user: any }) {
   )
 }
 
+function RecipeCard({ recipe }: { recipe: any }) {
+  return (
+    <Link
+      href={`/share/cookbook/${recipe.cookbook_id}`}
+      className="bg-white border border-gray-100 rounded-2xl overflow-hidden hover:shadow-md transition group flex gap-3 p-3 items-center"
+    >
+      {recipe.image_url ? (
+        <img src={recipe.image_url} className="w-14 h-14 rounded-xl object-cover flex-shrink-0" />
+      ) : (
+        <div className="w-14 h-14 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0 text-orange-300">
+          <PlateIcon size={24} />
+        </div>
+      )}
+      <div className="min-w-0 flex-1">
+        <div className="font-medium text-sm text-gray-900 truncate group-hover:text-orange-500 transition">{recipe.title}</div>
+        <div className="text-xs text-gray-400 truncate mt-0.5">in {recipe.cookbook_title}</div>
+        <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
+          {recipe.prep_time && <span className="flex items-center gap-1"><ClockIcon size={10} />{recipe.prep_time}</span>}
+          {recipe.difficulty && <span>{recipe.difficulty}</span>}
+        </div>
+      </div>
+    </Link>
+  )
+}
+
 export default function ExplorePage() {
   const { status } = useSession()
   const router = useRouter()
   const [cookbooks, setCookbooks] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
+  const [recipes, setRecipes] = useState<any[]>([])
   const [query, setQuery] = useState("")
-  const [activeTab, setActiveTab] = useState<"cookbooks" | "people">("cookbooks")
+  const [activeTab, setActiveTab] = useState<"cookbooks" | "recipes" | "people">("cookbooks")
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -101,6 +127,7 @@ export default function ExplorePage() {
     const data = await res.json()
     setCookbooks(data.cookbooks || [])
     setUsers(data.users || [])
+    setRecipes(data.recipes || [])
     setLoading(false)
   }
 
@@ -156,6 +183,12 @@ export default function ExplorePage() {
                 Cookbooks {cookbooks.length > 0 && <span className="ml-1 text-xs opacity-70">({cookbooks.length})</span>}
               </button>
               <button
+                onClick={() => setActiveTab("recipes")}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition ${activeTab === "recipes" ? "bg-orange-500 text-white shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+              >
+                Recipes {recipes.length > 0 && <span className="ml-1 text-xs opacity-70">({recipes.length})</span>}
+              </button>
+              <button
                 onClick={() => setActiveTab("people")}
                 className={`px-4 py-1.5 rounded-lg text-sm font-medium transition ${activeTab === "people" ? "bg-orange-500 text-white shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
               >
@@ -172,6 +205,17 @@ export default function ExplorePage() {
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                   {cookbooks.map(cb => <CookbookCard key={cb.id} cookbook={cb} />)}
+                </div>
+              )
+            ) : activeTab === "recipes" ? (
+              recipes.length === 0 ? (
+                <div className="text-center py-16">
+                  <div className="text-gray-300 mb-3 flex justify-center"><PlateIcon size={32} /></div>
+                  <p className="text-sm text-gray-400">No recipes found for &ldquo;{query}&rdquo;</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {recipes.map(r => <RecipeCard key={r.id} recipe={r} />)}
                 </div>
               )
             ) : (

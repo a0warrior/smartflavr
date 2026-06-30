@@ -62,5 +62,28 @@ export async function GET(req: Request) {
     [currentUserId, like, like, like]
   )
 
-  return NextResponse.json({ cookbooks, users })
+  const [recipes]: any = await pool.query(
+    `SELECT
+      recipes.id,
+      recipes.title,
+      recipes.image_url,
+      recipes.prep_time,
+      recipes.difficulty,
+      cookbooks.id AS cookbook_id,
+      cookbooks.title AS cookbook_title,
+      users.name AS owner_name,
+      users.username AS owner_username,
+      users.profile_image AS owner_image
+    FROM recipes
+    JOIN cookbooks ON recipes.cookbook_id = cookbooks.id
+    JOIN users ON cookbooks.user_id = users.id
+    WHERE cookbooks.is_public = 1
+      AND users.username IS NOT NULL
+      AND (recipes.title LIKE ? OR recipes.description LIKE ?)
+    ORDER BY recipes.title ASC
+    LIMIT 20`,
+    [like, like]
+  )
+
+  return NextResponse.json({ cookbooks, users, recipes })
 }
