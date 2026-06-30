@@ -85,5 +85,33 @@ export async function GET(req: Request) {
     [like, like]
   )
 
-  return NextResponse.json({ cookbooks, users, recipes })
+  // Trending recipes — only fetched for the default (no-query) view
+  let trendingRecipes: any[] = []
+  if (!query) {
+    const [tr]: any = await pool.query(
+      `SELECT
+        recipes.id,
+        recipes.title,
+        recipes.image_url,
+        recipes.prep_time,
+        recipes.difficulty,
+        cookbooks.id AS cookbook_id,
+        cookbooks.title AS cookbook_title,
+        users.name AS owner_name,
+        users.username AS owner_username,
+        users.profile_image AS owner_image,
+        COUNT(DISTINCT favorites.id) AS fav_count
+      FROM recipes
+      JOIN cookbooks ON recipes.cookbook_id = cookbooks.id
+      JOIN users ON cookbooks.user_id = users.id
+      LEFT JOIN favorites ON favorites.recipe_id = recipes.id
+      WHERE cookbooks.is_public = 1 AND users.username IS NOT NULL
+      GROUP BY recipes.id
+      ORDER BY fav_count DESC, recipes.created_at DESC
+      LIMIT 8`
+    )
+    trendingRecipes = tr
+  }
+
+  return NextResponse.json({ cookbooks, users, recipes, trendingRecipes })
 }

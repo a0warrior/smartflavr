@@ -148,6 +148,10 @@ export default function CookbookPage() {
   const [showMobileSort, setShowMobileSort] = useState(false)
   const [mobileCardMenuId, setMobileCardMenuId] = useState<string | null>(null)
   const [mobileCardRename, setMobileCardRename] = useState("")
+  const [showCopyModal, setShowCopyModal] = useState(false)
+  const [userCookbooks, setUserCookbooks] = useState<any[]>([])
+  const [copyLoading, setCopyLoading] = useState(false)
+  const [copyDone, setCopyDone] = useState<string | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -517,6 +521,43 @@ export default function CookbookPage() {
 
   const canEdit = isOwner || isCollaborator
   const favCount = recipes.filter(r => favorites.has(r.id)).length
+
+  async function openCopyModal() {
+    setShowCopyModal(true)
+    setCopyDone(null)
+    if (userCookbooks.length === 0) {
+      const res = await fetch("/api/cookbooks")
+      const data = await res.json()
+      setUserCookbooks(data.cookbooks || [])
+    }
+  }
+
+  async function copyRecipeToBook(targetCookbookId: string) {
+    if (!recipe) return
+    setCopyLoading(true)
+    await fetch("/api/recipes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        cookbook_id: targetCookbookId,
+        title: recipe.title,
+        description: recipe.description,
+        ingredients: recipe.ingredients,
+        instructions: recipe.instructions,
+        prep_time: recipe.prep_time,
+        servings: recipe.servings,
+        difficulty: recipe.difficulty,
+        source_url: recipe.source_url,
+        notes: recipe.notes,
+        image_url: recipe.image_url,
+        nutrition: recipe.nutrition ? JSON.parse(recipe.nutrition) : null,
+        sort_order: 0,
+      }),
+    })
+    const picked = userCookbooks.find((c: any) => c.id === targetCookbookId)
+    setCopyDone(picked?.title || "your cookbook")
+    setCopyLoading(false)
+  }
 
   if (status === "loading") {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>
@@ -978,6 +1019,9 @@ export default function CookbookPage() {
                 {canEdit && recipe && (
                   <button onClick={startEdit} className="text-sm font-medium text-orange-500 px-2 py-1">Edit</button>
                 )}
+                {!canEdit && recipe && (
+                  <button onClick={openCopyModal} className="text-sm font-medium text-orange-500 px-2 py-1">Save</button>
+                )}
                 <button onClick={() => setShowMobileActions(true)} className="p-1.5 rounded-lg text-gray-400">
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
                 </button>
@@ -1005,6 +1049,11 @@ export default function CookbookPage() {
                 </div>
               )}
               {recipe && !editMode && <RecipePDFButton recipe={recipe} />}
+              {!canEdit && recipe && !editMode && (
+                <button onClick={openCopyModal} className="px-4 py-1.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition">
+                  Save to my cookbook
+                </button>
+              )}
               {isOwner && recipe && !editMode && (
                 <button onClick={() => deleteRecipe(recipe.id)} className="px-3 py-1.5 border border-red-100 text-red-400 rounded-lg text-sm hover:bg-red-50 transition">
                   Delete
@@ -1402,6 +1451,55 @@ export default function CookbookPage() {
           onCrop={handleRecipeCrop}
           onCancel={() => setRecipeCropSrc("")}
         />
+      )}
+
+      {showCopyModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl p-5">
+            {copyDone ? (
+              <div className="text-center py-4">
+                <div className="text-3xl mb-3">✅</div>
+                <p className="font-medium text-gray-900">Saved to &ldquo;{copyDone}&rdquo;</p>
+                <p className="text-sm text-gray-400 mt-1">Recipe copied to your cookbook</p>
+                <button
+                  onClick={() => setShowCopyModal(false)}
+                  className="mt-5 w-full bg-orange-500 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-orange-600 transition"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-semibold text-gray-900">Save to my cookbook</h2>
+                  <button onClick={() => setShowCopyModal(false)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">✕</button>
+                </div>
+                {userCookbooks.length === 0 ? (
+                  <div className="text-center py-8 text-sm text-gray-400">Loading your cookbooks...</div>
+                ) : (
+                  <div className="space-y-2 max-h-72 overflow-y-auto">
+                    {userCookbooks.map((cb: any) => (
+                      <button
+                        key={cb.id}
+                        onClick={() => copyRecipeToBook(cb.id)}
+                        disabled={copyLoading}
+                        className="w-full flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-orange-200 hover:bg-orange-50 transition text-left disabled:opacity-50"
+                      >
+                        <div
+                          className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-xl overflow-hidden"
+                          style={{ backgroundColor: cb.cover_image ? "transparent" : (cb.cover_color || "#F97316") + "22" }}
+                        >
+                          {cb.cover_image ? <img src={cb.cover_image} className="w-full h-full object-cover" /> : cb.cover_emoji || "📖"}
+                        </div>
+                        <span className="text-sm font-medium text-gray-800 truncate">{cb.title}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
       )}
     </div>
   )

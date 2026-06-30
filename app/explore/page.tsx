@@ -107,6 +107,7 @@ export default function ExplorePage() {
   const [cookbooks, setCookbooks] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
   const [recipes, setRecipes] = useState<any[]>([])
+  const [trendingRecipes, setTrendingRecipes] = useState<any[]>([])
   const [query, setQuery] = useState("")
   const [activeTab, setActiveTab] = useState<"cookbooks" | "recipes" | "people">("cookbooks")
   const [loading, setLoading] = useState(false)
@@ -128,6 +129,7 @@ export default function ExplorePage() {
     setCookbooks(data.cookbooks || [])
     setUsers(data.users || [])
     setRecipes(data.recipes || [])
+    setTrendingRecipes(data.trendingRecipes || [])
     setLoading(false)
   }
 
@@ -251,6 +253,19 @@ export default function ExplorePage() {
                 </div>
               )}
             </div>
+
+            {/* Trending Recipes */}
+            {trendingRecipes.length > 0 && (
+              <div className="mb-10">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-base font-semibold text-gray-900">Trending Recipes</h2>
+                  <span className="text-xs text-gray-400">from public cookbooks</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {trendingRecipes.map(r => <RecipeCard key={r.id} recipe={r} />)}
+                </div>
+              </div>
+            )}
 
             {/* People to Discover */}
             <div>
