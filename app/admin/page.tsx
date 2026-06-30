@@ -161,28 +161,29 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      <div className="max-w-4xl mx-auto px-6 py-10">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-medium text-gray-900">Admin Panel</h1>
-            <p className="text-sm text-gray-400 mt-1">Manage invite codes and users</p>
-          </div>
-          <div className="flex gap-3 text-sm">
-            <div className="bg-white border border-gray-100 rounded-xl px-4 py-2 text-center">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-medium text-gray-900">Admin Panel</h1>
+          <p className="text-sm text-gray-400 mt-1">Manage invite codes and users</p>
+          <div className="flex gap-3 mt-4 text-sm">
+            <div className="flex-1 bg-white border border-gray-100 rounded-xl px-3 py-2 text-center">
               <div className="font-medium text-gray-900">{users.length}</div>
-              <div className="text-xs text-gray-400">Total users</div>
+              <div className="text-xs text-gray-400">Users</div>
             </div>
-            <div className="bg-white border border-gray-100 rounded-xl px-4 py-2 text-center">
+            <div className="flex-1 bg-white border border-gray-100 rounded-xl px-3 py-2 text-center">
               <div className="font-medium text-gray-900">{unusedCodes.length}</div>
               <div className="text-xs text-gray-400">Unused codes</div>
             </div>
-            <div className="bg-white border border-gray-100 rounded-xl px-4 py-2 text-center">
+            <div className="flex-1 bg-white border border-gray-100 rounded-xl px-3 py-2 text-center">
               <div className="font-medium text-gray-900">{usedCodes.length}</div>
               <div className="text-xs text-gray-400">Used codes</div>
             </div>
           </div>
         </div>
 
+        {/* Tabs */}
         <div className="flex gap-2 mb-6">
           <button
             onClick={() => setActiveTab("codes")}
@@ -198,34 +199,38 @@ export default function AdminPage() {
 
         {activeTab === "codes" && (
           <>
-            <div className="bg-white border border-gray-100 rounded-2xl p-5 mb-6">
-              <h2 className="text-sm font-medium mb-4">Create new invite code</h2>
-              <div className="flex gap-3">
+            {/* Create code */}
+            <div className="bg-white border border-gray-100 rounded-2xl p-4 sm:p-5 mb-6">
+              <h2 className="text-sm font-medium mb-3">Create new invite code</h2>
+              <div className="space-y-2 sm:space-y-0 sm:flex sm:gap-3">
                 <input
                   value={newCode}
                   onChange={e => setNewCode(formatCode(e.target.value))}
                   placeholder="Leave blank to auto-generate"
-                  className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none font-mono"
+                  className="w-full sm:flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none font-mono"
                   maxLength={9}
                 />
-                <button
-                  onClick={() => setNewCode(generateCode())}
-                  className="px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-500 hover:bg-gray-50">
-                  Generate
-                </button>
-                <button
-                  onClick={createCode}
-                  disabled={loading}
-                  className="px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-medium hover:bg-orange-600">
-                  {loading ? "Creating..." : "Create"}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setNewCode(generateCode())}
+                    className="flex-1 sm:flex-none px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-500 hover:bg-gray-50">
+                    Generate
+                  </button>
+                  <button
+                    onClick={createCode}
+                    disabled={loading}
+                    className="flex-1 sm:flex-none px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-medium hover:bg-orange-600 disabled:opacity-50">
+                    {loading ? "Creating..." : "Create"}
+                  </button>
+                </div>
               </div>
               {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
               {success && <p className="text-xs text-green-600 mt-2">{success}</p>}
             </div>
 
+            {/* Unused codes */}
             <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden mb-6">
-              <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+              <div className="px-4 sm:px-5 py-3 border-b border-gray-100">
                 <h2 className="text-sm font-medium">Unused codes ({unusedCodes.length})</h2>
               </div>
               {unusedCodes.length === 0 ? (
@@ -233,19 +238,11 @@ export default function AdminPage() {
               ) : (
                 <div className="divide-y divide-gray-50">
                   {unusedCodes.map((c: any) => (
-                    <div key={c.code} className="px-5 py-3 flex items-center justify-between">
+                    <div key={c.code} className="px-4 sm:px-5 py-3 flex items-center justify-between gap-2">
                       <span className="font-mono text-sm font-medium text-gray-900">{c.code}</span>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => copyCode(c.code)}
-                          className="px-3 py-1 border border-gray-200 rounded-lg text-xs text-gray-500 hover:bg-gray-50">
-                          Copy
-                        </button>
-                        <button
-                          onClick={() => deleteCode(c.code)}
-                          className="px-3 py-1 border border-red-200 rounded-lg text-xs text-red-400 hover:bg-red-50">
-                          Delete
-                        </button>
+                      <div className="flex gap-2 flex-shrink-0">
+                        <button onClick={() => copyCode(c.code)} className="px-3 py-1 border border-gray-200 rounded-lg text-xs text-gray-500 hover:bg-gray-50">Copy</button>
+                        <button onClick={() => deleteCode(c.code)} className="px-3 py-1 border border-red-200 rounded-lg text-xs text-red-400 hover:bg-red-50">Delete</button>
                       </div>
                     </div>
                   ))}
@@ -253,8 +250,9 @@ export default function AdminPage() {
               )}
             </div>
 
+            {/* Used codes */}
             <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
-              <div className="px-5 py-3 border-b border-gray-100">
+              <div className="px-4 sm:px-5 py-3 border-b border-gray-100">
                 <h2 className="text-sm font-medium">Used codes ({usedCodes.length})</h2>
               </div>
               {usedCodes.length === 0 ? (
@@ -262,18 +260,14 @@ export default function AdminPage() {
               ) : (
                 <div className="divide-y divide-gray-50">
                   {usedCodes.map((c: any) => (
-                    <div key={c.code} className="px-5 py-3 flex items-center justify-between">
-                      <div>
+                    <div key={c.code} className="px-4 sm:px-5 py-3 flex items-center justify-between gap-2">
+                      <div className="min-w-0">
                         <span className="font-mono text-sm font-medium text-gray-900">{c.code}</span>
-                        <span className="text-xs text-gray-400 ml-3">Used by {c.used_by_name || c.used_by_email}</span>
+                        <p className="text-xs text-gray-400 truncate">Used by {c.used_by_name || c.used_by_email}</p>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-green-500 font-medium">Used ✓</span>
-                        <button
-                          onClick={() => revokeCode(c.code)}
-                          className="px-3 py-1 border border-yellow-200 rounded-lg text-xs text-yellow-600 hover:bg-yellow-50">
-                          Revoke
-                        </button>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-xs text-green-500 font-medium hidden sm:inline">Used ✓</span>
+                        <button onClick={() => revokeCode(c.code)} className="px-3 py-1 border border-yellow-200 rounded-lg text-xs text-yellow-600 hover:bg-yellow-50">Revoke</button>
                       </div>
                     </div>
                   ))}
@@ -285,122 +279,93 @@ export default function AdminPage() {
 
         {activeTab === "users" && (
           <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
-            <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between gap-4">
-              <h2 className="text-sm font-medium">All users ({filteredUsers.length}{userSearch ? ` of ${users.length}` : ""})</h2>
+            {/* Users header + search */}
+            <div className="px-4 sm:px-5 py-3 border-b border-gray-100 space-y-2 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-4">
+              <h2 className="text-sm font-medium flex-shrink-0">All users ({filteredUsers.length}{userSearch ? ` of ${users.length}` : ""})</h2>
               <input
                 value={userSearch}
                 onChange={e => setUserSearch(e.target.value)}
-                placeholder="Search by name, username or email..."
-                className="flex-1 max-w-xs border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none"
+                placeholder="Search users..."
+                className="w-full sm:max-w-xs border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none"
               />
             </div>
+
             <div className="divide-y divide-gray-50">
               {filteredUsers.length === 0 ? (
                 <div className="px-5 py-8 text-center text-sm text-gray-400">No users found</div>
               ) : (
                 filteredUsers.map((user: any) => (
-                  <div key={user.id} className="px-5 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                  <div key={user.id} className="px-4 sm:px-5 py-4">
+                    {/* User info row */}
+                    <div className="flex items-start gap-3">
                       {user.profile_image ? (
-                        <img src={user.profile_image} className="w-9 h-9 rounded-full object-cover"/>
+                        <img src={user.profile_image} className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
                       ) : (
-                        <div className="w-9 h-9 rounded-full bg-orange-500 flex items-center justify-center text-white text-sm font-medium">
+                        <div className="w-9 h-9 rounded-full bg-orange-500 flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
                           {user.name?.charAt(0).toUpperCase()}
                         </div>
                       )}
-                      <div>
-                        <div className="text-sm font-medium text-gray-900 flex items-center gap-2">
-                          {user.name}
-                          {user.is_admin === 1 && (
-                            <span className="text-xs bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full">Admin</span>
-                          )}
-                          {user.status === "suspended" && (
-                            <span className="text-xs bg-yellow-50 text-yellow-600 px-2 py-0.5 rounded-full">Suspended</span>
-                          )}
-                          {user.status === "banned" && (
-                            <span className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded-full">Banned</span>
-                          )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5 text-sm font-medium text-gray-900">
+                          <span className="truncate">{user.name}</span>
+                          {user.is_admin === 1 && <span className="text-xs bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full flex-shrink-0">Admin</span>}
+                          {user.status === "suspended" && <span className="text-xs bg-yellow-50 text-yellow-600 px-2 py-0.5 rounded-full flex-shrink-0">Suspended</span>}
+                          {user.status === "banned" && <span className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded-full flex-shrink-0">Banned</span>}
                           {user.post_timeout_until && new Date(user.post_timeout_until) > new Date() && (
-                            <span className="text-xs bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full">
-                              ⏱ Post timeout
-                            </span>
+                            <span className="text-xs bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full flex-shrink-0">⏱ Timed out</span>
                           )}
                         </div>
-                        <div className="text-xs text-gray-400">
-                          {user.username ? `@${user.username}` : "No username set"} · {user.email}
+                        <p className="text-xs text-gray-400 truncate mt-0.5">
+                          {user.username ? `@${user.username}` : "No username"} · {user.email}
+                        </p>
+                        <div className="flex gap-4 text-xs text-gray-400 mt-1.5">
+                          <span><span className="font-medium text-gray-700">{user.cookbook_count}</span> cookbooks</span>
+                          <span><span className="font-medium text-gray-700">{user.recipe_count}</span> recipes</span>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex gap-4 text-xs text-gray-400">
-                        <div className="text-center">
-                          <div className="font-medium text-gray-900">{user.cookbook_count}</div>
-                          <div>cookbooks</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="font-medium text-gray-900">{user.recipe_count}</div>
-                          <div>recipes</div>
-                        </div>
-                      </div>
-                      {user.email !== session?.user?.email && (
-                        <div className="flex gap-2">
+
+                    {/* Action buttons */}
+                    {user.email !== session?.user?.email && (
+                      <div className="mt-3 pl-12 space-y-2">
+                        <div className="flex flex-wrap gap-2">
                           <button
                             onClick={() => toggleAdmin(user.id, user.is_admin)}
-                            className={`px-3 py-1 rounded-lg text-xs border transition ${user.is_admin === 1 ? "border-red-200 text-red-400 hover:bg-red-50" : "border-orange-200 text-orange-500 hover:bg-orange-50"}`}>
+                            className={`px-3 py-1.5 rounded-lg text-xs border transition ${user.is_admin === 1 ? "border-red-200 text-red-400 hover:bg-red-50" : "border-orange-200 text-orange-500 hover:bg-orange-50"}`}>
                             {user.is_admin === 1 ? "Remove admin" : "Make admin"}
                           </button>
                           {user.status === "active" || !user.status ? (
                             <>
-                              <button
-                                onClick={() => updateUserStatus(user.id, "suspended")}
-                                className="px-3 py-1 rounded-lg text-xs border border-yellow-200 text-yellow-600 hover:bg-yellow-50 transition">
-                                Suspend
-                              </button>
-                              <button
-                                onClick={() => updateUserStatus(user.id, "banned")}
-                                className="px-3 py-1 rounded-lg text-xs border border-red-200 text-red-500 hover:bg-red-50 transition">
-                                Ban
-                              </button>
+                              <button onClick={() => updateUserStatus(user.id, "suspended")} className="px-3 py-1.5 rounded-lg text-xs border border-yellow-200 text-yellow-600 hover:bg-yellow-50 transition">Suspend</button>
+                              <button onClick={() => updateUserStatus(user.id, "banned")} className="px-3 py-1.5 rounded-lg text-xs border border-red-200 text-red-500 hover:bg-red-50 transition">Ban</button>
                             </>
                           ) : (
-                            <button
-                              onClick={() => updateUserStatus(user.id, "active")}
-                              className="px-3 py-1 rounded-lg text-xs border border-green-200 text-green-600 hover:bg-green-50 transition">
-                              Reactivate
-                            </button>
+                            <button onClick={() => updateUserStatus(user.id, "active")} className="px-3 py-1.5 rounded-lg text-xs border border-green-200 text-green-600 hover:bg-green-50 transition">Reactivate</button>
                           )}
-                          {timeoutTarget === user.id ? (
-                            <div className="flex items-center gap-1 bg-orange-50 border border-orange-200 rounded-lg px-2 py-1">
-                              <span className="text-xs text-orange-600 font-medium mr-1">Timeout:</span>
+                          {timeoutTarget !== user.id && (
+                            <button onClick={() => setTimeoutTarget(user.id)} className="px-3 py-1.5 rounded-lg text-xs border border-orange-200 text-orange-500 hover:bg-orange-50 transition">⏱ Timeout</button>
+                          )}
+                          {user.post_timeout_until && new Date(user.post_timeout_until) > new Date() && (
+                            <button onClick={() => timeoutUser(user.id, 0)} className="px-3 py-1.5 rounded-lg text-xs border border-gray-200 text-gray-500 hover:bg-gray-50 transition">Clear timeout</button>
+                          )}
+                          <button onClick={() => setDeleteUserTarget(user)} className="px-3 py-1.5 rounded-lg text-xs border border-red-300 text-red-600 hover:bg-red-50 transition">Delete</button>
+                        </div>
+                        {timeoutTarget === user.id && (
+                          <div className="bg-orange-50 border border-orange-200 rounded-xl px-3 py-2.5">
+                            <p className="text-xs text-orange-700 font-medium mb-2">Select timeout duration:</p>
+                            <div className="flex flex-wrap gap-2">
                               {[["15m", 15], ["1h", 60], ["24h", 1440], ["7d", 10080]].map(([label, mins]) => (
                                 <button key={label as string} onClick={() => timeoutUser(user.id, mins as number)}
-                                  className="px-2 py-0.5 text-xs bg-white border border-orange-200 rounded text-orange-600 hover:bg-orange-100">
+                                  className="px-3 py-1.5 text-xs bg-white border border-orange-200 rounded-lg text-orange-600 hover:bg-orange-100 transition">
                                   {label}
                                 </button>
                               ))}
-                              <button onClick={() => setTimeoutTarget(null)} className="text-xs text-gray-400 ml-1">✕</button>
+                              <button onClick={() => setTimeoutTarget(null)} className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg text-gray-400 hover:bg-gray-50 transition">Cancel</button>
                             </div>
-                          ) : (
-                            <button
-                              onClick={() => setTimeoutTarget(user.id)}
-                              className="px-3 py-1 rounded-lg text-xs border border-orange-200 text-orange-500 hover:bg-orange-50 transition">
-                              ⏱ Timeout
-                            </button>
-                          )}
-                          {user.post_timeout_until && new Date(user.post_timeout_until) > new Date() && (
-                            <button onClick={() => timeoutUser(user.id, 0)}
-                              className="px-3 py-1 rounded-lg text-xs border border-gray-200 text-gray-500 hover:bg-gray-50 transition">
-                              Clear timeout
-                            </button>
-                          )}
-                          <button
-                            onClick={() => setDeleteUserTarget(user)}
-                            className="px-3 py-1 rounded-lg text-xs border border-red-300 text-red-600 hover:bg-red-50 transition">
-                            Delete
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))
               )}
