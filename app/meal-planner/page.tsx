@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Navbar from "@/app/components/Navbar"
 import { SparkleIcon, PlateIcon, ClockIcon, UserIcon, FlameIcon } from "@/app/components/Icons"
+import { pulse, subscribe } from "@/lib/firebase"
 
 function getWeekDates(date: Date) {
   const day = date.getDay()
@@ -61,6 +62,7 @@ export default function MealPlannerPage() {
   const [selectedExistingList, setSelectedExistingList] = useState("")
   const [mobileDate, setMobileDate] = useState<Date>(new Date())
   const [planStatus, setPlanStatus] = useState<any>(null)
+  const [userId, setUserId] = useState<number | null>(null)
 
   const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
@@ -71,6 +73,7 @@ export default function MealPlannerPage() {
       fetchCookbooks()
       fetchExistingLists()
       fetch("/api/subscription").then(r => r.ok ? r.json() : null).then(d => d && setPlanStatus(d)).catch(() => {})
+      fetch("/api/profile").then(r => r.json()).then(d => { if (d.user?.id) setUserId(d.user.id) }).catch(() => {})
       const saved = localStorage.getItem("smartflavr_live_sync")
       if (saved === "true") setLiveSync(true)
     }
@@ -92,6 +95,11 @@ export default function MealPlannerPage() {
   useEffect(() => {
     if (selectedCookbook) fetchRecipesForCookbook(selectedCookbook)
   }, [selectedCookbook])
+
+  useEffect(() => {
+    if (!userId) return
+    return subscribe(`/updates/users/${userId}/mealplan`, fetchMeals)
+  }, [userId])
 
   async function fetchMeals() {
     const start = formatDate(weekDates[0])
@@ -221,6 +229,7 @@ export default function MealPlannerPage() {
       await syncMealsToCalendar(mealsData.meals || [])
     }
     fetchMeals()
+    if (userId) pulse(`/updates/users/${userId}/mealplan`)
   }
 
   async function removeMeal(meal: any) {
@@ -233,6 +242,7 @@ export default function MealPlannerPage() {
       body: JSON.stringify({ id: meal.id }),
     })
     fetchMeals()
+    if (userId) pulse(`/updates/users/${userId}/mealplan`)
   }
 
   async function addCategory() {

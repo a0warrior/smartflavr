@@ -22,6 +22,7 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { ClockIcon, UserIcon, StarIcon, LinkIcon, DocumentIcon, CameraIcon, PrintIcon, ListIcon, CheckIcon, PencilIcon, GlobeIcon, LockIcon, SparkleIcon, PinIcon } from "@/app/components/Icons"
+import { pulse, subscribe } from "@/lib/firebase"
 
 const COLORS = [
   "#F97316", "#EF4444", "#8B5CF6", "#3B82F6",
@@ -113,6 +114,7 @@ export default function Dashboard() {
   const [showAllCookbooks, setShowAllCookbooks] = useState(false)
   const [showAllCollabCookbooks, setShowAllCollabCookbooks] = useState(false)
   const [showAllGroceryLists, setShowAllGroceryLists] = useState(false)
+  const [userId, setUserId] = useState<number | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -123,6 +125,11 @@ export default function Dashboard() {
     if (status === "unauthenticated") router.push("/login?code=returning")
     if (status === "authenticated") registerUser()
   }, [status])
+
+  useEffect(() => {
+    if (!userId) return
+    return subscribe(`/updates/users/${userId}/cookbooks`, fetchCookbooks)
+  }, [userId])
 
   async function registerUser() {
     try {
@@ -147,6 +154,7 @@ export default function Dashboard() {
       const data = await res.json()
       if (!data.user) { router.replace("/"); return }
       if (!data.user.username) { router.replace("/profile/settings?new=true"); return }
+      if (data.user.id) setUserId(data.user.id)
       fetchCookbooks()
       fetchGroceryLists()
       fetch("/api/subscription").then(r => r.ok ? r.json() : null).then(d => d && setPlanStatus(d)).catch(() => {})
@@ -327,6 +335,7 @@ export default function Dashboard() {
     await fetch("/api/cookbooks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, cover_emoji: emoji, cover_color: color, cover_image: coverImage, is_public: isPublic }) })
     setTitle(""); setEmoji("📖"); setColor("#F97316"); setCoverImage(""); setIsPublic(0); setShowModal(false); setLoading(false)
     fetchCookbooks()
+    if (userId) pulse(`/updates/users/${userId}/cookbooks`)
   }
 
   async function updateCookbook() {
@@ -335,6 +344,7 @@ export default function Dashboard() {
     await fetch(`/api/cookbooks/${editingCookbook.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: editingCookbook.title, cover_emoji: editingCookbook.cover_emoji, cover_color: editingCookbook.cover_color, cover_image: editingCookbook.cover_image || "", is_public: editingCookbook.is_public ?? 0 }) })
     setShowEditModal(false); setEditingCookbook(null); setLoading(false)
     fetchCookbooks()
+    if (userId) pulse(`/updates/users/${userId}/cookbooks`)
   }
 
   async function deleteCookbook(id: string) { setCookbookToDelete(id); setShowDeleteCookbookModal(true) }
@@ -344,6 +354,7 @@ export default function Dashboard() {
     await fetch(`/api/cookbooks/${cookbookToDelete}`, { method: "DELETE" })
     setShowDeleteCookbookModal(false); setCookbookToDelete(null); setShowEditModal(false); setEditingCookbook(null)
     fetchCookbooks()
+    if (userId) pulse(`/updates/users/${userId}/cookbooks`)
   }
 
   async function extractRecipe() {

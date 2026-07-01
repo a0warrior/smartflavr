@@ -4,6 +4,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { useState, useEffect } from "react"
 import { BellIcon, HeartIcon, UserIcon, CommentIcon, BookIcon, BanIcon, WarningIcon, SparkleIcon } from "@/app/components/Icons"
+import { subscribe } from "@/lib/firebase"
 
 const navLinks = [
   { href: "/feed", label: "Feed" },
@@ -25,6 +26,7 @@ export default function Navbar() {
   const [notifications, setNotifications] = useState<any[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [confirmClearAll, setConfirmClearAll] = useState(false)
+  const [userId, setUserId] = useState<number | null>(null)
 
   useEffect(() => {
     if (session?.user?.email) {
@@ -34,6 +36,7 @@ export default function Navbar() {
           if (data.user?.username) setUsername(data.user.username)
           if (data.user?.profile_image) setProfileImage(data.user.profile_image)
           if (data.user?.is_admin) setIsAdmin(data.user.is_admin === 1)
+          if (data.user?.id) setUserId(data.user.id)
         })
       fetchNotifications()
     }
@@ -45,6 +48,11 @@ export default function Navbar() {
     }, 30000)
     return () => clearInterval(interval)
   }, [session])
+
+  useEffect(() => {
+    if (!userId) return
+    return subscribe(`/updates/users/${userId}/notifications`, fetchNotifications)
+  }, [userId])
 
   async function fetchNotifications() {
     const res = await fetch("/api/notifications")

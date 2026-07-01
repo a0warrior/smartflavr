@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter, useParams } from "next/navigation"
 import Navbar from "@/app/components/Navbar"
@@ -154,6 +154,9 @@ export default function CookbookPage() {
   const [copyDone, setCopyDone] = useState<string | null>(null)
   const [planStatus, setPlanStatus] = useState<any>(null)
 
+  const focusedFieldRef = useRef<string | null>(null)
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -201,6 +204,27 @@ export default function CookbookPage() {
     })
     return () => off(recipesRef)
   }, [params.id, session])
+
+  useEffect(() => {
+    if (!params.id || !selectedRecipe?.id) return
+    const fieldRef = ref(db, `cookbooks/${params.id}/recipe/${selectedRecipe.id}`)
+    let initialized = false
+    onValue(fieldRef, (snapshot) => {
+      if (!initialized) { initialized = true; return }
+      const data = snapshot.val()
+      if (!data || data._by === session?.user?.email) return
+      const SYNC_FIELDS = ["title", "prep_time", "servings", "difficulty", "category_id", "description", "ingredients", "instructions", "notes", "source_url"]
+      setEdited((prev: any) => {
+        if (!prev) return prev
+        const patch: any = {}
+        for (const f of SYNC_FIELDS) {
+          if (focusedFieldRef.current !== f && data[f] !== undefined) patch[f] = data[f]
+        }
+        return { ...prev, ...patch }
+      })
+    })
+    return () => off(fieldRef)
+  }, [params.id, selectedRecipe?.id, session])
 
   useEffect(() => {
     if (filteredRecipes.length > 0 && !selectedRecipe) {
@@ -457,7 +481,18 @@ export default function CookbookPage() {
   }
 
   function updateEdited(field: string, value: string) {
-    setEdited((prev: any) => ({ ...prev, [field]: value }))
+    setEdited((prev: any) => {
+      const next = { ...prev, [field]: value }
+      if (selectedRecipe && session?.user?.email) {
+        if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current)
+        syncTimeoutRef.current = setTimeout(() => {
+          set(ref(db, `cookbooks/${params.id}/recipe/${selectedRecipe.id}`), {
+            ...next, _by: session.user!.email, _ts: Date.now(),
+          })
+        }, 400)
+      }
+      return next
+    })
   }
 
   function withUnsavedCheck(action: () => void) {
@@ -1153,18 +1188,18 @@ export default function CookbookPage() {
                   </>
                 ) : (
                   <>
-                    <input value={edited.title || ""} onChange={e => updateEdited("title", e.target.value)} className="text-2xl font-medium bg-transparent border-b border-gray-200 outline-none w-full mb-4 pb-2 placeholder:text-gray-300" placeholder="Type recipe name here..."/>
+                    <input value={edited.title || ""} onChange={e => updateEdited("title", e.target.value)} onFocus={() => { focusedFieldRef.current = "title" }} onBlur={() => { focusedFieldRef.current = null }} className="text-2xl font-medium bg-transparent border-b border-gray-200 outline-none w-full mb-4 pb-2 placeholder:text-gray-300" placeholder="Type recipe name here..."/>
                     <div className="flex gap-2 mb-4 flex-wrap">
-                      <input value={edited.prep_time || ""} onChange={e => updateEdited("prep_time", e.target.value)} placeholder="Time" className="bg-white border border-gray-200 rounded-full px-3 py-1 text-xs w-28 outline-none"/>
-                      <input value={edited.servings || ""} onChange={e => updateEdited("servings", e.target.value)} placeholder="Servings" className="bg-white border border-gray-200 rounded-full px-3 py-1 text-xs w-28 outline-none"/>
-                      <select value={edited.difficulty || ""} onChange={e => updateEdited("difficulty", e.target.value)} className="bg-white border border-gray-200 rounded-full px-3 py-1 text-xs outline-none cursor-pointer">
+                      <input value={edited.prep_time || ""} onChange={e => updateEdited("prep_time", e.target.value)} onFocus={() => { focusedFieldRef.current = "prep_time" }} onBlur={() => { focusedFieldRef.current = null }} placeholder="Time" className="bg-white border border-gray-200 rounded-full px-3 py-1 text-xs w-28 outline-none"/>
+                      <input value={edited.servings || ""} onChange={e => updateEdited("servings", e.target.value)} onFocus={() => { focusedFieldRef.current = "servings" }} onBlur={() => { focusedFieldRef.current = null }} placeholder="Servings" className="bg-white border border-gray-200 rounded-full px-3 py-1 text-xs w-28 outline-none"/>
+                      <select value={edited.difficulty || ""} onChange={e => updateEdited("difficulty", e.target.value)} onFocus={() => { focusedFieldRef.current = "difficulty" }} onBlur={() => { focusedFieldRef.current = null }} className="bg-white border border-gray-200 rounded-full px-3 py-1 text-xs outline-none cursor-pointer">
                         <option value="">Difficulty</option>
                         <option value="Easy">Easy</option>
                         <option value="Medium">Medium</option>
                         <option value="Hard">Hard</option>
                         <option value="Expert">Expert</option>
                       </select>
-                      <select value={edited.category_id || ""} onChange={e => updateEdited("category_id", e.target.value)} className="bg-white border border-gray-200 rounded-full px-3 py-1 text-xs outline-none">
+                      <select value={edited.category_id || ""} onChange={e => updateEdited("category_id", e.target.value)} onFocus={() => { focusedFieldRef.current = "category_id" }} onBlur={() => { focusedFieldRef.current = null }} className="bg-white border border-gray-200 rounded-full px-3 py-1 text-xs outline-none">
                         <option value="">No category</option>
                         {categories.map((cat: any) => (
                           <option key={cat.id} value={cat.id}>{cat.emoji} {cat.name}</option>
@@ -1205,7 +1240,7 @@ export default function CookbookPage() {
                           {aiLoading === "description" ? "Writing..." : <><SparkleIcon size={13} /> AI write</>}
                         </button>
                       </div>
-                      <textarea value={edited.description || ""} onChange={e => updateEdited("description", e.target.value)} placeholder="Add a description..." className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none outline-none" rows={2}/>
+                      <textarea value={edited.description || ""} onChange={e => updateEdited("description", e.target.value)} onFocus={() => { focusedFieldRef.current = "description" }} onBlur={() => { focusedFieldRef.current = null }} placeholder="Add a description..." className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none outline-none" rows={2}/>
                     </div>
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
@@ -1243,6 +1278,8 @@ export default function CookbookPage() {
                                   setTimeout(() => { const els = document.querySelectorAll<HTMLInputElement>("[data-ing]"); els[Math.max(0, i - 1)]?.focus() }, 0)
                                 }
                               }}
+                              onFocus={() => { focusedFieldRef.current = "ingredients" }}
+                              onBlur={() => { focusedFieldRef.current = null }}
                               placeholder={i === 0 ? "e.g. 200g pasta" : "Add ingredient..."}
                               className="flex-1 text-sm outline-none bg-transparent py-2.5 min-w-0"
                             />
@@ -1277,7 +1314,7 @@ export default function CookbookPage() {
                           {aiLoading === "instructions" ? "Improving..." : <><SparkleIcon size={13} /> AI improve</>}
                         </button>
                       </div>
-                      <textarea value={edited.instructions || ""} onChange={e => updateEdited("instructions", e.target.value)} placeholder="Boil water&#10;Add pasta&#10;Drain and serve" className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none outline-none" rows={8}/>
+                      <textarea value={edited.instructions || ""} onChange={e => updateEdited("instructions", e.target.value)} onFocus={() => { focusedFieldRef.current = "instructions" }} onBlur={() => { focusedFieldRef.current = null }} placeholder="Boil water&#10;Add pasta&#10;Drain and serve" className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none outline-none" rows={8}/>
                     </div>
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
@@ -1286,11 +1323,11 @@ export default function CookbookPage() {
                           {aiLoading === "notes" ? "Generating..." : <><SparkleIcon size={13} /> AI generate</>}
                         </button>
                       </div>
-                      <textarea value={edited.notes || ""} onChange={e => updateEdited("notes", e.target.value)} placeholder="Tips, variations, substitutions..." className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none outline-none" rows={3}/>
+                      <textarea value={edited.notes || ""} onChange={e => updateEdited("notes", e.target.value)} onFocus={() => { focusedFieldRef.current = "notes" }} onBlur={() => { focusedFieldRef.current = null }} placeholder="Tips, variations, substitutions..." className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none outline-none" rows={3}/>
                     </div>
                     <div className="mb-4">
                       <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Source URL</div>
-                      <input value={edited.source_url || ""} onChange={e => updateEdited("source_url", e.target.value)} placeholder="https://..." className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none"/>
+                      <input value={edited.source_url || ""} onChange={e => updateEdited("source_url", e.target.value)} onFocus={() => { focusedFieldRef.current = "source_url" }} onBlur={() => { focusedFieldRef.current = null }} placeholder="https://..." className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none"/>
                     </div>
                   </>
                 )}

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Navbar from "@/app/components/Navbar"
 import Link from "next/link"
 import { WarningIcon, PeopleIcon, CheckIcon, ClockIcon, HeartIcon, UserIcon, QuestionIcon, PlateIcon, BookIcon, CameraIcon, PencilIcon, GlobeIcon, TrashIcon } from "@/app/components/Icons"
+import { pulse, subscribe } from "@/lib/firebase"
 
 function timeAgo(date: string) {
   const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000)
@@ -654,6 +655,7 @@ export default function FeedPage() {
   const [uploading, setUploading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [newPostsAvailable, setNewPostsAvailable] = useState(false)
 
   const isTimedOut = Boolean(postTimeoutUntil && new Date(postTimeoutUntil) > new Date())
 
@@ -665,6 +667,10 @@ export default function FeedPage() {
       fetchMyCookbooks()
     }
   }, [status])
+
+  useEffect(() => {
+    return subscribe("/updates/feed", () => setNewPostsAvailable(true))
+  }, [])
 
   useEffect(() => { fetchPosts() }, [feedType])
 
@@ -749,6 +755,7 @@ export default function FeedPage() {
         cookbook_id: postCookbookId || null, visibility: postVisibility,
       }),
     })
+    pulse("/updates/feed")
     resetModal()
     setSubmitting(false)
     fetchPosts()
@@ -777,6 +784,17 @@ export default function FeedPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
+      {newPostsAvailable && (
+        <div className="fixed top-16 left-0 right-0 flex justify-center z-40 pointer-events-none">
+          <button
+            onClick={() => { setNewPostsAvailable(false); fetchPosts(); window.scrollTo({ top: 0, behavior: "smooth" }) }}
+            className="pointer-events-auto bg-gray-900 text-white text-xs font-medium px-4 py-2 rounded-full shadow-lg flex items-center gap-2 hover:bg-gray-800 transition animate-fade-in">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+            New posts — tap to refresh
+          </button>
+        </div>
+      )}
+
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
 
         {/* Timeout banner */}
