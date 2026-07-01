@@ -60,6 +60,7 @@ export default function MealPlannerPage() {
   const [existingLists, setExistingLists] = useState<any[]>([])
   const [selectedExistingList, setSelectedExistingList] = useState("")
   const [mobileDate, setMobileDate] = useState<Date>(new Date())
+  const [planStatus, setPlanStatus] = useState<any>(null)
 
   const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
@@ -69,6 +70,7 @@ export default function MealPlannerPage() {
       fetchCategories()
       fetchCookbooks()
       fetchExistingLists()
+      fetch("/api/subscription").then(r => r.ok ? r.json() : null).then(d => d && setPlanStatus(d)).catch(() => {})
       const saved = localStorage.getItem("smartflavr_live_sync")
       if (saved === "true") setLiveSync(true)
     }
@@ -124,6 +126,7 @@ export default function MealPlannerPage() {
   }
 
   async function generateMissingNutrition() {
+    if (!planStatus?.canUseAI) return
     const missingNutrition = meals.filter(m => !m.nutrition && m.ingredients)
     if (missingNutrition.length === 0) {
       alert("All recipes already have nutrition data!")
@@ -256,6 +259,7 @@ export default function MealPlannerPage() {
   }
 
   async function generateGroceryList() {
+    if (!planStatus?.canUseAI) return
     setGeneratingGrocery(true)
     setGrocerySaved(false)
     setSaveMode("new")
@@ -416,11 +420,11 @@ export default function MealPlannerPage() {
           <div className="hidden md:flex gap-3 items-center flex-wrap justify-end">
             <button onClick={() => setShowCategoryModal(true)} className="border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 bg-white">+ Category</button>
             {hasMissingNutrition && (
-              <button onClick={generateMissingNutrition} disabled={generatingNutrition} className="border border-orange-200 text-orange-500 px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-50 disabled:opacity-50 transition bg-white">
+              <button onClick={generateMissingNutrition} disabled={!planStatus?.canUseAI || generatingNutrition} title={!planStatus?.canUseAI ? "AI limit reached for this week" : undefined} className="border border-orange-200 text-orange-500 px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-50 disabled:opacity-50 transition bg-white">
                 {generatingNutrition ? "Generating..." : <><SparkleIcon size={13} /> Generate nutrition</>}
               </button>
             )}
-            <button onClick={generateGroceryList} disabled={generatingGrocery || meals.length === 0} className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 disabled:opacity-50 transition">
+            <button onClick={generateGroceryList} disabled={!planStatus?.canUseAI || generatingGrocery || meals.length === 0} title={!planStatus?.canUseAI ? "AI limit reached for this week" : undefined} className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 disabled:opacity-50 transition">
               {generatingGrocery ? "Generating..." : "Grocery list"}
             </button>
             <button onClick={toggleLiveSync} disabled={syncing} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition border ${liveSync ? "bg-blue-500 text-white border-blue-500 hover:bg-blue-600" : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"}`}>
@@ -430,7 +434,7 @@ export default function MealPlannerPage() {
           </div>
           {/* Mobile-only quick actions */}
           <div className="flex md:hidden gap-2">
-            <button onClick={generateGroceryList} disabled={generatingGrocery || meals.length === 0} className="px-3 py-2 bg-orange-500 text-white rounded-xl text-xs font-semibold hover:bg-orange-600 disabled:opacity-50 transition">
+            <button onClick={generateGroceryList} disabled={!planStatus?.canUseAI || generatingGrocery || meals.length === 0} className="px-3 py-2 bg-orange-500 text-white rounded-xl text-xs font-semibold hover:bg-orange-600 disabled:opacity-50 transition">
               {generatingGrocery ? "..." : "Grocery"}
             </button>
           </div>

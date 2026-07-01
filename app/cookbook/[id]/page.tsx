@@ -152,6 +152,7 @@ export default function CookbookPage() {
   const [userCookbooks, setUserCookbooks] = useState<any[]>([])
   const [copyLoading, setCopyLoading] = useState(false)
   const [copyDone, setCopyDone] = useState<string | null>(null)
+  const [planStatus, setPlanStatus] = useState<any>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -165,6 +166,7 @@ export default function CookbookPage() {
       fetchCategories()
       fetchCookbookInfo()
       fetchFavorites()
+      fetch("/api/subscription").then(r => r.ok ? r.json() : null).then(d => d && setPlanStatus(d)).catch(() => {})
     }
   }, [status])
 
@@ -418,13 +420,19 @@ export default function CookbookPage() {
   }
 
   async function aiAssist(type: string) {
-    if (!edited) return
+    if (!edited || !planStatus?.canUseAI) return
     setAiLoading(type)
     const res = await fetch("/api/ai-assist", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type, recipe: edited }),
     })
+    if (res.status === 403) {
+      // Limit hit mid-session — refresh plan status
+      fetch("/api/subscription").then(r => r.ok ? r.json() : null).then(d => d && setPlanStatus(d)).catch(() => {})
+      setAiLoading(null)
+      return
+    }
     const data = await res.json()
     if (data.success) {
       switch (type) {
@@ -1184,10 +1192,16 @@ export default function CookbookPage() {
                       )}
                     </div>
                     <input type="file" id="photo-upload" accept="image/*" onChange={uploadPhoto} className="hidden"/>
+                    {planStatus && !planStatus.canUseAI && planStatus.weeklyLimit !== null && (
+                      <div className="mb-4 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2 text-xs text-orange-700 flex items-center gap-2">
+                        <SparkleIcon size={13} />
+                        <span>You've used all your AI features for this week. They'll reset next week.</span>
+                      </div>
+                    )}
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Description</div>
-                        <button onClick={() => aiAssist("description")} disabled={aiLoading === "description"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1">
+                        <button onClick={() => aiAssist("description")} disabled={!planStatus?.canUseAI || aiLoading === "description"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
                           {aiLoading === "description" ? "Writing..." : <><SparkleIcon size={13} /> AI write</>}
                         </button>
                       </div>
@@ -1196,7 +1210,7 @@ export default function CookbookPage() {
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Ingredients</div>
-                        <button onClick={() => aiAssist("ingredients")} disabled={aiLoading === "ingredients"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1">
+                        <button onClick={() => aiAssist("ingredients")} disabled={!planStatus?.canUseAI || aiLoading === "ingredients"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
                           {aiLoading === "ingredients" ? "Suggesting..." : <><SparkleIcon size={13} /> AI suggest</>}
                         </button>
                       </div>
@@ -1259,7 +1273,7 @@ export default function CookbookPage() {
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Instructions <span className="text-gray-300 font-normal normal-case">(one step per line)</span></div>
-                        <button onClick={() => aiAssist("instructions")} disabled={aiLoading === "instructions"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1">
+                        <button onClick={() => aiAssist("instructions")} disabled={!planStatus?.canUseAI || aiLoading === "instructions"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
                           {aiLoading === "instructions" ? "Improving..." : <><SparkleIcon size={13} /> AI improve</>}
                         </button>
                       </div>
@@ -1268,7 +1282,7 @@ export default function CookbookPage() {
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Notes</div>
-                        <button onClick={() => aiAssist("notes")} disabled={aiLoading === "notes"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1">
+                        <button onClick={() => aiAssist("notes")} disabled={!planStatus?.canUseAI || aiLoading === "notes"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
                           {aiLoading === "notes" ? "Generating..." : <><SparkleIcon size={13} /> AI generate</>}
                         </button>
                       </div>

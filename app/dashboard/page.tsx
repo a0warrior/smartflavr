@@ -328,7 +328,7 @@ export default function Dashboard() {
   }
 
   async function extractRecipe() {
-    if (!url) return
+    if (!url || !planStatus?.canUseAI) return
     setExtracting(true)
     const res = await fetch("/api/extract", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) })
     const data = await res.json()
@@ -338,7 +338,7 @@ export default function Dashboard() {
 
   async function handleFileImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (!file) return
+    if (!file || !planStatus?.canUseAI) return
     setImporting(true); setShowImportModal(true); setImportedRecipes([]); setImportCookbooks({})
     if (file.type.startsWith("image/") || file.type === "application/pdf") {
       const reader = new FileReader()
@@ -451,7 +451,7 @@ export default function Dashboard() {
               <p className="text-xs text-gray-400 mb-4 leading-relaxed">Paste a link from any recipe site and we'll pull out the ingredients, steps, and details automatically.</p>
               <div className="flex gap-2 mb-3">
                 <input value={url} onChange={e => setUrl(e.target.value)} onKeyDown={e => e.key === "Enter" && extractRecipe()} placeholder="https://allrecipes.com/recipe/..." className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none bg-gray-50"/>
-                <button onClick={extractRecipe} disabled={extracting} className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 transition whitespace-nowrap">{extracting ? "Extracting..." : "Extract"}</button>
+                <button onClick={extractRecipe} disabled={!planStatus?.canUseAI || extracting} title={!planStatus?.canUseAI ? "AI limit reached for this week" : undefined} className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 transition whitespace-nowrap disabled:opacity-50">{extracting ? "Extracting..." : "Extract"}</button>
               </div>
               <p className="text-xs text-gray-400 mb-2">Works with</p>
               <div className="flex flex-wrap gap-1.5">
@@ -470,7 +470,7 @@ export default function Dashboard() {
                 <span className="text-xs px-2.5 py-1 rounded-full bg-orange-50 text-orange-600 flex items-center gap-1"><DocumentIcon size={11} />PDF</span>
                 <span className="text-xs px-2.5 py-1 rounded-full bg-orange-50 text-orange-600 flex items-center gap-1"><DocumentIcon size={11} />Text file</span>
               </div>
-              <button onClick={() => document.getElementById("file-import")?.click()} className="w-full border border-gray-200 text-gray-600 px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 transition text-center">Choose a file to import</button>
+              <button onClick={() => document.getElementById("file-import")?.click()} disabled={!planStatus?.canUseAI} title={!planStatus?.canUseAI ? "AI limit reached for this week" : undefined} className="w-full border border-gray-200 text-gray-600 px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 transition text-center disabled:opacity-50">Choose a file to import</button>
               <input type="file" id="file-import" accept="image/*,.pdf,.txt" onChange={handleFileImport} className="hidden"/>
             </div>
           </div>

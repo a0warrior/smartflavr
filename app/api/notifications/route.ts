@@ -77,12 +77,19 @@ export async function DELETE(req: Request) {
     [session.user.email]
   ) as any[]
 
-  const { id } = await req.json()
+  const body = await req.json().catch(() => ({}))
 
-  await pool.query(
-    "DELETE FROM notifications WHERE id = ? AND user_id = ?",
-    [id, currentUser[0].id]
-  )
+  if (body.id) {
+    await pool.query(
+      "DELETE FROM notifications WHERE id = ? AND user_id = ?",
+      [body.id, currentUser[0].id]
+    )
+  } else {
+    await pool.query(
+      "DELETE FROM notifications WHERE user_id = ?",
+      [currentUser[0].id]
+    )
+  }
 
   return NextResponse.json({ success: true })
 }

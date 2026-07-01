@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     if (status.plan !== "free") return NextResponse.json({ error: "Already on a paid plan" }, { status: 400 })
 
     const expires = new Date()
-    expires.setDate(expires.getDate() + 14)
+    expires.setDate(expires.getDate() + 7)
     await pool.query(
       "UPDATE users SET plan = 'pro', plan_expires_at = ?, trial_used = 1 WHERE email = ?",
       [expires, session.user.email]

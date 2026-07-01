@@ -471,30 +471,6 @@ function selectProfilePhoto(e: React.ChangeEvent<HTMLInputElement>) {
                   <p className="text-xs text-gray-400">Your 7-day trial has ended. Paid plans coming soon.</p>
                 )}
 
-                {/* Cancel button — only for self-started trials, not admin-granted plans */}
-                {!ps.isAdminOrOwner && ps.isTrial && !ps.isCancelled && (
-                  <button
-                    onClick={async () => {
-                      if (!confirm(`Cancel your ${ps.plan} plan? You'll keep access until ${endsDateStr || "the end of your current period"}.`)) return
-                      setPlanLoading(true)
-                      const res = await fetch("/api/subscription", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "cancel" }) })
-                      const data = await res.json()
-                      if (data.success) {
-                        const res2 = await fetch("/api/subscription")
-                        const d2 = await res2.json()
-                        setPlanStatus(d2)
-                      } else {
-                        setError(data.error || "Could not cancel plan")
-                      }
-                      setPlanLoading(false)
-                    }}
-                    disabled={planLoading}
-                    className="mt-4 w-full border border-red-200 text-red-400 rounded-xl py-2 text-sm hover:bg-red-50 transition disabled:opacity-50"
-                  >
-                    {planLoading ? "Cancelling..." : "Cancel plan"}
-                  </button>
-                )}
-
                 {/* Already cancelled message */}
                 {!ps.isAdminOrOwner && ps.isCancelled && endsDateStr && (
                   <div className="mt-2 bg-red-50 border border-red-100 rounded-xl p-3 text-xs text-red-500">

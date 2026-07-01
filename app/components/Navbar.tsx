@@ -24,6 +24,7 @@ export default function Navbar() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [notifications, setNotifications] = useState<any[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
+  const [confirmClearAll, setConfirmClearAll] = useState(false)
 
   useEffect(() => {
     if (session?.user?.email) {
@@ -93,6 +94,13 @@ export default function Navbar() {
     setUnreadCount(prev => Math.max(0, prev - 1))
   }
 
+  async function clearAllNotifications() {
+    await fetch("/api/notifications", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) })
+    setNotifications([])
+    setUnreadCount(0)
+    setConfirmClearAll(false)
+  }
+
   function timeAgo(date: string) {
     const diff = Date.now() - new Date(date).getTime()
     const m = Math.floor(diff / 60000)
@@ -143,10 +151,21 @@ export default function Navbar() {
     <div className="absolute right-0 top-11 bg-white border border-gray-100 rounded-2xl shadow-xl w-80 z-50 overflow-hidden">
       <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
-        {unreadCount > 0 && (
-          <button onClick={markAllRead} className="text-xs text-orange-500 hover:text-orange-600 font-medium">
-            Mark all read
-          </button>
+        {notifications.length > 0 && (
+          confirmClearAll ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">Clear all?</span>
+              <button onClick={clearAllNotifications} className="text-xs text-red-500 hover:text-red-600 font-semibold">Yes</button>
+              <button onClick={() => setConfirmClearAll(false)} className="text-xs text-gray-400 hover:text-gray-600">No</button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              {unreadCount > 0 && (
+                <button onClick={markAllRead} className="text-xs text-orange-500 hover:text-orange-600 font-medium">Mark all read</button>
+              )}
+              <button onClick={() => setConfirmClearAll(true)} className="text-xs text-gray-400 hover:text-gray-600 font-medium">Clear all</button>
+            </div>
+          )
         )}
       </div>
       <div className="max-h-96 overflow-y-auto">
