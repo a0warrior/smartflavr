@@ -21,7 +21,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { ClockIcon, UserIcon, StarIcon, LinkIcon, DocumentIcon, CameraIcon, PrintIcon, ListIcon, CheckIcon, PencilIcon, GlobeIcon, LockIcon, SparkleIcon } from "@/app/components/Icons"
+import { ClockIcon, UserIcon, StarIcon, LinkIcon, DocumentIcon, CameraIcon, PrintIcon, ListIcon, CheckIcon, PencilIcon, GlobeIcon, LockIcon, SparkleIcon, PinIcon } from "@/app/components/Icons"
 
 const COLORS = [
   "#F97316", "#EF4444", "#8B5CF6", "#3B82F6",
@@ -71,8 +71,8 @@ function SortableGroceryItem({ item, onToggle, onDelete }: any) {
 export default function Dashboard() {
   const { data: session, status } = useSession()
   const router = useRouter()
-  const [cookbooks, setCookbooks] = useState([])
-  const [collaboratedCookbooks, setCollaboratedCookbooks] = useState([])
+  const [cookbooks, setCookbooks] = useState<any[]>([])
+  const [collaboratedCookbooks, setCollaboratedCookbooks] = useState<any[]>([])
   const [showModal, setShowModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingCookbook, setEditingCookbook] = useState<any>(null)
@@ -110,6 +110,8 @@ export default function Dashboard() {
   const [checking, setChecking] = useState(true)
   const [groceryCopied, setGroceryCopied] = useState(false)
   const [planStatus, setPlanStatus] = useState<any>(null)
+  const [showAllCookbooks, setShowAllCookbooks] = useState(false)
+  const [showAllGroceryLists, setShowAllGroceryLists] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -159,6 +161,22 @@ export default function Dashboard() {
     const data = await res.json()
     setCookbooks(data.cookbooks || [])
     setCollaboratedCookbooks(data.collaborated || [])
+  }
+
+  async function togglePin(book: any) {
+    const newPinned = !book.is_pinned
+    setCookbooks((prev: any[]) => {
+      const updated = prev.map((b: any) => b.id === book.id ? { ...b, is_pinned: newPinned ? 1 : 0 } : b)
+      return updated.sort((a: any, b: any) => {
+        if ((b.is_pinned || 0) !== (a.is_pinned || 0)) return (b.is_pinned || 0) - (a.is_pinned || 0)
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      })
+    })
+    await fetch(`/api/cookbooks/${book.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_pinned: newPinned ? 1 : 0 }),
+    })
   }
 
   async function fetchGroceryLists() {
@@ -484,9 +502,9 @@ export default function Dashboard() {
           <button onClick={() => setShowModal(true)} className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 transition">+ New Cookbook</button>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-10">
-          {cookbooks.map((book: any) => (
-            <div key={book.id} className="bg-white border border-gray-100 rounded-2xl overflow-hidden hover:shadow-sm transition relative">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {(showAllCookbooks ? cookbooks : cookbooks.slice(0, 6)).map((book: any, i: number) => (
+            <div key={book.id} className={`bg-white border border-gray-100 rounded-2xl overflow-hidden hover:shadow-sm transition relative${!showAllCookbooks && i >= 4 ? " hidden md:block" : ""}`}>
               <Link href={`/cookbook/${book.id}`} className="block">
                 <div className="h-24 flex items-center justify-center overflow-hidden" style={{ backgroundColor: book.cover_image ? "transparent" : book.cover_color + "22" }}>
                   {book.cover_image ? <img src={book.cover_image} className="w-full h-full object-cover"/> : <span className="text-4xl">{book.cover_emoji}</span>}
@@ -501,6 +519,12 @@ export default function Dashboard() {
                 className="absolute top-2 right-2 w-7 h-7 bg-white/90 shadow-sm rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 text-xs transition">
                 <PencilIcon size={12} />
               </button>
+              <button
+                onClick={() => togglePin(book)}
+                title={book.is_pinned ? "Unpin" : "Pin to top"}
+                className={`absolute top-2 left-2 w-7 h-7 bg-white/90 shadow-sm rounded-lg flex items-center justify-center text-xs transition ${book.is_pinned ? "text-orange-500" : "text-gray-300 hover:text-gray-500"}`}>
+                <PinIcon filled={!!book.is_pinned} size={12} />
+              </button>
             </div>
           ))}
           <div onClick={() => setShowModal(true)} className="bg-white border border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center p-8 cursor-pointer hover:bg-gray-50 transition">
@@ -508,6 +532,17 @@ export default function Dashboard() {
             <span className="text-sm text-gray-400">New cookbook</span>
           </div>
         </div>
+        {!showAllCookbooks && cookbooks.length > 4 && (
+          <button
+            onClick={() => setShowAllCookbooks(true)}
+            className={`mt-3 text-sm text-orange-500 hover:text-orange-600 font-medium transition${cookbooks.length <= 6 ? " md:hidden" : ""}`}>
+            View all {cookbooks.length} cookbooks →
+          </button>
+        )}
+        {showAllCookbooks && cookbooks.length > 4 && (
+          <button onClick={() => setShowAllCookbooks(false)} className="mt-3 text-sm text-gray-400 hover:text-gray-600 transition">Show less ↑</button>
+        )}
+        <div className="mb-10" />
 
         {collaboratedCookbooks.length > 0 && (
           <div className="mb-10">
@@ -544,7 +579,7 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4">
-              {groceryLists.map((list: any) => {
+              {(showAllGroceryLists ? groceryLists : groceryLists.slice(0, 5)).map((list: any) => {
                 const total = list.items?.length || 0
                 const checkedCount = list.items?.filter((i: any) => i.checked).length || 0
                 const pct = total > 0 ? Math.round((checkedCount / total) * 100) : 0
@@ -562,6 +597,14 @@ export default function Dashboard() {
                 )
               })}
             </div>
+          )}
+          {!showAllGroceryLists && groceryLists.length > 5 && (
+            <button onClick={() => setShowAllGroceryLists(true)} className="mt-3 text-sm text-orange-500 hover:text-orange-600 font-medium transition">
+              View all {groceryLists.length} lists →
+            </button>
+          )}
+          {showAllGroceryLists && groceryLists.length > 5 && (
+            <button onClick={() => setShowAllGroceryLists(false)} className="mt-3 text-sm text-gray-400 hover:text-gray-600 transition">Show less ↑</button>
           )}
         </div>
 

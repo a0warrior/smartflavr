@@ -17,8 +17,10 @@ export async function GET(req: Request) {
     return NextResponse.json({ cookbooks: [], collaborated: [] })
   }
 
+  try { await pool.query("ALTER TABLE cookbooks ADD COLUMN IF NOT EXISTS is_pinned TINYINT(1) NOT NULL DEFAULT 0") } catch {}
+
   const [cookbooks] = await pool.query(
-    "SELECT * FROM cookbooks WHERE user_id = ? ORDER BY created_at DESC",
+    "SELECT * FROM cookbooks WHERE user_id = ? ORDER BY is_pinned DESC, created_at DESC",
     [users[0].id]
   ) as any[]
 

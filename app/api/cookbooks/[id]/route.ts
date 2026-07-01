@@ -21,8 +21,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   }
 
   const { id } = await params
-  const { title, cover_emoji, cover_color, cover_image, is_public } = await req.json()
+  const body = await req.json()
 
+  if ("is_pinned" in body) {
+    await pool.query("UPDATE cookbooks SET is_pinned=? WHERE id=?", [body.is_pinned ? 1 : 0, id])
+    return NextResponse.json({ success: true })
+  }
+
+  const { title, cover_emoji, cover_color, cover_image, is_public } = body
   await pool.query(
     "UPDATE cookbooks SET title=?, cover_emoji=?, cover_color=?, cover_image=?, is_public=? WHERE id=?",
     [title, cover_emoji, cover_color, cover_image || null, is_public ?? 0, id]

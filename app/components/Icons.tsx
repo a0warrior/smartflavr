@@ -284,6 +284,20 @@ export function FlameIcon({ size = 16, className }: IconProps) {
   )
 }
 
+export function PinIcon({ filled = false, size = 16, className }: { filled?: boolean; size?: number; className?: string }) {
+  return filled ? (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <line x1="12" y1="17" x2="12" y2="22"/>
+      <path d="M5 17H19V15L17 10V4H7V10L5 15V17Z"/>
+    </svg>
+  ) : (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <line x1="12" y1="17" x2="12" y2="22"/>
+      <path d="M5 17H19V15L17 10V4H7V10L5 15V17Z"/>
+    </svg>
+  )
+}
+
 export function ChefIcon({ size = 16, className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
