@@ -386,6 +386,12 @@ function PostCard({ post, currentUserId, isAdmin, isTimedOut, onDelete, onUpdate
                 <video src={post.image_url} className="w-full max-h-[480px] object-contain" controls playsInline />
               </div>
             )}
+            {post.type === "recipe" && !post.recipe_id && (
+              <div className="border border-gray-100 rounded-xl p-4 mb-3 flex items-center gap-3 text-gray-400">
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="10"/><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01"/></svg>
+                <span className="text-xs">This recipe is no longer available.</span>
+              </div>
+            )}
             {post.type === "recipe" && post.recipe_id && (
               <div className="border border-gray-100 rounded-xl overflow-hidden mb-3">
                 {(post.image_url || post.recipe_image) && (

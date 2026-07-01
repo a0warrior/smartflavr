@@ -396,7 +396,7 @@ export default function Dashboard() {
 
       <div className="max-w-4xl mx-auto px-6 py-10">
 
-        {planStatus && !planStatus.isAdminOrOwner && (() => {
+        {planStatus && !planStatus.isAdminOrOwner && planStatus.weeklyLimit !== null && (() => {
           const { plan, aiUsesThisWeek, weeklyLimit, isTrial, isCancelled, planExpiresAt } = planStatus
           const daysLeft = planExpiresAt ? Math.max(0, Math.ceil((new Date(planExpiresAt).getTime() - Date.now()) / 86400000)) : null
 

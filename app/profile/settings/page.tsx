@@ -436,24 +436,26 @@ function selectProfilePhoto(e: React.ChangeEvent<HTMLInputElement>) {
                   )}
                 </div>
 
-                {/* AI usage bar */}
-                <div className="mb-1 flex items-center justify-between text-xs text-gray-500">
-                  <span>AI uses this week</span>
-                  <span>
-                    {ps.isAdminOrOwner || ps.weeklyLimit === null
-                      ? "Unlimited"
-                      : `${ps.aiUsesThisWeek ?? 0} / ${ps.weeklyLimit}`}
-                  </span>
-                </div>
-                <div className="w-full bg-gray-100 rounded-full h-2 mb-5">
-                  <div className="h-2 rounded-full transition-all" style={{
-                    width: ps.isAdminOrOwner || ps.weeklyLimit === null ? "100%" : `${ps.weeklyLimit ? Math.min(100, Math.round(((ps.aiUsesThisWeek ?? 0) / ps.weeklyLimit) * 100)) : 0}%`,
-                    background: ps.isAdminOrOwner || ps.weeklyLimit === null
-                      ? "linear-gradient(90deg,#6366f1,#8b5cf6)"
-                      : ps.plan === "premium" ? "linear-gradient(90deg,#7c3aed,#a855f7)"
-                      : "linear-gradient(90deg,#f97316,#ea580c)"
-                  }} />
-                </div>
+                {/* AI usage bar — hidden for admin/owner */}
+                {!ps.isAdminOrOwner && (
+                  <>
+                    <div className="mb-1 flex items-center justify-between text-xs text-gray-500">
+                      <span>AI uses this week</span>
+                      <span>
+                        {ps.weeklyLimit === null ? "Unlimited" : `${ps.aiUsesThisWeek ?? 0} / ${ps.weeklyLimit}`}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-2 mb-5">
+                      <div className="h-2 rounded-full transition-all" style={{
+                        width: ps.weeklyLimit === null ? "100%" : `${ps.weeklyLimit ? Math.min(100, Math.round(((ps.aiUsesThisWeek ?? 0) / ps.weeklyLimit) * 100)) : 0}%`,
+                        background: ps.weeklyLimit === null
+                          ? "linear-gradient(90deg,#7c3aed,#a855f7)"
+                          : ps.plan === "premium" ? "linear-gradient(90deg,#7c3aed,#a855f7)"
+                          : "linear-gradient(90deg,#f97316,#ea580c)"
+                      }} />
+                    </div>
+                  </>
+                )}
 
                 {/* Free plan CTAs */}
                 {!ps.isAdminOrOwner && ps.plan === "free" && !ps.trialUsed && (
@@ -469,8 +471,8 @@ function selectProfilePhoto(e: React.ChangeEvent<HTMLInputElement>) {
                   <p className="text-xs text-gray-400">Your 7-day trial has ended. Paid plans coming soon.</p>
                 )}
 
-                {/* Cancel button for active paid plans */}
-                {!ps.isAdminOrOwner && ps.plan !== "free" && !ps.isCancelled && (
+                {/* Cancel button — only for self-started trials, not admin-granted plans */}
+                {!ps.isAdminOrOwner && ps.isTrial && !ps.isCancelled && (
                   <button
                     onClick={async () => {
                       if (!confirm(`Cancel your ${ps.plan} plan? You'll keep access until ${endsDateStr || "the end of your current period"}.`)) return

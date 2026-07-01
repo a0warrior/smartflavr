@@ -55,7 +55,7 @@ export async function getPlanStatus(email: string): Promise<PlanStatus> {
   const u = rows[0]
 
   // Admins and owner always get unlimited access
-  if (u.is_admin === 1 || isOwnerEmail) {
+  if (!!u.is_admin || isOwnerEmail) {
     return { plan: (u.plan || "free") as Plan, isActive: true, trialUsed: !!u.trial_used, aiUsesThisWeek: 0, weeklyLimit: null, canUseAI: true, planExpiresAt: null, isTrial: false, isCancelled: false, isAdminOrOwner: true }
   }
 

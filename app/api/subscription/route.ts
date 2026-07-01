@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     if (status.plan !== "free") return NextResponse.json({ error: "Already on a paid plan" }, { status: 400 })
 
     const expires = new Date()
-    expires.setDate(expires.getDate() + 7)
+    expires.setDate(expires.getDate() + 14)
     await pool.query(
       "UPDATE users SET plan = 'pro', plan_expires_at = ?, trial_used = 1 WHERE email = ?",
       [expires, session.user.email]
@@ -43,7 +43,9 @@ export async function POST(req: Request) {
     const { user_id, plan } = body
     if (!["free", "pro", "premium"].includes(plan)) return NextResponse.json({ error: "Invalid plan" }, { status: 400 })
     await runMigrations()
-    await pool.query("UPDATE users SET plan = ?, plan_expires_at = NULL WHERE id = ?", [plan, user_id])
+    // Granting free also resets trial so admins can refresh a user's trial access
+    const resetTrial = plan === "free" ? ", trial_used = 0, plan_cancelled_at = NULL" : ", plan_cancelled_at = NULL"
+    await pool.query(`UPDATE users SET plan = ?, plan_expires_at = NULL${resetTrial} WHERE id = ?`, [plan, user_id])
 
     const messages: Record<string, string> = {
       pro: "You've been granted Pro access! Enjoy 25 AI uses per week.",
@@ -64,6 +66,7 @@ export async function POST(req: Request) {
     const status = await getPlanStatus(session.user.email)
     if (status.plan === "free") return NextResponse.json({ error: "No active plan to cancel" }, { status: 400 })
     if (status.isCancelled) return NextResponse.json({ error: "Already cancelled" }, { status: 400 })
+    if (!status.isTrial) return NextResponse.json({ error: "Admin-granted plans cannot be self-cancelled." }, { status: 403 })
     // If no expiry yet (admin-granted open-ended plan), set end date to 30 days from now
     if (!status.planExpiresAt) {
       const ends = new Date()
