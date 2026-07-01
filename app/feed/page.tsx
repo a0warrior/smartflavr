@@ -921,8 +921,8 @@ export default function FeedPage() {
                   onChange={e => { setPostCookbookId(e.target.value); if (postType === "recipe" && e.target.value) fetchRecipesForCookbook(e.target.value) }}
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none mb-2">
                   <option value="">Select a cookbook...</option>
-                  {myCookbooks.filter((b: any) => b.is_public === 1).map((b: any) => (
-                    <option key={b.id} value={b.id}>{b.cover_emoji} {b.title}</option>
+                  {(postType === "cookbook" ? myCookbooks.filter((b: any) => b.is_public === 1) : myCookbooks).map((b: any) => (
+                    <option key={b.id} value={b.id}>{b.cover_emoji} {b.title}{postType === "recipe" && b.is_public !== 1 ? " 🔒" : ""}</option>
                   ))}
                 </select>
                 {postType === "recipe" && postCookbookId && (
