@@ -111,6 +111,7 @@ export default function Dashboard() {
   const [groceryCopied, setGroceryCopied] = useState(false)
   const [planStatus, setPlanStatus] = useState<any>(null)
   const [showAllCookbooks, setShowAllCookbooks] = useState(false)
+  const [showAllCollabCookbooks, setShowAllCollabCookbooks] = useState(false)
   const [showAllGroceryLists, setShowAllGroceryLists] = useState(false)
 
   const sensors = useSensors(
@@ -548,8 +549,8 @@ export default function Dashboard() {
           <div className="mb-10">
             <h2 className="text-lg font-medium text-gray-900 mb-4">Shared with me</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {collaboratedCookbooks.map((book: any) => (
-                <div key={book.id} onClick={() => router.push(`/cookbook/${book.id}`)} className="bg-white border border-gray-100 rounded-2xl overflow-hidden cursor-pointer hover:shadow-sm transition">
+              {(showAllCollabCookbooks ? collaboratedCookbooks : collaboratedCookbooks.slice(0, 6)).map((book: any, i: number) => (
+                <div key={book.id} onClick={() => router.push(`/cookbook/${book.id}`)} className={`bg-white border border-gray-100 rounded-2xl overflow-hidden cursor-pointer hover:shadow-sm transition${!showAllCollabCookbooks && i >= 4 ? " hidden md:block" : ""}`}>
                   <div className="h-24 flex items-center justify-center overflow-hidden" style={{ backgroundColor: book.cover_image ? "transparent" : book.cover_color + "22" }}>
                     {book.cover_image ? <img src={book.cover_image} className="w-full h-full object-cover"/> : <span className="text-4xl">{book.cover_emoji}</span>}
                   </div>
@@ -563,6 +564,14 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
+            {!showAllCollabCookbooks && collaboratedCookbooks.length > 4 && (
+              <button onClick={() => setShowAllCollabCookbooks(true)} className={`mt-3 text-sm text-orange-500 hover:text-orange-600 font-medium transition${collaboratedCookbooks.length <= 6 ? " md:hidden" : ""}`}>
+                View all {collaboratedCookbooks.length} shared cookbooks →
+              </button>
+            )}
+            {showAllCollabCookbooks && collaboratedCookbooks.length > 4 && (
+              <button onClick={() => setShowAllCollabCookbooks(false)} className="mt-3 text-sm text-gray-400 hover:text-gray-600 transition">Show less ↑</button>
+            )}
           </div>
         )}
 
