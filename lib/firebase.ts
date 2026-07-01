@@ -1,5 +1,5 @@
 import { initializeApp, getApps } from "firebase/app"
-import { getDatabase, ref, set, onValue, off } from "firebase/database"
+import { getDatabase, ref, set, onValue } from "firebase/database"
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -17,7 +17,7 @@ const db = getDatabase(app)
 // Write a timestamp pulse to a Firebase path to signal that something changed.
 // Listeners on that path will refetch from the DB.
 export function pulse(path: string) {
-  try { set(ref(db, path), Date.now()) } catch {}
+  set(ref(db, path), Date.now()).catch(() => {})
 }
 
 // Subscribe to a Firebase path. Calls onChange whenever the value updates.
@@ -25,11 +25,11 @@ export function pulse(path: string) {
 export function subscribe(path: string, onChange: () => void): () => void {
   const r = ref(db, path)
   let first = true
-  onValue(r, () => {
+  const unsub = onValue(r, () => {
     if (first) { first = false; return } // skip initial load
     onChange()
   })
-  return () => off(r)
+  return unsub
 }
 
 export { db }
