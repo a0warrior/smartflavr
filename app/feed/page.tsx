@@ -243,7 +243,7 @@ function PostCard({ post, currentUserId, isAdmin, isTimedOut, onDelete, onUpdate
   const showDots = isOwn || isAdmin
 
   return (
-    <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm">
       <div className="p-4">
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
