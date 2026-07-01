@@ -60,5 +60,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true })
   }
 
+  if (action === "cancel") {
+    const status = await getPlanStatus(session.user.email)
+    if (status.plan === "free") return NextResponse.json({ error: "No active plan to cancel" }, { status: 400 })
+    if (status.isCancelled) return NextResponse.json({ error: "Already cancelled" }, { status: 400 })
+    // If no expiry yet (admin-granted open-ended plan), set end date to 30 days from now
+    if (!status.planExpiresAt) {
+      const ends = new Date()
+      ends.setDate(ends.getDate() + 30)
+      await pool.query("UPDATE users SET plan_expires_at = ?, plan_cancelled_at = NOW() WHERE email = ?", [ends, session.user.email])
+      return NextResponse.json({ success: true, endsAt: ends.toISOString() })
+    }
+    // Trial or plan already has an expiry — just mark as cancelled, it'll expire naturally
+    await pool.query("UPDATE users SET plan_cancelled_at = NOW() WHERE email = ?", [session.user.email])
+    return NextResponse.json({ success: true, endsAt: status.planExpiresAt })
+  }
+
   return NextResponse.json({ error: "Unknown action" }, { status: 400 })
 }

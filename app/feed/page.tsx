@@ -73,8 +73,47 @@ function PostCard({ post, currentUserId, isAdmin, isTimedOut, onDelete, onUpdate
   const [tapHeartVisible, setTapHeartVisible] = useState(false)
   const [warningDismissed, setWarningDismissed] = useState(false)
   const [showTimeoutMenu, setShowTimeoutMenu] = useState(false)
+  const [recipeExpanded, setRecipeExpanded] = useState(false)
+  const [showCopyModal, setShowCopyModal] = useState(false)
+  const [userCookbooks, setUserCookbooks] = useState<any[]>([])
+  const [copyLoading, setCopyLoading] = useState(false)
+  const [copyDone, setCopyDone] = useState<string | null>(null)
   const lastTap = useRef(0)
   const menuRef = useRef<HTMLDivElement>(null)
+
+  async function openCopyModal() {
+    setShowCopyModal(true)
+    setCopyDone(null)
+    if (userCookbooks.length === 0) {
+      const res = await fetch("/api/cookbooks")
+      const data = await res.json()
+      setUserCookbooks(data.cookbooks || [])
+    }
+  }
+
+  async function copyRecipe(targetCookbookId: string) {
+    setCopyLoading(true)
+    await fetch("/api/recipes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        cookbook_id: targetCookbookId,
+        title: post.recipe_title,
+        description: post.recipe_description,
+        ingredients: post.recipe_ingredients,
+        instructions: post.recipe_instructions,
+        prep_time: post.recipe_prep_time,
+        servings: post.recipe_servings,
+        difficulty: post.recipe_difficulty,
+        notes: post.recipe_notes,
+        image_url: post.recipe_image || post.image_url,
+        sort_order: 0,
+      }),
+    })
+    const picked = userCookbooks.find((c: any) => c.id === targetCookbookId)
+    setCopyDone(picked?.title || "your cookbook")
+    setCopyLoading(false)
+  }
 
   // Close menu on outside click
   useEffect(() => {
@@ -348,10 +387,10 @@ function PostCard({ post, currentUserId, isAdmin, isTimedOut, onDelete, onUpdate
               </div>
             )}
             {post.type === "recipe" && post.recipe_id && (
-              <Link href={`/cookbook/${post.cookbook_id}?recipe=${post.recipe_id}`} className="block border border-gray-100 rounded-xl overflow-hidden mb-3 hover:shadow-sm transition">
-                {post.image_url ? <img src={post.image_url} className="w-full object-contain rounded-t-xl" />
-                  : post.recipe_image ? <img src={post.recipe_image} className="w-full object-contain rounded-t-xl" />
-                  : null}
+              <div className="border border-gray-100 rounded-xl overflow-hidden mb-3">
+                {(post.image_url || post.recipe_image) && (
+                  <img src={post.image_url || post.recipe_image} className="w-full object-contain" />
+                )}
                 <div className="p-3">
                   <div className="text-xs font-medium text-orange-500 mb-1">Recipe</div>
                   <div className="text-sm font-medium text-gray-900">{post.recipe_title}</div>
@@ -359,9 +398,58 @@ function PostCard({ post, currentUserId, isAdmin, isTimedOut, onDelete, onUpdate
                   <div className="flex gap-3 mt-2 text-xs text-gray-400">
                     {post.recipe_prep_time && <span className="flex items-center gap-1"><ClockIcon size={11} />{post.recipe_prep_time}</span>}
                     {post.recipe_servings && <span className="flex items-center gap-1"><UserIcon size={11} />{post.recipe_servings}</span>}
+                    {post.recipe_difficulty && <span className="capitalize">{post.recipe_difficulty}</span>}
+                  </div>
+
+                  {/* Expanded recipe content */}
+                  {recipeExpanded && (
+                    <div className="mt-4 border-t border-gray-50 pt-4 space-y-4">
+                      {post.recipe_ingredients && (
+                        <div>
+                          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Ingredients</div>
+                          {post.recipe_ingredients.split("\n").filter(Boolean).map((ing: string, i: number) => (
+                            <div key={i} className="flex items-center gap-2.5 py-1.5 border-b border-gray-50 last:border-0">
+                              <div className="w-3.5 h-3.5 rounded-full border-2 border-gray-200 flex-shrink-0" />
+                              <span className="text-sm text-gray-700">{ing}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {post.recipe_instructions && (
+                        <div>
+                          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Instructions</div>
+                          {post.recipe_instructions.split("\n").filter(Boolean).map((step: string, i: number) => (
+                            <div key={i} className="flex gap-2.5 mb-3">
+                              <div className="w-5 h-5 rounded-full bg-orange-50 text-orange-600 text-xs font-semibold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</div>
+                              <p className="text-sm text-gray-700 leading-relaxed">{step}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {post.recipe_notes && (
+                        <div className="bg-amber-50 rounded-lg p-3 text-xs text-amber-800 leading-relaxed">{post.recipe_notes}</div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50">
+                    <button
+                      onClick={() => setRecipeExpanded(v => !v)}
+                      className="text-xs font-medium text-orange-500 hover:text-orange-600 transition"
+                    >
+                      {recipeExpanded ? "See less ↑" : "See more ↓"}
+                    </button>
+                    <button
+                      onClick={openCopyModal}
+                      className="text-xs font-medium text-gray-500 hover:text-orange-500 transition flex items-center gap-1"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                      Save to cookbook
+                    </button>
                   </div>
                 </div>
-              </Link>
+              </div>
             )}
             {post.type === "cookbook" && post.cookbook_id && (
               <Link href={`/share/cookbook/${post.cookbook_id}`} className="block border border-gray-100 rounded-xl overflow-hidden mb-3 hover:shadow-sm transition">
@@ -490,6 +578,44 @@ function PostCard({ post, currentUserId, isAdmin, isTimedOut, onDelete, onUpdate
               )}
             </>
           )}
+        </div>
+      )}
+
+      {showCopyModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40" onClick={() => setShowCopyModal(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl p-5" onClick={e => e.stopPropagation()}>
+            {copyDone ? (
+              <div className="text-center py-4">
+                <div className="text-3xl mb-3">✅</div>
+                <p className="font-medium text-gray-900">Saved to &ldquo;{copyDone}&rdquo;</p>
+                <p className="text-sm text-gray-400 mt-1">Recipe copied to your cookbook</p>
+                <button onClick={() => setShowCopyModal(false)} className="mt-5 w-full bg-orange-500 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-orange-600 transition">Done</button>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-semibold text-gray-900">Save to my cookbook</h2>
+                  <button onClick={() => setShowCopyModal(false)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">✕</button>
+                </div>
+                {userCookbooks.length === 0 ? (
+                  <div className="text-center py-8 text-sm text-gray-400">Loading your cookbooks...</div>
+                ) : (
+                  <div className="space-y-2 max-h-72 overflow-y-auto">
+                    {userCookbooks.map((cb: any) => (
+                      <button key={cb.id} onClick={() => copyRecipe(cb.id)} disabled={copyLoading}
+                        className="w-full flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-orange-200 hover:bg-orange-50 transition text-left disabled:opacity-50">
+                        <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-xl overflow-hidden"
+                          style={{ backgroundColor: cb.cover_image ? "transparent" : (cb.cover_color || "#F97316") + "22" }}>
+                          {cb.cover_image ? <img src={cb.cover_image} className="w-full h-full object-cover" /> : cb.cover_emoji || "📖"}
+                        </div>
+                        <span className="text-sm font-medium text-gray-800 truncate">{cb.title}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>

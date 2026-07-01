@@ -396,20 +396,50 @@ export default function Dashboard() {
 
       <div className="max-w-4xl mx-auto px-6 py-10">
 
-        {planStatus?.plan === "free" && planStatus?.weeklyLimit !== null && (
-          <div className="flex items-center justify-between bg-white border border-gray-100 rounded-xl px-4 py-2.5 mb-6">
-            <span className="text-xs text-gray-400">
-              Free plan &mdash; <span className="text-gray-700 font-medium">{planStatus.aiUsesThisWeek ?? 0} of {planStatus.weeklyLimit ?? 5}</span> AI uses this week
-            </span>
-            <Link href="/profile/settings?tab=plan" className="text-xs text-orange-500 hover:text-orange-600 font-medium transition">View plan &rarr;</Link>
-          </div>
-        )}
-        {planStatus?.plan === "pro" && planStatus?.trialUsed && planStatus?.plan_expires_at && (
-          <div className="flex items-center justify-between bg-orange-50 border border-orange-100 rounded-xl px-4 py-2.5 mb-6">
-            <span className="text-xs text-orange-700 font-medium">Pro trial active</span>
-            <Link href="/profile/settings?tab=plan" className="text-xs text-orange-500 hover:text-orange-600 font-medium transition">View plan &rarr;</Link>
-          </div>
-        )}
+        {planStatus && !planStatus.isAdminOrOwner && (() => {
+          const { plan, aiUsesThisWeek, weeklyLimit, isTrial, isCancelled, planExpiresAt } = planStatus
+          const daysLeft = planExpiresAt ? Math.max(0, Math.ceil((new Date(planExpiresAt).getTime() - Date.now()) / 86400000)) : null
+
+          if (plan === "free") return (
+            <div className="flex items-center justify-between bg-white border border-gray-100 rounded-xl px-4 py-2.5 mb-6">
+              <span className="text-xs text-gray-400">
+                Free plan &mdash; <span className="text-gray-700 font-medium">{aiUsesThisWeek ?? 0} of {weeklyLimit ?? 5}</span> AI uses this week
+              </span>
+              <Link href="/profile/settings?tab=plan" className="text-xs text-orange-500 hover:text-orange-600 font-medium transition">View plan →</Link>
+            </div>
+          )
+
+          if (plan === "pro" && isTrial) return (
+            <div className="flex items-center justify-between bg-orange-50 border border-orange-100 rounded-xl px-4 py-2.5 mb-6">
+              <span className="text-xs text-orange-700">
+                <span className="font-semibold">Pro trial</span> &mdash; {daysLeft !== null ? `${daysLeft} day${daysLeft !== 1 ? "s" : ""} left` : "active"} &mdash; <span className="font-medium">{aiUsesThisWeek ?? 0} of 25</span> AI uses this week
+              </span>
+              <Link href="/profile/settings?tab=plan" className="text-xs text-orange-500 hover:text-orange-600 font-medium transition">View plan →</Link>
+            </div>
+          )
+
+          if (plan === "pro") return (
+            <div className="flex items-center justify-between bg-white border border-gray-100 rounded-xl px-4 py-2.5 mb-6">
+              <span className="text-xs text-gray-400">
+                <span className="text-gray-700 font-semibold">Pro</span> &mdash; <span className="font-medium text-gray-700">{aiUsesThisWeek ?? 0} of 25</span> AI uses this week
+                {isCancelled && daysLeft !== null && <span className="text-orange-500 ml-1">· ends in {daysLeft}d</span>}
+              </span>
+              <Link href="/profile/settings?tab=plan" className="text-xs text-orange-500 hover:text-orange-600 font-medium transition">View plan →</Link>
+            </div>
+          )
+
+          if (plan === "premium") return (
+            <div className="flex items-center justify-between bg-white border border-gray-100 rounded-xl px-4 py-2.5 mb-6">
+              <span className="text-xs text-gray-400">
+                <span className="text-gray-700 font-semibold">Premium</span> &mdash; unlimited AI access
+                {isCancelled && daysLeft !== null && <span className="text-orange-500 ml-1">· ends in {daysLeft}d</span>}
+              </span>
+              <Link href="/profile/settings?tab=plan" className="text-xs text-orange-500 hover:text-orange-600 font-medium transition">View plan →</Link>
+            </div>
+          )
+
+          return null
+        })()}
 
         <div className="mb-8">
           <h2 className="text-lg font-medium text-gray-900 mb-1">Import a Recipe</h2>

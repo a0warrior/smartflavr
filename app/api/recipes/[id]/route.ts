@@ -26,6 +26,9 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   }
 
   const { id } = await params
+  await pool.query("DELETE FROM favorites WHERE recipe_id = ?", [id])
+  await pool.query("DELETE FROM meal_plans WHERE recipe_id = ?", [id])
+  await pool.query("UPDATE posts SET recipe_id = NULL WHERE recipe_id = ?", [id])
   await pool.query("DELETE FROM recipes WHERE id=?", [id])
 
   return NextResponse.json({ success: true })

@@ -401,73 +401,108 @@ function selectProfilePhoto(e: React.ChangeEvent<HTMLInputElement>) {
           </div>
         )}
 
-        {activeTab === "plan" && (
-          <div className="space-y-4">
+        {activeTab === "plan" && (() => {
+          const ps = planStatus
+          if (!ps) return <div className="text-center py-8 text-sm text-gray-400">Loading...</div>
+          const daysLeft = ps.planExpiresAt ? Math.max(0, Math.ceil((new Date(ps.planExpiresAt).getTime() - Date.now()) / 86400000)) : null
+          const endsDateStr = ps.planExpiresAt ? new Date(ps.planExpiresAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : null
 
-            {/* Current plan */}
-            <div className="bg-white border border-gray-100 rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-base font-semibold text-gray-900">Your Plan</h2>
-                  {planStatus?.plan === "pro" && <p className="text-xs text-gray-400 mt-0.5">{planStatus?.trialUsed && !planStatus?.isActive ? "Trial ended" : planStatus?.plan_expires_at ? "Trial active" : "Pro subscription"}</p>}
-                  {planStatus?.plan === "premium" && <p className="text-xs text-gray-400 mt-0.5">Premium subscription</p>}
+          return (
+            <div className="space-y-4">
+              <div className="bg-white border border-gray-100 rounded-2xl p-6">
+                {/* Plan badge + label */}
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-base font-semibold text-gray-900">Your Plan</h2>
+                    {ps.isAdminOrOwner && <p className="text-xs text-indigo-500 mt-0.5 font-medium">Unlimited access</p>}
+                    {!ps.isAdminOrOwner && ps.isTrial && <p className="text-xs text-orange-500 mt-0.5 font-medium">{daysLeft !== null ? `${daysLeft} day${daysLeft !== 1 ? "s" : ""} left in trial` : "Trial active"}</p>}
+                    {!ps.isAdminOrOwner && ps.isCancelled && endsDateStr && <p className="text-xs text-red-400 mt-0.5">Plan ends {endsDateStr}</p>}
+                    {!ps.isAdminOrOwner && !ps.isTrial && !ps.isCancelled && ps.plan === "pro" && <p className="text-xs text-gray-400 mt-0.5">Pro subscription</p>}
+                    {!ps.isAdminOrOwner && !ps.isTrial && !ps.isCancelled && ps.plan === "premium" && <p className="text-xs text-gray-400 mt-0.5">Premium subscription</p>}
+                    {!ps.isAdminOrOwner && ps.plan === "free" && !ps.trialUsed && <p className="text-xs text-gray-400 mt-0.5">Free plan</p>}
+                    {!ps.isAdminOrOwner && ps.plan === "free" && ps.trialUsed && <p className="text-xs text-gray-400 mt-0.5">Trial ended</p>}
+                  </div>
+                  {ps.isAdminOrOwner && (
+                    <span className="text-xs font-bold px-3 py-1 rounded-full text-white" style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}>Unlimited</span>
+                  )}
+                  {!ps.isAdminOrOwner && ps.plan === "free" && (
+                    <span className="text-xs bg-gray-100 text-gray-500 px-3 py-1 rounded-full font-medium">Free</span>
+                  )}
+                  {!ps.isAdminOrOwner && ps.plan === "pro" && (
+                    <span className="text-xs font-bold px-3 py-1 rounded-full text-white" style={{ background: "linear-gradient(135deg,#f97316,#ea580c)" }}>Pro</span>
+                  )}
+                  {!ps.isAdminOrOwner && ps.plan === "premium" && (
+                    <span className="text-xs font-bold px-3 py-1 rounded-full text-white" style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>Premium</span>
+                  )}
                 </div>
-                {planStatus?.weeklyLimit === null && (
-                  <span className="text-xs font-bold px-3 py-1 rounded-full text-white" style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}>Unlimited</span>
-                )}
-                {planStatus?.weeklyLimit !== null && planStatus?.plan === "free" && (
-                  <span className="text-xs bg-gray-100 text-gray-500 px-3 py-1 rounded-full font-medium">Free</span>
-                )}
-                {planStatus?.weeklyLimit !== null && planStatus?.plan === "pro" && (
-                  <span className="text-xs font-bold px-3 py-1 rounded-full text-white" style={{ background: "linear-gradient(135deg,#f97316,#ea580c)" }}>Pro</span>
-                )}
-                {planStatus?.weeklyLimit !== null && planStatus?.plan === "premium" && (
-                  <span className="text-xs font-bold px-3 py-1 rounded-full text-white" style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>Premium</span>
-                )}
-              </div>
 
-              {/* AI usage this week */}
-              <div className="mb-1 flex items-center justify-between text-xs text-gray-500">
-                <span>AI uses this week</span>
-                <span>{planStatus?.weeklyLimit === null ? "Unlimited" : `${planStatus?.aiUsesThisWeek ?? 0} / ${planStatus?.weeklyLimit ?? 5}`}</span>
-              </div>
-              <div className="w-full bg-gray-100 rounded-full h-2 mb-4">
-                <div
-                  className="h-2 rounded-full transition-all"
-                  style={{
-                    width: planStatus?.weeklyLimit === null ? "100%" : `${planStatus?.weeklyLimit ? Math.min(100, Math.round(((planStatus?.aiUsesThisWeek ?? 0) / planStatus.weeklyLimit) * 100)) : 0}%`,
-                    background: planStatus?.weeklyLimit === null ? "linear-gradient(90deg,#6366f1,#8b5cf6)" : planStatus?.plan === "premium" ? "linear-gradient(90deg,#7c3aed,#a855f7)" : "linear-gradient(90deg,#f97316,#ea580c)"
-                  }}
-                />
-              </div>
+                {/* AI usage bar */}
+                <div className="mb-1 flex items-center justify-between text-xs text-gray-500">
+                  <span>AI uses this week</span>
+                  <span>
+                    {ps.isAdminOrOwner || ps.weeklyLimit === null
+                      ? "Unlimited"
+                      : `${ps.aiUsesThisWeek ?? 0} / ${ps.weeklyLimit}`}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-100 rounded-full h-2 mb-5">
+                  <div className="h-2 rounded-full transition-all" style={{
+                    width: ps.isAdminOrOwner || ps.weeklyLimit === null ? "100%" : `${ps.weeklyLimit ? Math.min(100, Math.round(((ps.aiUsesThisWeek ?? 0) / ps.weeklyLimit) * 100)) : 0}%`,
+                    background: ps.isAdminOrOwner || ps.weeklyLimit === null
+                      ? "linear-gradient(90deg,#6366f1,#8b5cf6)"
+                      : ps.plan === "premium" ? "linear-gradient(90deg,#7c3aed,#a855f7)"
+                      : "linear-gradient(90deg,#f97316,#ea580c)"
+                  }} />
+                </div>
 
-              {/* Trial CTA — hidden for unlimited (admin/owner) users */}
-              {planStatus?.weeklyLimit !== null && planStatus?.plan === "free" && !planStatus?.trialUsed && (
-                <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 mb-4">
-                  <p className="text-sm font-medium text-orange-800 mb-1">Try Pro free for 7 days</p>
-                  <p className="text-xs text-orange-600 mb-3">Get 25 AI uses/week, no credit card required.</p>
-                  <button onClick={startTrial} disabled={planLoading} className="w-full bg-orange-500 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-orange-600 transition disabled:opacity-50">
-                    {planLoading ? "Starting..." : "Start free trial"}
+                {/* Free plan CTAs */}
+                {!ps.isAdminOrOwner && ps.plan === "free" && !ps.trialUsed && (
+                  <div className="bg-orange-50 border border-orange-100 rounded-xl p-4">
+                    <p className="text-sm font-medium text-orange-800 mb-1">Try Pro free for 7 days</p>
+                    <p className="text-xs text-orange-600 mb-3">Get 25 AI uses/week, no credit card required.</p>
+                    <button onClick={startTrial} disabled={planLoading} className="w-full bg-orange-500 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-orange-600 transition disabled:opacity-50">
+                      {planLoading ? "Starting..." : "Start free trial"}
+                    </button>
+                  </div>
+                )}
+                {!ps.isAdminOrOwner && ps.plan === "free" && ps.trialUsed && (
+                  <p className="text-xs text-gray-400">Your 7-day trial has ended. Paid plans coming soon.</p>
+                )}
+
+                {/* Cancel button for active paid plans */}
+                {!ps.isAdminOrOwner && ps.plan !== "free" && !ps.isCancelled && (
+                  <button
+                    onClick={async () => {
+                      if (!confirm(`Cancel your ${ps.plan} plan? You'll keep access until ${endsDateStr || "the end of your current period"}.`)) return
+                      setPlanLoading(true)
+                      const res = await fetch("/api/subscription", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "cancel" }) })
+                      const data = await res.json()
+                      if (data.success) {
+                        const res2 = await fetch("/api/subscription")
+                        const d2 = await res2.json()
+                        setPlanStatus(d2)
+                      } else {
+                        setError(data.error || "Could not cancel plan")
+                      }
+                      setPlanLoading(false)
+                    }}
+                    disabled={planLoading}
+                    className="mt-4 w-full border border-red-200 text-red-400 rounded-xl py-2 text-sm hover:bg-red-50 transition disabled:opacity-50"
+                  >
+                    {planLoading ? "Cancelling..." : "Cancel plan"}
                   </button>
-                </div>
-              )}
+                )}
 
-              {planStatus?.weeklyLimit !== null && planStatus?.plan === "free" && planStatus?.trialUsed && (
-                <p className="text-xs text-gray-400 mb-4">Your 7-day trial has ended. Paid plans coming soon.</p>
-              )}
-            </div>
-
-            {(planStatus?.plan === "pro" || planStatus?.plan === "premium") && (
-              <div className="bg-white border border-gray-100 rounded-2xl p-5 text-center">
-                <p className="text-sm font-medium text-gray-700 mb-1">
-                  {planStatus?.plan === "premium" ? "You're on Premium" : "You're on Pro"}
-                </p>
-                <p className="text-xs text-gray-400">Enjoy your AI features. Paid plan management coming soon.</p>
+                {/* Already cancelled message */}
+                {!ps.isAdminOrOwner && ps.isCancelled && endsDateStr && (
+                  <div className="mt-2 bg-red-50 border border-red-100 rounded-xl p-3 text-xs text-red-500">
+                    Your plan is cancelled and will end on <span className="font-semibold">{endsDateStr}</span>. You&apos;ll keep full access until then.
+                  </div>
+                )}
               </div>
-            )}
-
-          </div>
-        )}
+            </div>
+          )
+        })()}
 
       </div>
 

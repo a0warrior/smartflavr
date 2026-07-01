@@ -71,8 +71,11 @@ export default function Navbar() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ notification_id: notification.id, cookbook_id: data.cookbook_id, action }),
     })
-    fetchNotifications()
-    if (action === "accept") window.location.reload()
+    if (action === "accept") {
+      window.location.href = "/dashboard"
+    } else {
+      fetchNotifications()
+    }
   }
 
   async function deleteNotification(id: number) {
