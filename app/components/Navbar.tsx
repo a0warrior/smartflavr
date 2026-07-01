@@ -66,11 +66,16 @@ export default function Navbar() {
 
   async function respondToInvite(notification: any, action: "accept" | "decline") {
     const data = typeof notification.data === "string" ? JSON.parse(notification.data) : notification.data
-    await fetch("/api/notifications/respond", {
+    const res = await fetch("/api/notifications/respond", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ notification_id: notification.id, cookbook_id: data.cookbook_id, action }),
     })
+    const result = await res.json()
+    if (result.revoked) {
+      fetchNotifications() // remove the buttons by re-fetching (notification is now marked read)
+      return
+    }
     if (action === "accept") {
       window.location.href = "/dashboard"
     } else {

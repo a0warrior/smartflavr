@@ -129,5 +129,12 @@ export async function DELETE(req: Request) {
     [cookbook_id, user_id]
   )
 
+  // Mark the invitee's pending collab_invite notification as read so the Accept/Decline buttons disappear
+  await pool.query(
+    `UPDATE notifications SET read_at = NOW()
+     WHERE user_id = ? AND type = 'collab_invite' AND read_at IS NULL AND data LIKE ?`,
+    [user_id, `%"cookbook_id":${cookbook_id}%`]
+  )
+
   return NextResponse.json({ success: true })
 }
