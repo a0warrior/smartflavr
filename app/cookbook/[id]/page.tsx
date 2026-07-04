@@ -8,6 +8,7 @@ import CollaboratorModal from "@/app/components/CollaboratorModal"
 import NutritionPanel from "@/app/components/NutritionPanel"
 import { toast } from "@/app/components/Toast"
 import { PageSkeleton } from "@/app/components/Skeletons"
+import CookingMode from "@/app/components/CookingMode"
 import { RecipePDFButton, CookbookPDFButton } from "@/app/components/PDFButtons"
 import { db } from "@/lib/firebase"
 import { ref, onValue, set, off } from "firebase/database"
@@ -120,6 +121,7 @@ export default function CookbookPage() {
   const [recipes, setRecipes] = useState<any[]>([])
   const [categories, setCategories] = useState<any[]>([])
   const [selectedRecipe, setSelectedRecipe] = useState<any>(null)
+  const [cookingMode, setCookingMode] = useState(false)
   const [activeCategory, setActiveCategory] = useState("all")
   const [editMode, setEditMode] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -1269,6 +1271,14 @@ export default function CookbookPage() {
                         </div>
                       )}
                     </div>
+                    {recipe.instructions && (
+                      <button
+                        onClick={() => setCookingMode(true)}
+                        className="w-full md:w-auto flex items-center justify-center gap-2 bg-orange-500 text-white px-6 py-3 rounded-2xl text-sm font-semibold hover:bg-orange-600 active:scale-[0.99] transition mb-6">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+                        Start cooking
+                      </button>
+                    )}
                     {recipe.ingredients && (
                       <div id="ingredients" className="mb-6">
                         <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Ingredients</div>
@@ -1735,6 +1745,10 @@ export default function CookbookPage() {
             )}
           </div>
         </div>
+      )}
+
+      {cookingMode && recipe && (
+        <CookingMode recipe={recipe} onClose={() => setCookingMode(false)} />
       )}
     </div>
   )
