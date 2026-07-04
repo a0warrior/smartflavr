@@ -57,7 +57,11 @@ Return ONLY the JSON object, no other text. If multiple recipes are found, retur
     const content = response.content[0].type === "text" ? response.content[0].text : ""
     const clean = content.replace(/```json|```/g, "").trim()
     const parsed = JSON.parse(clean)
-    const recipes = Array.isArray(parsed) ? parsed : [parsed]
+    const rawRecipes = Array.isArray(parsed) ? parsed : [parsed]
+    // Explicitly whitelist fields — strip nutrition and any other AI-added extras
+    const recipes = rawRecipes.map(({ title, description, ingredients, instructions, prep_time, servings, difficulty, notes }: any) =>
+      ({ title, description, ingredients, instructions, prep_time, servings, difficulty, notes })
+    )
 
     await incrementAIUsage(session.user.email)
     return NextResponse.json({ success: true, recipes })

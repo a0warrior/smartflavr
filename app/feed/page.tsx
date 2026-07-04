@@ -817,7 +817,7 @@ export default function FeedPage() {
 
         {/* Feed tabs + New Post */}
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-1.5">
             {liveConnected && (
               <span className="flex items-center gap-1 text-xs text-green-500 font-medium">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
