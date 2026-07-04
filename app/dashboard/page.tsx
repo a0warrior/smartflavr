@@ -3,6 +3,7 @@ import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import Navbar from "../components/Navbar"
+import GroceryCollaboratorModal from "../components/GroceryCollaboratorModal"
 import ImageCropper from "../components/ImageCropper"
 import Link from "next/link"
 import {
@@ -109,8 +110,7 @@ export default function Dashboard() {
   const [listNameInput, setListNameInput] = useState("")
   const [checking, setChecking] = useState(true)
   const [groceryCopied, setGroceryCopied] = useState(false)
-  const [groceryShareLink, setGroceryShareLink] = useState("")
-  const [sharingGrocery, setSharingGrocery] = useState(false)
+  const [showGroceryCollabModal, setShowGroceryCollabModal] = useState(false)
   const [planStatus, setPlanStatus] = useState<any>(null)
   const [showAllCookbooks, setShowAllCookbooks] = useState(false)
   const [showAllCollabCookbooks, setShowAllCollabCookbooks] = useState(false)
@@ -238,26 +238,6 @@ export default function Dashboard() {
     setActiveGroceryList(updated)
     setGroceryLists(prev => prev.map((l: any) => l.id === updated.id ? updated : l))
     await fetch("/api/grocery-lists", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: activeGroceryList.id, reorderItems: newOrder.map((item: any, index: number) => ({ id: item.id, sort_order: index })) }) })
-  }
-
-  async function shareGroceryList() {
-    if (!activeGroceryList) return
-    setSharingGrocery(true)
-    try {
-      const res = await fetch("/api/grocery-lists/share", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ list_id: activeGroceryList.id }),
-      })
-      const data = await res.json()
-      if (data.token) {
-        const url = `${window.location.origin}/grocery/${data.token}`
-        await navigator.clipboard.writeText(url)
-        setGroceryShareLink(url)
-      }
-    } finally {
-      setSharingGrocery(false)
-    }
   }
 
   async function deleteGroceryList(id: number) { setGroceryListToDelete(id); setShowDeleteGroceryModal(true) }
@@ -638,13 +618,27 @@ export default function Dashboard() {
                 return (
                   <div key={list.id} className="bg-white border border-gray-100 rounded-2xl p-4 flex items-center justify-between gap-4 hover:shadow-sm transition">
                     <div className="flex-1 cursor-pointer min-w-0" onClick={() => { setActiveGroceryList(list); setShowGroceryListModal(true) }}>
-                      <div className="font-medium text-sm text-gray-900 truncate">{list.name}</div>
+                      <div className="font-medium text-sm text-gray-900 truncate flex items-center gap-2">
+                        {list.name}
+                        {list.shared_by && <span className="text-[10px] font-medium text-blue-500 bg-blue-50 border border-blue-100 rounded-full px-2 py-0.5 flex-shrink-0">Shared by {list.shared_by}</span>}
+                      </div>
                       <div className="text-xs text-gray-400 mt-1">{total} items · {pct}% done</div>
                       <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2">
                         <div className="bg-orange-400 h-1.5 rounded-full transition-all" style={{ width: `${pct}%` }}/>
                       </div>
                     </div>
-                    <button onClick={() => deleteGroceryList(list.id)} className="text-xs text-red-400 hover:text-red-600 border border-red-100 hover:border-red-300 rounded-lg px-3 py-1.5 transition flex-shrink-0">Delete</button>
+                    {list.shared_by ? (
+                      <button
+                        onClick={async () => {
+                          await fetch("/api/grocery-list-collaborators", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ list_id: list.id, user_id: "self" }) })
+                          fetchGroceryLists()
+                        }}
+                        className="text-xs text-red-400 hover:text-red-600 border border-red-100 hover:border-red-300 rounded-lg px-3 py-1.5 transition flex-shrink-0">
+                        Leave
+                      </button>
+                    ) : (
+                      <button onClick={() => deleteGroceryList(list.id)} className="text-xs text-red-400 hover:text-red-600 border border-red-100 hover:border-red-300 rounded-lg px-3 py-1.5 transition flex-shrink-0">Delete</button>
+                    )}
                   </div>
                 )
               })}
@@ -690,13 +684,31 @@ export default function Dashboard() {
                 </h2>
               )}
             </div>
+            {activeGroceryList.shared_by && (
+              <p className="text-xs text-blue-500 mb-2">Shared by {activeGroceryList.shared_by}</p>
+            )}
             {/* Actions row */}
             <div className="flex items-center gap-2 mb-4">
-              <button onClick={() => deleteGroceryList(activeGroceryList.id)} className="text-xs text-red-400 hover:text-red-600 border border-red-100 hover:border-red-300 rounded-lg px-3 py-2 transition">Delete list</button>
+              {activeGroceryList.shared_by ? (
+                <button
+                  onClick={async () => {
+                    await fetch("/api/grocery-list-collaborators", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ list_id: activeGroceryList.id, user_id: "self" }) })
+                    setShowGroceryListModal(false)
+                    setActiveGroceryList(null)
+                    fetchGroceryLists()
+                  }}
+                  className="text-xs text-red-400 hover:text-red-600 border border-red-100 hover:border-red-300 rounded-lg px-3 py-2 transition">
+                  Leave list
+                </button>
+              ) : (
+                <button onClick={() => deleteGroceryList(activeGroceryList.id)} className="text-xs text-red-400 hover:text-red-600 border border-red-100 hover:border-red-300 rounded-lg px-3 py-2 transition">Delete list</button>
+              )}
               <div className="flex-1" />
               <button onClick={printGroceryList} className="text-xs text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg px-3 py-2 flex items-center gap-1.5 transition"><PrintIcon size={12} />Print</button>
               <button onClick={copyGroceryText} className="text-xs text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg px-3 py-2 flex items-center gap-1.5 transition">{groceryCopied ? <><CheckIcon size={12} />Copied!</> : <><ListIcon size={12} />Copy</>}</button>
-              <button onClick={shareGroceryList} disabled={sharingGrocery} className="text-xs text-orange-500 hover:text-orange-600 border border-orange-200 hover:border-orange-300 rounded-lg px-3 py-2 flex items-center gap-1.5 transition disabled:opacity-50">{groceryShareLink ? <><CheckIcon size={12} />Link copied!</> : sharingGrocery ? "..." : "Collaborate"}</button>
+              {!activeGroceryList.shared_by && (
+                <button onClick={() => setShowGroceryCollabModal(true)} className="text-xs text-orange-500 hover:text-orange-600 border border-orange-200 hover:border-orange-300 rounded-lg px-3 py-2 transition">Collaborate</button>
+              )}
             </div>
             <p className="text-xs text-gray-400 mb-2">{activeGroceryList.items?.filter((i: any) => i.checked).length} of {activeGroceryList.items?.length} items checked</p>
             <div className="w-full bg-gray-100 rounded-full h-1.5 mb-4">
@@ -965,6 +977,14 @@ export default function Dashboard() {
             )}
           </div>
         </div>
+      )}
+
+      {showGroceryCollabModal && activeGroceryList && (
+        <GroceryCollaboratorModal
+          listId={activeGroceryList.id}
+          listName={activeGroceryList.name}
+          onClose={() => setShowGroceryCollabModal(false)}
+        />
       )}
 
       {showDeleteGroceryModal && (

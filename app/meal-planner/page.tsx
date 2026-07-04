@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Navbar from "@/app/components/Navbar"
+import MealPlanSyncModal from "@/app/components/MealPlanSyncModal"
 import { SparkleIcon, PlateIcon, ClockIcon, UserIcon, FlameIcon } from "@/app/components/Icons"
 import { pulse, subscribe } from "@/lib/firebase"
 
@@ -36,6 +37,8 @@ export default function MealPlannerPage() {
   const [currentWeek, setCurrentWeek] = useState(new Date())
   const [weekDates, setWeekDates] = useState<Date[]>([])
   const [meals, setMeals] = useState<any[]>([])
+  const [collaboratorMeals, setCollaboratorMeals] = useState<any[]>([])
+  const [showSyncModal, setShowSyncModal] = useState(false)
   const [categories, setCategories] = useState<any[]>([])
   const [cookbooks, setCookbooks] = useState<any[]>([])
   const [allRecipes, setAllRecipes] = useState<any[]>([])
@@ -107,6 +110,7 @@ export default function MealPlannerPage() {
     const res = await fetch(`/api/meal-plans?start=${start}&end=${end}`)
     const data = await res.json()
     setMeals(data.meals || [])
+    setCollaboratorMeals(data.collaboratorMeals || [])
   }
 
   async function fetchCategories() {
@@ -428,6 +432,7 @@ export default function MealPlannerPage() {
           {/* Desktop-only action buttons */}
           <div className="hidden md:flex gap-3 items-center flex-wrap justify-end">
             <button onClick={() => setShowCategoryModal(true)} className="border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 bg-white">+ Category</button>
+            <button onClick={() => setShowSyncModal(true)} className="border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 bg-white">Sync plans</button>
             {hasMissingNutrition && (
               <button onClick={generateMissingNutrition} disabled={!planStatus?.canUseAI || generatingNutrition} title={!planStatus?.canUseAI ? "AI limit reached for this week" : undefined} className="flex items-center gap-1.5 border border-orange-200 text-orange-500 px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-50 disabled:opacity-50 transition bg-white">
                 <SparkleIcon size={13} />{generatingNutrition ? "Generating..." : "Generate nutrition"}
@@ -449,6 +454,9 @@ export default function MealPlannerPage() {
             <button onClick={toggleLiveSync} disabled={syncing} className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition border ${liveSync ? "bg-blue-500 text-white border-blue-500" : "bg-white text-gray-500 border-gray-200"}`}>
               <div className={`w-2 h-2 rounded-full ${liveSync ? "bg-white" : "bg-gray-300"}`}/>
               {syncing ? "..." : liveSync ? "Cal: On" : "Cal: Off"}
+            </button>
+            <button onClick={() => setShowSyncModal(true)} className="px-3 py-2 rounded-xl text-xs font-semibold bg-white text-gray-500 border border-gray-200">
+              Sync
             </button>
           </div>
         </div>
@@ -530,6 +538,19 @@ export default function MealPlannerPage() {
                         <button onClick={() => removeMeal(meal)} className="text-orange-300 hover:text-red-400 transition flex-shrink-0 text-lg leading-none px-1">×</button>
                       </div>
                     ))}
+                    {collaboratorMeals.filter((m: any) => m.date === formatDate(mobileDate) && m.category_name === cat.name).map((meal: any) => (
+                      <div key={`collab-${meal.id}`} className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5">
+                        {meal.partner_image ? (
+                          <img src={meal.partner_image} className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
+                        ) : (
+                          <div className="w-6 h-6 rounded-full bg-blue-400 flex items-center justify-center text-white text-[10px] flex-shrink-0">{meal.partner_name?.charAt(0)}</div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-blue-800 truncate">{meal.recipe_title}</p>
+                          <p className="text-xs text-blue-400 mt-0.5">{meal.partner_name}</p>
+                        </div>
+                      </div>
+                    ))}
                     <button
                       onClick={() => { setSelectedDate(formatDate(mobileDate)); setSelectedCategory(cat.name); setShowAddModal(true) }}
                       className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-gray-200 text-sm text-gray-400 hover:border-orange-300 hover:text-orange-400 hover:bg-orange-50 transition">
@@ -598,6 +619,19 @@ export default function MealPlannerPage() {
                             })()}
                             {meal.synced_to_calendar === 1 && <div className="text-xs text-blue-400 mt-0.5">Synced</div>}
                             <button onClick={() => removeMeal(meal)} className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-orange-300 hover:text-red-400 text-xs transition">×</button>
+                          </div>
+                        ))}
+                        {collaboratorMeals.filter((m: any) => m.date === formatDate(date) && m.category_name === cat.name).map((meal: any) => (
+                          <div key={`collab-${meal.id}`} className="bg-blue-50 border border-blue-100 rounded-lg p-1.5 relative">
+                            <div className="flex items-center gap-1 mb-0.5">
+                              {meal.partner_image ? (
+                                <img src={meal.partner_image} className="w-3.5 h-3.5 rounded-full object-cover flex-shrink-0" />
+                              ) : (
+                                <div className="w-3.5 h-3.5 rounded-full bg-blue-400 flex items-center justify-center text-white text-[8px] flex-shrink-0">{meal.partner_name?.charAt(0)}</div>
+                              )}
+                              <span className="text-[10px] text-blue-400 truncate">{meal.partner_name}</span>
+                            </div>
+                            <div className="text-xs font-medium text-blue-800 leading-tight">{meal.recipe_title}</div>
                           </div>
                         ))}
                         <button onClick={() => { setSelectedDate(formatDate(date)); setSelectedCategory(cat.name); setShowAddModal(true) }} className="w-full text-center text-gray-300 hover:text-orange-400 text-lg leading-none py-1 transition">+</button>
@@ -844,6 +878,10 @@ export default function MealPlannerPage() {
             <button onClick={() => { setShowGroceryModal(false); setGrocerySaved(false) }} className="w-full border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50 mt-4">Done</button>
           </div>
         </div>
+      )}
+
+      {showSyncModal && (
+        <MealPlanSyncModal onClose={() => setShowSyncModal(false)} onSyncChange={fetchMeals} />
       )}
     </div>
   )

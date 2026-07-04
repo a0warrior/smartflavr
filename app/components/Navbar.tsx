@@ -74,19 +74,18 @@ export default function Navbar() {
   }
 
   async function respondToInvite(notification: any, action: "accept" | "decline") {
-    const data = typeof notification.data === "string" ? JSON.parse(notification.data) : notification.data
     const res = await fetch("/api/notifications/respond", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ notification_id: notification.id, cookbook_id: data.cookbook_id, action }),
+      body: JSON.stringify({ notification_id: notification.id, action }),
     })
     const result = await res.json()
     if (result.revoked) {
-      fetchNotifications() // remove the buttons by re-fetching (notification is now marked read)
+      fetchNotifications()
       return
     }
     if (action === "accept") {
-      window.location.href = "/dashboard"
+      window.location.href = notification.type === "meal_plan_invite" ? "/meal-planner" : "/dashboard"
     } else {
       fetchNotifications()
     }
@@ -185,8 +184,9 @@ export default function Navbar() {
             <p className="text-sm text-gray-400">You're all caught up</p>
           </div>
         ) : (() => {
-          const priority = notifications.filter((n: any) => n.type === "collab_invite" && !n.read_at)
-          const rest = notifications.filter((n: any) => !(n.type === "collab_invite" && !n.read_at))
+          const inviteTypes = ["collab_invite", "grocery_invite", "meal_plan_invite"]
+          const priority = notifications.filter((n: any) => inviteTypes.includes(n.type) && !n.read_at)
+          const rest = notifications.filter((n: any) => !(inviteTypes.includes(n.type) && !n.read_at))
           return (
             <>
               {priority.length > 0 && (
@@ -238,7 +238,7 @@ export default function Navbar() {
                           {!n.read_at && <span className="w-2 h-2 rounded-full bg-orange-500 mt-1.5 flex-shrink-0" />}
                           <button onClick={() => deleteNotification(n.id)} className="text-gray-300 hover:text-red-400 transition flex-shrink-0 text-xs mt-0.5">✕</button>
                         </div>
-                        {n.type === "collab_invite" && n.read_at && (
+                        {["collab_invite", "grocery_invite", "meal_plan_invite"].includes(n.type) && n.read_at && (
                           <p className="text-xs text-gray-400 mt-1 pl-6 italic">✓ Responded</p>
                         )}
                       </div>

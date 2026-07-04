@@ -9,8 +9,16 @@ export async function GET() {
   const [currentUser] = await pool.query("SELECT id FROM users WHERE email = ?", [session.user.email]) as any[]
 
   const [lists] = await pool.query(
-    "SELECT * FROM grocery_lists WHERE user_id = ? ORDER BY created_at DESC",
-    [currentUser[0].id]
+    `SELECT gl.*, NULL as shared_by
+     FROM grocery_lists gl
+     WHERE gl.user_id = ?
+     UNION ALL
+     SELECT gl.*, u.name as shared_by
+     FROM grocery_lists gl
+     JOIN grocery_list_collaborators glc ON glc.grocery_list_id = gl.id AND glc.user_id = ? AND glc.status = 'accepted'
+     JOIN users u ON u.id = gl.user_id
+     ORDER BY created_at DESC`,
+    [currentUser[0].id, currentUser[0].id]
   ) as any[]
 
   const listsWithItems = await Promise.all(lists.map(async (list: any) => {
@@ -59,10 +67,12 @@ export async function PUT(req: Request) {
 
   const { id, name, addItems, deleteItemIds, reorderItems } = await req.json()
 
-  // Verify ownership
+  // Verify ownership or accepted collaboration
   const [lists] = await pool.query(
-    "SELECT id FROM grocery_lists WHERE id = ? AND user_id = ?",
-    [id, currentUser[0].id]
+    `SELECT gl.id FROM grocery_lists gl
+     LEFT JOIN grocery_list_collaborators glc ON glc.grocery_list_id = gl.id AND glc.user_id = ? AND glc.status = 'accepted'
+     WHERE gl.id = ? AND (gl.user_id = ? OR glc.id IS NOT NULL)`,
+    [currentUser[0].id, id, currentUser[0].id]
   ) as any[]
 
   if (!lists[0]) return NextResponse.json({ error: "Not found" }, { status: 404 })
