@@ -6,6 +6,7 @@ import { Suspense } from "react"
 import Navbar from "@/app/components/Navbar"
 import ImageCropper from "@/app/components/ImageCropper"
 import { WarningIcon } from "@/app/components/Icons"
+import { PageSkeleton } from "@/app/components/Skeletons"
 
 function ProfileSettingsContent() {
   const { data: session, status } = useSession()
@@ -180,7 +181,7 @@ function selectProfilePhoto(e: React.ChangeEvent<HTMLInputElement>) {
   }
 
   if (status === "loading") {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+    return <PageSkeleton />
   }
 
   const initials = name.charAt(0).toUpperCase() || session?.user?.name?.charAt(0).toUpperCase() || "?"

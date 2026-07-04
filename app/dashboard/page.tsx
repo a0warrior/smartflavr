@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import Navbar from "../components/Navbar"
 import GroceryCollaboratorModal from "../components/GroceryCollaboratorModal"
+import { toast } from "../components/Toast"
+import { PageSkeleton } from "../components/Skeletons"
 import ImageCropper from "../components/ImageCropper"
 import Link from "next/link"
 import {
@@ -357,7 +359,7 @@ export default function Dashboard() {
     setExtracting(true)
     const res = await fetch("/api/extract", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) })
     const data = await res.json()
-    if (data.success) { setExtractedRecipe(data.recipe); setUrl("") } else { alert("Could not extract recipe. Try a different URL.") }
+    if (data.success) { setExtractedRecipe(data.recipe); setUrl("") } else { toast.error("Could not extract recipe. Try a different URL.") }
     setExtracting(false)
   }
 
@@ -371,8 +373,8 @@ export default function Dashboard() {
         try {
           const res = await fetch("/api/extract-file", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: reader.result, type: "image" }) })
           const data = await res.json()
-          if (data.success) setImportedRecipes(data.recipes); else alert("Could not extract recipe.")
-        } catch { alert("Could not extract recipe.") }
+          if (data.success) setImportedRecipes(data.recipes); else toast.error("Could not extract recipe.")
+        } catch { toast.error("Could not extract recipe.") }
         setImporting(false)
       }
       reader.readAsDataURL(file)
@@ -382,8 +384,8 @@ export default function Dashboard() {
         try {
           const res = await fetch("/api/extract-file", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: reader.result, type: "pdf" }) })
           const data = await res.json()
-          if (data.success) setImportedRecipes(data.recipes); else alert("Could not extract recipe.")
-        } catch { alert("Could not extract recipe.") }
+          if (data.success) setImportedRecipes(data.recipes); else toast.error("Could not extract recipe.")
+        } catch { toast.error("Could not extract recipe.") }
         setImporting(false)
       }
       reader.readAsDataURL(file)
@@ -392,8 +394,8 @@ export default function Dashboard() {
         const text = await file.text()
         const res = await fetch("/api/extract-file", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, type: "text" }) })
         const data = await res.json()
-        if (data.success) setImportedRecipes(data.recipes); else alert("Could not extract recipe.")
-      } catch { alert("Could not extract recipe.") }
+        if (data.success) setImportedRecipes(data.recipes); else toast.error("Could not extract recipe.")
+      } catch { toast.error("Could not extract recipe.") }
       setImporting(false)
     }
   }
@@ -413,7 +415,7 @@ export default function Dashboard() {
       }
     }
     setShowImportModal(false); setImportedRecipes([]); setImportCookbooks({})
-    alert(`Saved ${saved} recipe${saved !== 1 ? "s" : ""}!`)
+    toast.success(`Saved ${saved} recipe${saved !== 1 ? "s" : ""}!`)
   }
 
   async function saveRecipe() {
@@ -423,14 +425,14 @@ export default function Dashboard() {
       await fetch("/api/recipes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...recipeData, cookbook_id: cookbookId }) })
     }
     setExtractedRecipe(null); setSelectedCookbooks([])
-    alert(`Recipe saved to ${selectedCookbooks.length} cookbook${selectedCookbooks.length > 1 ? "s" : ""}!`)
+    toast.success(`Recipe saved to ${selectedCookbooks.length} cookbook${selectedCookbooks.length > 1 ? "s" : ""}!`)
   }
 
   function toggleCookbook(id: string) {
     setSelectedCookbooks(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id])
   }
 
-  if (status === "loading" || checking) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+  if (status === "loading" || checking) return <PageSkeleton />
 
   return (
     <div className="min-h-screen bg-gray-50">

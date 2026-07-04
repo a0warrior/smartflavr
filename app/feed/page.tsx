@@ -6,6 +6,7 @@ import Navbar from "@/app/components/Navbar"
 import Link from "next/link"
 import { WarningIcon, PeopleIcon, CheckIcon, ClockIcon, HeartIcon, UserIcon, QuestionIcon, PlateIcon, BookIcon, CameraIcon, PencilIcon, GlobeIcon, TrashIcon } from "@/app/components/Icons"
 import { pulse, subscribe, subscribeConnected } from "@/lib/firebase"
+import { PageSkeleton } from "@/app/components/Skeletons"
 
 function timeAgo(date: string) {
   const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000)
@@ -783,7 +784,7 @@ export default function FeedPage() {
   }
 
   if (status === "loading") {
-    return <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading...</div>
+    return <PageSkeleton />
   }
 
   return (

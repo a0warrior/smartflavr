@@ -7,12 +7,22 @@ const geist = Geist({ subsets: ["latin"] })
 export const metadata = {
   title: "SmartFlavr",
   description: "Your AI-powered recipe cookbook",
+  icons: {
+    icon: "/icon-192.png",
+    apple: "/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    title: "SmartFlavr",
+    statusBarStyle: "default" as const,
+  },
 }
 
 export const viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover" as const,
+  themeColor: "#F97316",
 }
 
 export default function RootLayout({

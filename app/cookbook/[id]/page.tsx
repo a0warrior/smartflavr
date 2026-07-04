@@ -6,6 +6,8 @@ import Navbar from "@/app/components/Navbar"
 import ImageCropper from "@/app/components/ImageCropper"
 import CollaboratorModal from "@/app/components/CollaboratorModal"
 import NutritionPanel from "@/app/components/NutritionPanel"
+import { toast } from "@/app/components/Toast"
+import { PageSkeleton } from "@/app/components/Skeletons"
 import { RecipePDFButton, CookbookPDFButton } from "@/app/components/PDFButtons"
 import { db } from "@/lib/firebase"
 import { ref, onValue, set, off } from "firebase/database"
@@ -726,7 +728,7 @@ export default function CookbookPage() {
   }
 
   if (status === "loading") {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+    return <PageSkeleton />
   }
 
   const recipe = editMode ? edited : selectedRecipe
@@ -779,7 +781,7 @@ export default function CookbookPage() {
               <div className="flex gap-2 px-4 pt-3 pb-2">
                 {isPublic && isOwner && (
                   <button
-                    onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/share/cookbook/${params.id}`); alert("Link copied!") }}
+                    onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/share/cookbook/${params.id}`); toast.success("Link copied!") }}
                     className="flex-1 flex flex-col items-center gap-1 py-3 bg-gray-50 rounded-2xl text-xs text-gray-600 active:bg-gray-100 transition">
                     <ShareIcon size={18} />
                     <span>Share</span>
@@ -1017,7 +1019,7 @@ export default function CookbookPage() {
             {isPublic && isOwner && (
               <button
                 title="Copy share link"
-                onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/share/cookbook/${params.id}`); alert("Link copied!") }}
+                onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/share/cookbook/${params.id}`); toast.success("Link copied!") }}
                 className="flex-1 flex flex-col items-center gap-1 py-3 text-xs text-gray-500 hover:bg-gray-50 hover:text-orange-500 transition">
                 <ShareIcon size={17} />Share
               </button>
@@ -1300,7 +1302,7 @@ export default function CookbookPage() {
                       <button
                         onClick={() => {
                           navigator.clipboard.writeText(`${window.location.origin}/share/recipe/${recipe.id}`)
-                          alert("Recipe link copied to clipboard!")
+                          toast.success("Recipe link copied to clipboard!")
                         }}
                         className="px-3 py-1.5 border border-orange-200 text-orange-500 rounded-lg text-xs hover:bg-orange-50 transition">
                         Share recipe ↗

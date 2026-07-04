@@ -4,6 +4,8 @@ import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Navbar from "@/app/components/Navbar"
 import MealPlanSyncModal from "@/app/components/MealPlanSyncModal"
+import { toast } from "@/app/components/Toast"
+import { PageSkeleton } from "@/app/components/Skeletons"
 import { SparkleIcon, PlateIcon, ClockIcon, UserIcon, FlameIcon } from "@/app/components/Icons"
 import { pulse, subscribe } from "@/lib/firebase"
 
@@ -408,7 +410,7 @@ export default function MealPlannerPage() {
   const recipeCategories = Array.from(new Set(allRecipes.map((r: any) => r.category_name).filter(Boolean)))
 
   if (status === "loading") {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+    return <PageSkeleton />
   }
 
   return (
@@ -785,7 +787,7 @@ export default function MealPlannerPage() {
                     `${cat}\n${items.map((i: any) => `- ${i.amount} ${i.item}`).join("\n")}`
                   ).join("\n\n")
                   navigator.clipboard.writeText(text)
-                  alert("Copied to clipboard!")
+                  toast.success("Copied to clipboard!")
                 }}
                 className="px-3 py-1 border border-gray-200 rounded-lg text-xs text-gray-500 hover:bg-gray-50">
                 Copy

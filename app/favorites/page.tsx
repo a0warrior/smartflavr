@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Navbar from "@/app/components/Navbar"
 import { HeartIcon, ClockIcon, UserIcon, StarIcon, PlateIcon } from "@/app/components/Icons"
+import { PageSkeleton } from "@/app/components/Skeletons"
 
 export default function FavoritesPage() {
   const { data: session, status } = useSession()
@@ -50,7 +51,7 @@ export default function FavoritesPage() {
   }, {})
 
   if (status === "loading") {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+    return <PageSkeleton />
   }
 
   return (

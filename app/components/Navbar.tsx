@@ -4,6 +4,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { useState, useEffect } from "react"
 import { BellIcon, HeartIcon, UserIcon, CommentIcon, BookIcon, BanIcon, WarningIcon, SparkleIcon } from "@/app/components/Icons"
+import BottomNav from "@/app/components/BottomNav"
 import { subscribe } from "@/lib/firebase"
 
 const navLinks = [
@@ -395,6 +396,9 @@ export default function Navbar() {
           </button>
         </div>
       </div>
+
+      {/* Mobile bottom tab bar */}
+      {session && <BottomNav />}
     </>
   )
 }

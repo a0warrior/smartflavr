@@ -6,6 +6,7 @@ import Navbar from "@/app/components/Navbar"
 import FollowButton from "@/app/components/FollowButton"
 import Link from "next/link"
 import { BookIcon, UserIcon, PlateIcon, ClockIcon } from "@/app/components/Icons"
+import { PageSkeleton } from "@/app/components/Skeletons"
 
 function CookbookCard({ cookbook }: { cookbook: any }) {
   return (
@@ -134,7 +135,7 @@ export default function ExplorePage() {
   }
 
   if (status === "loading") {
-    return <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading...</div>
+    return <PageSkeleton />
   }
 
   const isSearching = query.trim().length > 0

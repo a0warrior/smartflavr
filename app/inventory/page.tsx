@@ -4,6 +4,8 @@ import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Navbar from "@/app/components/Navbar"
 import { ListIcon, PlateIcon, FlameIcon, ClockIcon, SparkleIcon, ChefIcon } from "@/app/components/Icons"
+import { toast } from "@/app/components/Toast"
+import { PageSkeleton } from "@/app/components/Skeletons"
 import type { ReactElement } from "react"
 
 const CATEGORIES = ["Pantry", "Produce", "Proteins", "Dairy", "Frozen", "Spices"]
@@ -125,11 +127,11 @@ export default function InventoryPage() {
     setShowGroceryModal(false)
     setGroceryItem(null)
     setTargetListId("")
-    alert("Added to grocery list!")
+    toast.success("Added to grocery list!")
   }
 
   function openImportModal() {
-    if (groceryLists.length === 0) return alert("You don't have any grocery lists yet.")
+    if (groceryLists.length === 0) return toast.info("You don't have any grocery lists yet.")
     const first = groceryLists[0]
     setSelectedList(first)
     setSelectedItems(new Set(first?.items?.map((i: any) => i.id) || []))
@@ -197,7 +199,7 @@ export default function InventoryPage() {
     return acc
   }, {})
 
-  if (status === "loading") return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+  if (status === "loading") return <PageSkeleton />
 
   return (
     <div className="min-h-screen bg-gray-50">
