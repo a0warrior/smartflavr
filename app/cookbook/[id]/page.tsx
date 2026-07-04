@@ -156,6 +156,11 @@ export default function CookbookPage() {
 
   const focusedFieldRef = useRef<string | null>(null)
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [showHistory, setShowHistory] = useState(false)
+  const [historyVersions, setHistoryVersions] = useState<any[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [fieldFocus, setFieldFocus] = useState<{[key: string]: string}>({})
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -190,8 +195,29 @@ export default function CookbookPage() {
     const interval = setInterval(() => {
       set(presenceRef, { name: session.user?.name, email: session.user?.email, timestamp: Date.now() })
     }, 10000)
-    return () => { off(allPresenceRef); clearInterval(interval); set(presenceRef, null) }
+    const focusKey = session.user.email.replace(/[.#$[\]]/g, "_")
+    return () => {
+      off(allPresenceRef)
+      clearInterval(interval)
+      set(presenceRef, null)
+      set(ref(db, `cookbooks/${params.id}/focus/${focusKey}`), null).catch(() => {})
+    }
   }, [session, params.id])
+
+  useEffect(() => {
+    if (!params.id || !session?.user?.email) return
+    const focusRef = ref(db, `cookbooks/${params.id}/focus`)
+    const myKey = session.user.email.replace(/[.#$[\]]/g, "_")
+    const unsub = onValue(focusRef, snap => {
+      const data = snap.val() || {}
+      const others: {[key: string]: string} = {}
+      for (const [k, v] of Object.entries(data)) {
+        if (k !== myKey && v) others[k] = v as string
+      }
+      setFieldFocus(others)
+    })
+    return unsub
+  }, [params.id, session])
 
   useEffect(() => {
     if (!params.id) return
@@ -316,18 +342,75 @@ export default function CookbookPage() {
     if (!edited) return
     setSaving(true)
     const toSave = { ...edited, title: edited.title?.trim() || "New Recipe" }
+    if (autoSaveTimeoutRef.current) { clearTimeout(autoSaveTimeoutRef.current); autoSaveTimeoutRef.current = null }
     await fetch(`/api/recipes/${edited.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...toSave, _saveVersion: true }),
+    })
+    setSelectedRecipe(toSave)
+    setRecipes(prev => prev.map(r => r.id === toSave.id ? toSave : r))
+    setEdited(toSave)
+    setSaving(false)
+    setLastSaved("Saved")
+    setEditMode(false)
+    await notifyFirebase()
+  }
+
+  async function autoSaveRecipe(data: any) {
+    if (!data?.id) return
+    const toSave = { ...data, title: data.title?.trim() || "New Recipe" }
+    await fetch(`/api/recipes/${toSave.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(toSave),
     })
     setSelectedRecipe(toSave)
     setRecipes(prev => prev.map(r => r.id === toSave.id ? toSave : r))
-    setEdited(toSave)
-    setSaving(false)
-    setLastSaved("Saved just now")
-    setEditMode(false)
-    await notifyFirebase()
+    setLastSaved("Auto-saved")
+  }
+
+  async function fetchHistory() {
+    if (!selectedRecipe) return
+    setHistoryLoading(true)
+    setShowHistory(true)
+    const res = await fetch(`/api/recipes/${selectedRecipe.id}/versions`)
+    const data = await res.json()
+    setHistoryVersions(data.versions || [])
+    setHistoryLoading(false)
+  }
+
+  async function restoreVersion(versionId: number) {
+    if (!selectedRecipe) return
+    const res = await fetch(`/api/recipes/${selectedRecipe.id}/versions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ version_id: versionId }),
+    })
+    const data = await res.json()
+    if (data.recipe) {
+      setEdited({ ...selectedRecipe, ...data.recipe })
+      setEditMode(true)
+      setShowHistory(false)
+      setLastSaved("Restored — review and save")
+    }
+  }
+
+  const emailKey = session?.user?.email?.replace(/[.#$[\]]/g, "_") || ""
+  function handleFieldFocus(field: string) {
+    focusedFieldRef.current = field
+    if (editMode && emailKey) set(ref(db, `cookbooks/${params.id}/focus/${emailKey}`), field).catch(() => {})
+  }
+  function handleFieldBlur() {
+    focusedFieldRef.current = null
+    if (emailKey) set(ref(db, `cookbooks/${params.id}/focus/${emailKey}`), null).catch(() => {})
+  }
+  function isTypedByOther(field: string) { return Object.values(fieldFocus).includes(field) }
+  function getTyperName(field: string) {
+    const key = Object.entries(fieldFocus).find(([, f]) => f === field)?.[0]
+    if (!key) return ""
+    const email = key.replace(/_/g, ".")
+    return activeUsers.find((u: any) => u.email === email)?.name?.split(" ")[0] || "Someone"
   }
 
   async function createRecipe() {
@@ -491,6 +574,8 @@ export default function CookbookPage() {
           })
         }, 400)
       }
+      if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current)
+      autoSaveTimeoutRef.current = setTimeout(() => autoSaveRecipe(next), 3000)
       return next
     })
   }
@@ -1053,6 +1138,7 @@ export default function CookbookPage() {
             {editMode ? (
               <>
                 <button onClick={cancelEdit} className="text-sm text-gray-400 px-2 py-1">Cancel</button>
+                <button onClick={fetchHistory} className="p-1.5 text-gray-400 rounded-lg"><ClockIcon size={18} /></button>
                 <button onClick={saveRecipe} disabled={saving} className="text-sm font-semibold text-white bg-orange-500 px-3 py-1.5 rounded-lg disabled:opacity-50">
                   {saving ? "Saving…" : "Save"}
                 </button>
@@ -1109,6 +1195,7 @@ export default function CookbookPage() {
               )}
               {canEdit && editMode && (
                 <>
+                  <button onClick={fetchHistory} className="px-3 py-1.5 border border-gray-200 text-gray-400 rounded-lg text-sm hover:bg-gray-50 transition flex items-center gap-1.5"><ClockIcon size={13} />History</button>
                   <button onClick={cancelEdit} className="px-4 py-1.5 border border-gray-200 text-gray-500 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
                   <button onClick={saveRecipe} disabled={saving} className="px-4 py-1.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-50 transition">
                     {saving ? "Saving..." : "Save"}
@@ -1188,18 +1275,18 @@ export default function CookbookPage() {
                   </>
                 ) : (
                   <>
-                    <input value={edited.title || ""} onChange={e => updateEdited("title", e.target.value)} onFocus={() => { focusedFieldRef.current = "title" }} onBlur={() => { focusedFieldRef.current = null }} className="text-2xl font-medium bg-transparent border-b border-gray-200 outline-none w-full mb-4 pb-2 placeholder:text-gray-300" placeholder="Type recipe name here..."/>
+                    <input value={edited.title || ""} onChange={e => updateEdited("title", e.target.value)} onFocus={() => handleFieldFocus("title")} onBlur={handleFieldBlur} className={`text-2xl font-medium bg-transparent border-b outline-none w-full mb-4 pb-2 placeholder:text-gray-300 ${isTypedByOther("title") ? "border-blue-300" : "border-gray-200"}`} placeholder="Type recipe name here..."/>
                     <div className="flex gap-2 mb-4 flex-wrap">
-                      <input value={edited.prep_time || ""} onChange={e => updateEdited("prep_time", e.target.value)} onFocus={() => { focusedFieldRef.current = "prep_time" }} onBlur={() => { focusedFieldRef.current = null }} placeholder="Time" className="bg-white border border-gray-200 rounded-full px-3 py-1 text-xs w-28 outline-none"/>
-                      <input value={edited.servings || ""} onChange={e => updateEdited("servings", e.target.value)} onFocus={() => { focusedFieldRef.current = "servings" }} onBlur={() => { focusedFieldRef.current = null }} placeholder="Servings" className="bg-white border border-gray-200 rounded-full px-3 py-1 text-xs w-28 outline-none"/>
-                      <select value={edited.difficulty || ""} onChange={e => updateEdited("difficulty", e.target.value)} onFocus={() => { focusedFieldRef.current = "difficulty" }} onBlur={() => { focusedFieldRef.current = null }} className="bg-white border border-gray-200 rounded-full px-3 py-1 text-xs outline-none cursor-pointer">
+                      <input value={edited.prep_time || ""} onChange={e => updateEdited("prep_time", e.target.value)} onFocus={() => handleFieldFocus("prep_time")} onBlur={handleFieldBlur} placeholder="Time" className={`bg-white border rounded-full px-3 py-1 text-xs w-28 outline-none ${isTypedByOther("prep_time") ? "border-blue-300" : "border-gray-200"}`}/>
+                      <input value={edited.servings || ""} onChange={e => updateEdited("servings", e.target.value)} onFocus={() => handleFieldFocus("servings")} onBlur={handleFieldBlur} placeholder="Servings" className={`bg-white border rounded-full px-3 py-1 text-xs w-28 outline-none ${isTypedByOther("servings") ? "border-blue-300" : "border-gray-200"}`}/>
+                      <select value={edited.difficulty || ""} onChange={e => updateEdited("difficulty", e.target.value)} onFocus={() => handleFieldFocus("difficulty")} onBlur={handleFieldBlur} className={`bg-white border rounded-full px-3 py-1 text-xs outline-none cursor-pointer ${isTypedByOther("difficulty") ? "border-blue-300" : "border-gray-200"}`}>
                         <option value="">Difficulty</option>
                         <option value="Easy">Easy</option>
                         <option value="Medium">Medium</option>
                         <option value="Hard">Hard</option>
                         <option value="Expert">Expert</option>
                       </select>
-                      <select value={edited.category_id || ""} onChange={e => updateEdited("category_id", e.target.value)} onFocus={() => { focusedFieldRef.current = "category_id" }} onBlur={() => { focusedFieldRef.current = null }} className="bg-white border border-gray-200 rounded-full px-3 py-1 text-xs outline-none">
+                      <select value={edited.category_id || ""} onChange={e => updateEdited("category_id", e.target.value)} onFocus={() => handleFieldFocus("category_id")} onBlur={handleFieldBlur} className={`bg-white border rounded-full px-3 py-1 text-xs outline-none ${isTypedByOther("category_id") ? "border-blue-300" : "border-gray-200"}`}>
                         <option value="">No category</option>
                         {categories.map((cat: any) => (
                           <option key={cat.id} value={cat.id}>{cat.emoji} {cat.name}</option>
@@ -1235,21 +1322,27 @@ export default function CookbookPage() {
                     )}
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
-                        <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Description</div>
+                        <div className="text-xs font-medium text-gray-400 uppercase tracking-wide flex items-center gap-2">
+                          Description
+                          {isTypedByOther("description") && <span className="normal-case font-normal text-blue-400">{getTyperName("description")} is here</span>}
+                        </div>
                         <button onClick={() => aiAssist("description")} disabled={!planStatus?.canUseAI || aiLoading === "description"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
                           {aiLoading === "description" ? "Writing..." : <><SparkleIcon size={13} /> AI write</>}
                         </button>
                       </div>
-                      <textarea value={edited.description || ""} onChange={e => updateEdited("description", e.target.value)} onFocus={() => { focusedFieldRef.current = "description" }} onBlur={() => { focusedFieldRef.current = null }} placeholder="Add a description..." className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none outline-none" rows={2}/>
+                      <textarea value={edited.description || ""} onChange={e => updateEdited("description", e.target.value)} onFocus={() => handleFieldFocus("description")} onBlur={handleFieldBlur} placeholder="Add a description..." className={`w-full bg-white border rounded-xl px-3 py-2 text-sm resize-none outline-none ${isTypedByOther("description") ? "ring-2 ring-blue-200 border-blue-300" : "border-gray-200"}`} rows={2}/>
                     </div>
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
-                        <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Ingredients</div>
+                        <div className="text-xs font-medium text-gray-400 uppercase tracking-wide flex items-center gap-2">
+                          Ingredients
+                          {isTypedByOther("ingredients") && <span className="normal-case font-normal text-blue-400">{getTyperName("ingredients")} is here</span>}
+                        </div>
                         <button onClick={() => aiAssist("ingredients")} disabled={!planStatus?.canUseAI || aiLoading === "ingredients"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
                           {aiLoading === "ingredients" ? "Suggesting..." : <><SparkleIcon size={13} /> AI suggest</>}
                         </button>
                       </div>
-                      <div className="border border-gray-200 rounded-xl overflow-hidden">
+                      <div className={`border rounded-xl overflow-hidden ${isTypedByOther("ingredients") ? "ring-2 ring-blue-200 border-blue-300" : "border-gray-200"}`}>
                         {(edited.ingredients || "").split("\n").concat(edited.ingredients ? [] : [""]).map((ing: string, i: number, arr: string[]) => (
                           <div key={i} className="flex items-center gap-2.5 px-3 border-b border-gray-100 last:border-0 group">
                             <div className="w-4 h-4 rounded-full border-2 border-gray-200 flex-shrink-0" />
@@ -1278,8 +1371,8 @@ export default function CookbookPage() {
                                   setTimeout(() => { const els = document.querySelectorAll<HTMLInputElement>("[data-ing]"); els[Math.max(0, i - 1)]?.focus() }, 0)
                                 }
                               }}
-                              onFocus={() => { focusedFieldRef.current = "ingredients" }}
-                              onBlur={() => { focusedFieldRef.current = null }}
+                              onFocus={() => handleFieldFocus("ingredients")}
+                              onBlur={handleFieldBlur}
                               placeholder={i === 0 ? "e.g. 200g pasta" : "Add ingredient..."}
                               className="flex-1 text-sm outline-none bg-transparent py-2.5 min-w-0"
                             />
@@ -1309,25 +1402,31 @@ export default function CookbookPage() {
                     </div>
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
-                        <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Instructions <span className="text-gray-300 font-normal normal-case">(one step per line)</span></div>
+                        <div className="text-xs font-medium text-gray-400 uppercase tracking-wide flex items-center gap-2">
+                          <span>Instructions <span className="text-gray-300 font-normal normal-case">(one step per line)</span></span>
+                          {isTypedByOther("instructions") && <span className="normal-case font-normal text-blue-400">{getTyperName("instructions")} is here</span>}
+                        </div>
                         <button onClick={() => aiAssist("instructions")} disabled={!planStatus?.canUseAI || aiLoading === "instructions"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
                           {aiLoading === "instructions" ? "Improving..." : <><SparkleIcon size={13} /> AI improve</>}
                         </button>
                       </div>
-                      <textarea value={edited.instructions || ""} onChange={e => updateEdited("instructions", e.target.value)} onFocus={() => { focusedFieldRef.current = "instructions" }} onBlur={() => { focusedFieldRef.current = null }} placeholder="Boil water&#10;Add pasta&#10;Drain and serve" className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none outline-none" rows={8}/>
+                      <textarea value={edited.instructions || ""} onChange={e => updateEdited("instructions", e.target.value)} onFocus={() => handleFieldFocus("instructions")} onBlur={handleFieldBlur} placeholder="Boil water&#10;Add pasta&#10;Drain and serve" className={`w-full bg-white border rounded-xl px-3 py-2 text-sm resize-none outline-none ${isTypedByOther("instructions") ? "ring-2 ring-blue-200 border-blue-300" : "border-gray-200"}`} rows={8}/>
                     </div>
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
-                        <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Notes</div>
+                        <div className="text-xs font-medium text-gray-400 uppercase tracking-wide flex items-center gap-2">
+                          Notes
+                          {isTypedByOther("notes") && <span className="normal-case font-normal text-blue-400">{getTyperName("notes")} is here</span>}
+                        </div>
                         <button onClick={() => aiAssist("notes")} disabled={!planStatus?.canUseAI || aiLoading === "notes"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
                           {aiLoading === "notes" ? "Generating..." : <><SparkleIcon size={13} /> AI generate</>}
                         </button>
                       </div>
-                      <textarea value={edited.notes || ""} onChange={e => updateEdited("notes", e.target.value)} onFocus={() => { focusedFieldRef.current = "notes" }} onBlur={() => { focusedFieldRef.current = null }} placeholder="Tips, variations, substitutions..." className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none outline-none" rows={3}/>
+                      <textarea value={edited.notes || ""} onChange={e => updateEdited("notes", e.target.value)} onFocus={() => handleFieldFocus("notes")} onBlur={handleFieldBlur} placeholder="Tips, variations, substitutions..." className={`w-full bg-white border rounded-xl px-3 py-2 text-sm resize-none outline-none ${isTypedByOther("notes") ? "ring-2 ring-blue-200 border-blue-300" : "border-gray-200"}`} rows={3}/>
                     </div>
                     <div className="mb-4">
                       <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Source URL</div>
-                      <input value={edited.source_url || ""} onChange={e => updateEdited("source_url", e.target.value)} onFocus={() => { focusedFieldRef.current = "source_url" }} onBlur={() => { focusedFieldRef.current = null }} placeholder="https://..." className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none"/>
+                      <input value={edited.source_url || ""} onChange={e => updateEdited("source_url", e.target.value)} onFocus={() => handleFieldFocus("source_url")} onBlur={handleFieldBlur} placeholder="https://..." className={`w-full bg-white border rounded-xl px-3 py-2 text-sm outline-none ${isTypedByOther("source_url") ? "ring-2 ring-blue-200 border-blue-300" : "border-gray-200"}`}/>
                     </div>
                   </>
                 )}
@@ -1493,6 +1592,46 @@ export default function CookbookPage() {
             fetchCookbookInfo()
           }}
         />
+      )}
+
+      {showHistory && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end sm:items-center sm:justify-center p-0 sm:p-4 bg-black/40">
+          <div className="bg-white rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md shadow-xl">
+            <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
+              <h2 className="font-semibold text-gray-900 flex items-center gap-2"><ClockIcon size={16} />Version History</h2>
+              <button onClick={() => setShowHistory(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+            </div>
+            <div className="max-h-80 overflow-y-auto">
+              {historyLoading ? (
+                <div className="py-12 text-center text-sm text-gray-400">Loading...</div>
+              ) : historyVersions.length === 0 ? (
+                <div className="py-12 text-center text-sm text-gray-400">
+                  No saved versions yet.<br/>
+                  <span className="text-xs">Versions are saved each time you click Save.</span>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-50">
+                  {historyVersions.map((v: any) => (
+                    <div key={v.id} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{v.title || "Untitled"}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{new Date(v.created_at).toLocaleString()} · {v.saved_by}</p>
+                      </div>
+                      <button
+                        onClick={() => restoreVersion(v.id)}
+                        className="flex-shrink-0 px-3 py-1.5 bg-orange-50 text-orange-600 text-xs font-medium rounded-lg hover:bg-orange-100 transition">
+                        Restore
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="px-5 py-4 border-t border-gray-100">
+              <button onClick={() => setShowHistory(false)} className="w-full py-2.5 border border-gray-200 rounded-xl text-sm text-gray-500 hover:bg-gray-50">Close</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {recipeCropSrc && (
