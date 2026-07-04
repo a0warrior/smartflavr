@@ -360,24 +360,21 @@ export default function Navbar() {
           </button>
         </div>
 
-        {/* Sidebar links */}
+        {/* Sidebar links — account menu only; pages live in the bottom tab bar */}
         <div className="flex-1 overflow-y-auto py-2">
-          <Link href="/dashboard" onClick={() => setShowSidebar(false)} className="flex items-center px-5 py-3 text-sm text-gray-700 hover:bg-gray-50 transition font-medium">
-            Dashboard
-          </Link>
-          <div className="border-t border-gray-50 my-1" />
-          {navLinks.map(link => (
-            <Link key={link.href} href={link.href} onClick={() => setShowSidebar(false)} className="flex items-center px-5 py-3 text-sm text-gray-600 hover:bg-gray-50 transition">
-              {link.label}
-            </Link>
-          ))}
-          <div className="border-t border-gray-50 my-1" />
           {username && (
-            <Link href={`/u/${username}`} onClick={() => setShowSidebar(false)} className="flex items-center px-5 py-3 text-sm text-gray-600 hover:bg-gray-50 transition">
+            <Link href={`/u/${username}`} onClick={() => setShowSidebar(false)} className="flex items-center gap-3 px-5 py-3 text-sm text-gray-700 hover:bg-gray-50 transition font-medium">
+              <UserIcon size={16} className="text-gray-400" />
               My Profile
             </Link>
           )}
-          <Link href="/profile/settings" onClick={() => setShowSidebar(false)} className="flex items-center px-5 py-3 text-sm text-gray-600 hover:bg-gray-50 transition">
+          <Link href="/favorites" onClick={() => setShowSidebar(false)} className="flex items-center gap-3 px-5 py-3 text-sm text-gray-700 hover:bg-gray-50 transition font-medium">
+            <HeartIcon size={16} className="text-gray-400" />
+            Favorites
+          </Link>
+          <div className="border-t border-gray-50 my-1" />
+          <Link href="/profile/settings" onClick={() => setShowSidebar(false)} className="flex items-center gap-3 px-5 py-3 text-sm text-gray-600 hover:bg-gray-50 transition">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             Settings
           </Link>
           {isAdmin && (

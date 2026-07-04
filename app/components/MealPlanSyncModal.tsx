@@ -33,7 +33,7 @@ export default function MealPlanSyncModal({ onClose, onSyncChange }: { onClose: 
     if (data.error) {
       setInviteError(data.error)
     } else {
-      setInviteSuccess(`Sync invite sent to ${username}!`)
+      setInviteSuccess(`Invite sent to ${username}!`)
       fetchSyncs()
     }
     setLoadingInvite(null)
@@ -57,8 +57,8 @@ export default function MealPlanSyncModal({ onClose, onSyncChange }: { onClose: 
       <div className="bg-white rounded-2xl w-full max-w-sm mx-4 max-h-[90vh] overflow-y-auto">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-medium">Sync meal plans</h2>
-            <p className="text-xs text-gray-400">See each other's meals in the same planner</p>
+            <h2 className="text-sm font-medium">Plan meals together</h2>
+            <p className="text-xs text-gray-400">Invite a friend to see each other's meals in the planner</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
         </div>
@@ -87,7 +87,7 @@ export default function MealPlanSyncModal({ onClose, onSyncChange }: { onClose: 
                       onClick={() => inviteByUsername(friend.username)}
                       disabled={loadingInvite === friend.username}
                       className="px-3 py-1 bg-orange-500 text-white rounded-lg text-xs font-medium hover:bg-orange-600 disabled:opacity-50">
-                      {loadingInvite === friend.username ? "Sending..." : "Sync"}
+                      {loadingInvite === friend.username ? "Sending..." : "Invite"}
                     </button>
                   </div>
                 ))}
@@ -108,7 +108,7 @@ export default function MealPlanSyncModal({ onClose, onSyncChange }: { onClose: 
               <button
                 onClick={() => { if (manualUsername.trim()) { inviteByUsername(manualUsername.trim()); setManualUsername("") } }}
                 className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600">
-                Sync
+                Invite
               </button>
             </div>
             {inviteError && <p className="text-xs text-red-500 mt-1">{inviteError}</p>}

@@ -434,7 +434,7 @@ export default function MealPlannerPage() {
           {/* Desktop-only action buttons */}
           <div className="hidden md:flex gap-3 items-center flex-wrap justify-end">
             <button onClick={() => setShowCategoryModal(true)} className="border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 bg-white">+ Category</button>
-            <button onClick={() => setShowSyncModal(true)} className="border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 bg-white">Sync plans</button>
+            <button onClick={() => setShowSyncModal(true)} title="Invite a friend to see each other's meal plans" className="border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 bg-white">Collaborate</button>
             {hasMissingNutrition && (
               <button onClick={generateMissingNutrition} disabled={!planStatus?.canUseAI || generatingNutrition} title={!planStatus?.canUseAI ? "AI limit reached for this week" : undefined} className="flex items-center gap-1.5 border border-orange-200 text-orange-500 px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-50 disabled:opacity-50 transition bg-white">
                 <SparkleIcon size={13} />{generatingNutrition ? "Generating..." : "Generate nutrition"}
@@ -443,9 +443,9 @@ export default function MealPlannerPage() {
             <button onClick={generateGroceryList} disabled={!planStatus?.canUseAI || generatingGrocery || meals.length === 0} title={!planStatus?.canUseAI ? "AI limit reached for this week" : undefined} className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 disabled:opacity-50 transition">
               {generatingGrocery ? "Generating..." : "Grocery list"}
             </button>
-            <button onClick={toggleLiveSync} disabled={syncing} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition border ${liveSync ? "bg-blue-500 text-white border-blue-500 hover:bg-blue-600" : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"}`}>
+            <button onClick={toggleLiveSync} disabled={syncing} title="Sync your meals to Google Calendar" className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition border ${liveSync ? "bg-blue-500 text-white border-blue-500 hover:bg-blue-600" : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"}`}>
               <div className={`w-3 h-3 rounded-full ${liveSync ? "bg-white" : "bg-gray-300"}`}/>
-              {syncing ? "Syncing..." : liveSync ? "Cal: On" : "Cal: Off"}
+              {syncing ? "Syncing..." : liveSync ? "Calendar: On" : "Calendar: Off"}
             </button>
           </div>
           {/* Mobile-only quick actions */}
@@ -455,10 +455,10 @@ export default function MealPlannerPage() {
             </button>
             <button onClick={toggleLiveSync} disabled={syncing} className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold transition border ${liveSync ? "bg-blue-500 text-white border-blue-500" : "bg-white text-gray-500 border-gray-200"}`}>
               <div className={`w-2 h-2 rounded-full flex-shrink-0 ${liveSync ? "bg-white" : "bg-gray-300"}`}/>
-              {syncing ? "..." : liveSync ? "Cal: On" : "Cal: Off"}
+              {syncing ? "..." : liveSync ? "Calendar: On" : "Calendar: Off"}
             </button>
             <button onClick={() => setShowSyncModal(true)} className="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-white text-gray-500 border border-gray-200">
-              Sync
+              Collaborate
             </button>
           </div>
         </div>
