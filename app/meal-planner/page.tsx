@@ -447,6 +447,10 @@ export default function MealPlannerPage() {
             <button onClick={generateGroceryList} disabled={!planStatus?.canUseAI || generatingGrocery || meals.length === 0} className="px-3 py-2 bg-orange-500 text-white rounded-xl text-xs font-semibold hover:bg-orange-600 disabled:opacity-50 transition">
               {generatingGrocery ? "..." : "Grocery"}
             </button>
+            <button onClick={toggleLiveSync} disabled={syncing} className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition border ${liveSync ? "bg-blue-500 text-white border-blue-500" : "bg-white text-gray-500 border-gray-200"}`}>
+              <div className={`w-2 h-2 rounded-full ${liveSync ? "bg-white" : "bg-gray-300"}`}/>
+              {syncing ? "..." : liveSync ? "Cal: On" : "Cal: Off"}
+            </button>
           </div>
         </div>
       </div>

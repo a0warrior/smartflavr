@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import Navbar from "@/app/components/Navbar"
 import Link from "next/link"
 import { WarningIcon, PeopleIcon, CheckIcon, ClockIcon, HeartIcon, UserIcon, QuestionIcon, PlateIcon, BookIcon, CameraIcon, PencilIcon, GlobeIcon, TrashIcon } from "@/app/components/Icons"
-import { pulse, subscribe } from "@/lib/firebase"
+import { pulse, subscribe, subscribeConnected } from "@/lib/firebase"
 
 function timeAgo(date: string) {
   const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000)
@@ -656,6 +656,7 @@ export default function FeedPage() {
   const [submitting, setSubmitting] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
   const [newPostsAvailable, setNewPostsAvailable] = useState(false)
+  const [liveConnected, setLiveConnected] = useState(false)
 
   const isTimedOut = Boolean(postTimeoutUntil && new Date(postTimeoutUntil) > new Date())
 
@@ -670,6 +671,10 @@ export default function FeedPage() {
 
   useEffect(() => {
     return subscribe("/updates/feed", () => setNewPostsAvailable(true))
+  }, [])
+
+  useEffect(() => {
+    return subscribeConnected(setLiveConnected)
   }, [])
 
   useEffect(() => { fetchPosts() }, [feedType])
@@ -812,17 +817,25 @@ export default function FeedPage() {
 
         {/* Feed tabs + New Post */}
         <div className="flex items-center justify-between mb-6">
-          <div className="flex gap-2">
-            <button
-              onClick={() => setFeedType("following")}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition ${feedType === "following" ? "bg-orange-500 text-white" : "bg-white border border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
-              Following
-            </button>
-            <button
-              onClick={() => setFeedType("global")}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition ${feedType === "global" ? "bg-orange-500 text-white" : "bg-white border border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
-              Everyone
-            </button>
+          <div className="flex items-center gap-3">
+            {liveConnected && (
+              <span className="flex items-center gap-1 text-xs text-green-500 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
+                Live
+              </span>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setFeedType("following")}
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition ${feedType === "following" ? "bg-orange-500 text-white" : "bg-white border border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
+                Following
+              </button>
+              <button
+                onClick={() => setFeedType("global")}
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition ${feedType === "global" ? "bg-orange-500 text-white" : "bg-white border border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
+                Everyone
+              </button>
+            </div>
           </div>
           <button
             onClick={() => !isTimedOut && setShowPostModal(true)}

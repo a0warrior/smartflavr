@@ -32,4 +32,10 @@ export function subscribe(path: string, onChange: () => void): () => void {
   return unsub
 }
 
+// Subscribe to Firebase connection state. Calls onChange(true) when connected, onChange(false) when not.
+export function subscribeConnected(onChange: (connected: boolean) => void): () => void {
+  const r = ref(db, ".info/connected")
+  return onValue(r, snap => onChange(snap.val() === true))
+}
+
 export { db }
