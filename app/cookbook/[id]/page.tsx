@@ -161,6 +161,8 @@ export default function CookbookPage() {
   const [historyVersions, setHistoryVersions] = useState<any[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
   const [fieldFocus, setFieldFocus] = useState<{[key: string]: string}>({})
+  const [fieldCursors, setFieldCursors] = useState<{[key: string]: {field: string, pos: number}}>({})
+  const cursorUpdateRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -201,6 +203,7 @@ export default function CookbookPage() {
       clearInterval(interval)
       set(presenceRef, null)
       set(ref(db, `cookbooks/${params.id}/focus/${focusKey}`), null).catch(() => {})
+      set(ref(db, `cookbooks/${params.id}/cursor/${focusKey}`), null).catch(() => {})
     }
   }, [session, params.id])
 
@@ -215,6 +218,21 @@ export default function CookbookPage() {
         if (k !== myKey && v) others[k] = v as string
       }
       setFieldFocus(others)
+    })
+    return unsub
+  }, [params.id, session])
+
+  useEffect(() => {
+    if (!params.id || !session?.user?.email) return
+    const myKey = session.user.email.replace(/[.#$[\]]/g, "_")
+    const cursorRefPath = ref(db, `cookbooks/${params.id}/cursor`)
+    const unsub = onValue(cursorRefPath, snap => {
+      const data = snap.val() || {}
+      const others: {[key: string]: {field: string, pos: number}} = {}
+      for (const [k, v] of Object.entries(data)) {
+        if (k !== myKey && v && typeof v === "object") others[k] = v as {field: string, pos: number}
+      }
+      setFieldCursors(others)
     })
     return unsub
   }, [params.id, session])
@@ -403,7 +421,11 @@ export default function CookbookPage() {
   }
   function handleFieldBlur() {
     focusedFieldRef.current = null
-    if (emailKey) set(ref(db, `cookbooks/${params.id}/focus/${emailKey}`), null).catch(() => {})
+    if (emailKey) {
+      set(ref(db, `cookbooks/${params.id}/focus/${emailKey}`), null).catch(() => {})
+      if (cursorUpdateRef.current) clearTimeout(cursorUpdateRef.current)
+      set(ref(db, `cookbooks/${params.id}/cursor/${emailKey}`), null).catch(() => {})
+    }
   }
   function isTypedByOther(field: string) { return Object.values(fieldFocus).includes(field) }
   function getTyperName(field: string) {
@@ -411,6 +433,22 @@ export default function CookbookPage() {
     if (!key) return ""
     const email = key.replace(/_/g, ".")
     return activeUsers.find((u: any) => u.email === email)?.name?.split(" ")[0] || "Someone"
+  }
+  function emitCursor(field: string, pos: number) {
+    if (!emailKey || !editMode) return
+    if (cursorUpdateRef.current) clearTimeout(cursorUpdateRef.current)
+    cursorUpdateRef.current = setTimeout(() => {
+      set(ref(db, `cookbooks/${params.id}/cursor/${emailKey}`), { field, pos }).catch(() => {})
+    }, 300)
+  }
+  function getLockedLabel(field: string, text?: string): string {
+    const name = getTyperName(field)
+    if (!text) return `${name} is editing`
+    const entry = Object.entries(fieldCursors).find(([, v]) => v.field === field)
+    if (!entry || typeof entry[1].pos !== "number") return `${name} is editing`
+    const lines = text.split("\n")
+    const line = text.substring(0, Math.min(entry[1].pos, text.length)).split("\n").length
+    return lines.length > 1 ? `${name} · line ${line}/${lines.length}` : `${name} is editing`
   }
 
   async function createRecipe() {
@@ -1275,18 +1313,18 @@ export default function CookbookPage() {
                   </>
                 ) : (
                   <>
-                    <input value={edited.title || ""} onChange={e => updateEdited("title", e.target.value)} onFocus={() => handleFieldFocus("title")} onBlur={handleFieldBlur} className={`text-2xl font-medium bg-transparent border-b outline-none w-full mb-4 pb-2 placeholder:text-gray-300 ${isTypedByOther("title") ? "border-blue-300" : "border-gray-200"}`} placeholder="Type recipe name here..."/>
+                    <input value={edited.title || ""} onChange={e => { if (!isTypedByOther("title")) updateEdited("title", e.target.value) }} onFocus={() => handleFieldFocus("title")} onBlur={handleFieldBlur} readOnly={isTypedByOther("title")} className={`text-2xl font-medium bg-transparent border-b outline-none w-full mb-4 pb-2 placeholder:text-gray-300 transition ${isTypedByOther("title") ? "border-amber-300 cursor-not-allowed" : "border-gray-200"}`} placeholder="Type recipe name here..."/>
                     <div className="flex gap-2 mb-4 flex-wrap">
-                      <input value={edited.prep_time || ""} onChange={e => updateEdited("prep_time", e.target.value)} onFocus={() => handleFieldFocus("prep_time")} onBlur={handleFieldBlur} placeholder="Time" className={`bg-white border rounded-full px-3 py-1 text-xs w-28 outline-none ${isTypedByOther("prep_time") ? "border-blue-300" : "border-gray-200"}`}/>
-                      <input value={edited.servings || ""} onChange={e => updateEdited("servings", e.target.value)} onFocus={() => handleFieldFocus("servings")} onBlur={handleFieldBlur} placeholder="Servings" className={`bg-white border rounded-full px-3 py-1 text-xs w-28 outline-none ${isTypedByOther("servings") ? "border-blue-300" : "border-gray-200"}`}/>
-                      <select value={edited.difficulty || ""} onChange={e => updateEdited("difficulty", e.target.value)} onFocus={() => handleFieldFocus("difficulty")} onBlur={handleFieldBlur} className={`bg-white border rounded-full px-3 py-1 text-xs outline-none cursor-pointer ${isTypedByOther("difficulty") ? "border-blue-300" : "border-gray-200"}`}>
+                      <input value={edited.prep_time || ""} onChange={e => { if (!isTypedByOther("prep_time")) updateEdited("prep_time", e.target.value) }} onFocus={() => handleFieldFocus("prep_time")} onBlur={handleFieldBlur} readOnly={isTypedByOther("prep_time")} placeholder="Time" className={`bg-white border rounded-full px-3 py-1 text-xs w-28 outline-none transition ${isTypedByOther("prep_time") ? "border-amber-300 bg-amber-50 cursor-not-allowed" : "border-gray-200"}`}/>
+                      <input value={edited.servings || ""} onChange={e => { if (!isTypedByOther("servings")) updateEdited("servings", e.target.value) }} onFocus={() => handleFieldFocus("servings")} onBlur={handleFieldBlur} readOnly={isTypedByOther("servings")} placeholder="Servings" className={`bg-white border rounded-full px-3 py-1 text-xs w-28 outline-none transition ${isTypedByOther("servings") ? "border-amber-300 bg-amber-50 cursor-not-allowed" : "border-gray-200"}`}/>
+                      <select value={edited.difficulty || ""} onChange={e => { if (!isTypedByOther("difficulty")) updateEdited("difficulty", e.target.value) }} onFocus={() => handleFieldFocus("difficulty")} onBlur={handleFieldBlur} className={`bg-white border rounded-full px-3 py-1 text-xs outline-none transition ${isTypedByOther("difficulty") ? "border-amber-300 bg-amber-50 pointer-events-none" : "border-gray-200 cursor-pointer"}`}>
                         <option value="">Difficulty</option>
                         <option value="Easy">Easy</option>
                         <option value="Medium">Medium</option>
                         <option value="Hard">Hard</option>
                         <option value="Expert">Expert</option>
                       </select>
-                      <select value={edited.category_id || ""} onChange={e => updateEdited("category_id", e.target.value)} onFocus={() => handleFieldFocus("category_id")} onBlur={handleFieldBlur} className={`bg-white border rounded-full px-3 py-1 text-xs outline-none ${isTypedByOther("category_id") ? "border-blue-300" : "border-gray-200"}`}>
+                      <select value={edited.category_id || ""} onChange={e => { if (!isTypedByOther("category_id")) updateEdited("category_id", e.target.value) }} onFocus={() => handleFieldFocus("category_id")} onBlur={handleFieldBlur} className={`bg-white border rounded-full px-3 py-1 text-xs outline-none transition ${isTypedByOther("category_id") ? "border-amber-300 bg-amber-50 pointer-events-none" : "border-gray-200"}`}>
                         <option value="">No category</option>
                         {categories.map((cat: any) => (
                           <option key={cat.id} value={cat.id}>{cat.emoji} {cat.name}</option>
@@ -1324,38 +1362,41 @@ export default function CookbookPage() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-xs font-medium text-gray-400 uppercase tracking-wide flex items-center gap-2">
                           Description
-                          {isTypedByOther("description") && <span className="normal-case font-normal text-blue-400">{getTyperName("description")} is here</span>}
+                          {isTypedByOther("description") && <span className="normal-case font-normal text-amber-500">🔒 {getLockedLabel("description", edited?.description)}</span>}
                         </div>
                         <button onClick={() => aiAssist("description")} disabled={!planStatus?.canUseAI || aiLoading === "description"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
                           {aiLoading === "description" ? "Writing..." : <><SparkleIcon size={13} /> AI write</>}
                         </button>
                       </div>
-                      <textarea value={edited.description || ""} onChange={e => updateEdited("description", e.target.value)} onFocus={() => handleFieldFocus("description")} onBlur={handleFieldBlur} placeholder="Add a description..." className={`w-full bg-white border rounded-xl px-3 py-2 text-sm resize-none outline-none ${isTypedByOther("description") ? "ring-2 ring-blue-200 border-blue-300" : "border-gray-200"}`} rows={2}/>
+                      <textarea value={edited.description || ""} onChange={e => { if (!isTypedByOther("description")) updateEdited("description", e.target.value) }} onFocus={() => handleFieldFocus("description")} onBlur={handleFieldBlur} onSelect={e => emitCursor("description", (e.target as HTMLTextAreaElement).selectionStart)} readOnly={isTypedByOther("description")} placeholder="Add a description..." className={`w-full bg-white border rounded-xl px-3 py-2 text-sm resize-none outline-none transition ${isTypedByOther("description") ? "ring-2 ring-amber-200 border-amber-300 bg-amber-50/30 cursor-not-allowed" : "border-gray-200"}`} rows={2}/>
                     </div>
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-xs font-medium text-gray-400 uppercase tracking-wide flex items-center gap-2">
                           Ingredients
-                          {isTypedByOther("ingredients") && <span className="normal-case font-normal text-blue-400">{getTyperName("ingredients")} is here</span>}
+                          {isTypedByOther("ingredients") && <span className="normal-case font-normal text-amber-500">🔒 {getTyperName("ingredients")} is editing</span>}
                         </div>
                         <button onClick={() => aiAssist("ingredients")} disabled={!planStatus?.canUseAI || aiLoading === "ingredients"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
                           {aiLoading === "ingredients" ? "Suggesting..." : <><SparkleIcon size={13} /> AI suggest</>}
                         </button>
                       </div>
-                      <div className={`border rounded-xl overflow-hidden ${isTypedByOther("ingredients") ? "ring-2 ring-blue-200 border-blue-300" : "border-gray-200"}`}>
+                      <div className={`border rounded-xl overflow-hidden ${isTypedByOther("ingredients") ? "ring-2 ring-amber-200 border-amber-300" : "border-gray-200"}`}>
                         {(edited.ingredients || "").split("\n").concat(edited.ingredients ? [] : [""]).map((ing: string, i: number, arr: string[]) => (
                           <div key={i} className="flex items-center gap-2.5 px-3 border-b border-gray-100 last:border-0 group">
                             <div className="w-4 h-4 rounded-full border-2 border-gray-200 flex-shrink-0" />
                             <input
                               data-ing={i}
                               value={ing}
+                              readOnly={isTypedByOther("ingredients")}
                               onChange={e => {
+                                if (isTypedByOther("ingredients")) return
                                 const lines = (edited.ingredients || "").split("\n")
                                 if (!edited.ingredients && lines.length === 1 && lines[0] === "") lines[0] = ""
                                 lines[i] = e.target.value
                                 updateEdited("ingredients", lines.join("\n"))
                               }}
                               onKeyDown={e => {
+                                if (isTypedByOther("ingredients")) return
                                 const lines = (edited.ingredients || "").split("\n").length > 0 ? (edited.ingredients || "").split("\n") : [""]
                                 if (e.key === "Enter") {
                                   e.preventDefault()
@@ -1374,27 +1415,29 @@ export default function CookbookPage() {
                               onFocus={() => handleFieldFocus("ingredients")}
                               onBlur={handleFieldBlur}
                               placeholder={i === 0 ? "e.g. 200g pasta" : "Add ingredient..."}
-                              className="flex-1 text-sm outline-none bg-transparent py-2.5 min-w-0"
+                              className={`flex-1 text-sm outline-none bg-transparent py-2.5 min-w-0 ${isTypedByOther("ingredients") ? "cursor-not-allowed" : ""}`}
                             />
                             {arr.length > 1 && (
                               <button
                                 onClick={() => {
+                                  if (isTypedByOther("ingredients")) return
                                   const lines = (edited.ingredients || "").split("\n")
                                   lines.splice(i, 1)
                                   updateEdited("ingredients", lines.join("\n"))
                                 }}
-                                className="text-gray-200 hover:text-red-400 text-xs flex-shrink-0 transition opacity-0 group-hover:opacity-100 focus:opacity-100 p-1"
+                                className={`text-gray-200 text-xs flex-shrink-0 transition opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 ${isTypedByOther("ingredients") ? "cursor-not-allowed" : "hover:text-red-400"}`}
                               >✕</button>
                             )}
                           </div>
                         ))}
                         <button
                           onClick={() => {
+                            if (isTypedByOther("ingredients")) return
                             const current = edited.ingredients || ""
                             updateEdited("ingredients", current ? current + "\n" : "")
                             setTimeout(() => { const els = document.querySelectorAll<HTMLInputElement>("[data-ing]"); els[els.length - 1]?.focus() }, 0)
                           }}
-                          className="w-full py-2 text-xs text-gray-400 hover:text-orange-500 hover:bg-orange-50 transition flex items-center justify-center gap-1"
+                          className={`w-full py-2 text-xs transition flex items-center justify-center gap-1 ${isTypedByOther("ingredients") ? "text-gray-300 cursor-not-allowed" : "text-gray-400 hover:text-orange-500 hover:bg-orange-50"}`}
                         >
                           <span className="text-base leading-none">+</span> Add ingredient
                         </button>
@@ -1404,29 +1447,29 @@ export default function CookbookPage() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-xs font-medium text-gray-400 uppercase tracking-wide flex items-center gap-2">
                           <span>Instructions <span className="text-gray-300 font-normal normal-case">(one step per line)</span></span>
-                          {isTypedByOther("instructions") && <span className="normal-case font-normal text-blue-400">{getTyperName("instructions")} is here</span>}
+                          {isTypedByOther("instructions") && <span className="normal-case font-normal text-amber-500">🔒 {getLockedLabel("instructions", edited?.instructions)}</span>}
                         </div>
                         <button onClick={() => aiAssist("instructions")} disabled={!planStatus?.canUseAI || aiLoading === "instructions"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
                           {aiLoading === "instructions" ? "Improving..." : <><SparkleIcon size={13} /> AI improve</>}
                         </button>
                       </div>
-                      <textarea value={edited.instructions || ""} onChange={e => updateEdited("instructions", e.target.value)} onFocus={() => handleFieldFocus("instructions")} onBlur={handleFieldBlur} placeholder="Boil water&#10;Add pasta&#10;Drain and serve" className={`w-full bg-white border rounded-xl px-3 py-2 text-sm resize-none outline-none ${isTypedByOther("instructions") ? "ring-2 ring-blue-200 border-blue-300" : "border-gray-200"}`} rows={8}/>
+                      <textarea value={edited.instructions || ""} onChange={e => { if (!isTypedByOther("instructions")) updateEdited("instructions", e.target.value) }} onFocus={() => handleFieldFocus("instructions")} onBlur={handleFieldBlur} onSelect={e => emitCursor("instructions", (e.target as HTMLTextAreaElement).selectionStart)} readOnly={isTypedByOther("instructions")} placeholder="Boil water&#10;Add pasta&#10;Drain and serve" className={`w-full bg-white border rounded-xl px-3 py-2 text-sm resize-none outline-none transition ${isTypedByOther("instructions") ? "ring-2 ring-amber-200 border-amber-300 bg-amber-50/30 cursor-not-allowed" : "border-gray-200"}`} rows={8}/>
                     </div>
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-xs font-medium text-gray-400 uppercase tracking-wide flex items-center gap-2">
                           Notes
-                          {isTypedByOther("notes") && <span className="normal-case font-normal text-blue-400">{getTyperName("notes")} is here</span>}
+                          {isTypedByOther("notes") && <span className="normal-case font-normal text-amber-500">🔒 {getLockedLabel("notes", edited?.notes)}</span>}
                         </div>
                         <button onClick={() => aiAssist("notes")} disabled={!planStatus?.canUseAI || aiLoading === "notes"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
                           {aiLoading === "notes" ? "Generating..." : <><SparkleIcon size={13} /> AI generate</>}
                         </button>
                       </div>
-                      <textarea value={edited.notes || ""} onChange={e => updateEdited("notes", e.target.value)} onFocus={() => handleFieldFocus("notes")} onBlur={handleFieldBlur} placeholder="Tips, variations, substitutions..." className={`w-full bg-white border rounded-xl px-3 py-2 text-sm resize-none outline-none ${isTypedByOther("notes") ? "ring-2 ring-blue-200 border-blue-300" : "border-gray-200"}`} rows={3}/>
+                      <textarea value={edited.notes || ""} onChange={e => { if (!isTypedByOther("notes")) updateEdited("notes", e.target.value) }} onFocus={() => handleFieldFocus("notes")} onBlur={handleFieldBlur} onSelect={e => emitCursor("notes", (e.target as HTMLTextAreaElement).selectionStart)} readOnly={isTypedByOther("notes")} placeholder="Tips, variations, substitutions..." className={`w-full bg-white border rounded-xl px-3 py-2 text-sm resize-none outline-none transition ${isTypedByOther("notes") ? "ring-2 ring-amber-200 border-amber-300 bg-amber-50/30 cursor-not-allowed" : "border-gray-200"}`} rows={3}/>
                     </div>
                     <div className="mb-4">
                       <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Source URL</div>
-                      <input value={edited.source_url || ""} onChange={e => updateEdited("source_url", e.target.value)} onFocus={() => handleFieldFocus("source_url")} onBlur={handleFieldBlur} placeholder="https://..." className={`w-full bg-white border rounded-xl px-3 py-2 text-sm outline-none ${isTypedByOther("source_url") ? "ring-2 ring-blue-200 border-blue-300" : "border-gray-200"}`}/>
+                      <input value={edited.source_url || ""} onChange={e => { if (!isTypedByOther("source_url")) updateEdited("source_url", e.target.value) }} onFocus={() => handleFieldFocus("source_url")} onBlur={handleFieldBlur} readOnly={isTypedByOther("source_url")} placeholder="https://..." className={`w-full bg-white border rounded-xl px-3 py-2 text-sm outline-none transition ${isTypedByOther("source_url") ? "ring-2 ring-amber-200 border-amber-300 bg-amber-50/30 cursor-not-allowed" : "border-gray-200"}`}/>
                     </div>
                   </>
                 )}
