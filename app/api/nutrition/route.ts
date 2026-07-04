@@ -15,13 +15,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "limit_reached", plan: status.plan, limit: status.weeklyLimit }, { status: 402 })
   }
 
-  const { recipe_id, ingredients, servings } = await req.json()
+  const { recipe_id, title, ingredients, servings } = await req.json()
 
-  const prompt = `Analyze these recipe ingredients and estimate the nutrition facts per serving.
-Ingredients: ${ingredients}
-Servings: ${servings || 1}
+  const prompt = `You are a registered dietitian calculating precise nutrition facts for a recipe.
 
-Return ONLY a JSON object with this exact structure, no other text:
+Recipe: ${title || ""}
+Ingredients list:
+${ingredients}
+Total servings: ${servings || 1}
+
+Instructions:
+1. Parse each ingredient line carefully — identify the food item, quantity, and unit (e.g. "2 tbsp olive oil", "1 cup all-purpose flour", "3 large eggs").
+2. Look up realistic nutritional values for each ingredient based on USDA data or well-known food composition tables.
+3. Sum all ingredients, then divide by the number of servings to get per-serving values.
+4. Do NOT use round numbers like 500 or 520 calories. Calculate precisely from the ingredient amounts.
+5. Calories must satisfy: calories ≈ (protein × 4) + (carbs × 4) + (fat × 9). Verify this before returning.
+
+Return ONLY a JSON object — no explanation, no markdown:
 {
   "calories": 0,
   "protein": 0,
@@ -30,48 +40,18 @@ Return ONLY a JSON object with this exact structure, no other text:
   "fiber": 0,
   "sugar": 0,
   "sodium": 0,
-  "vitamins": {
-    "vitamin_a": 0,
-    "vitamin_c": 0,
-    "vitamin_d": 0,
-    "vitamin_b12": 0,
-    "vitamin_b6": 0,
-    "folate": 0
-  },
-  "minerals": {
-    "calcium": 0,
-    "iron": 0,
-    "potassium": 0,
-    "magnesium": 0,
-    "zinc": 0,
-    "phosphorus": 0
-  },
+  "vitamins": { "vitamin_a": 0, "vitamin_c": 0, "vitamin_d": 0, "vitamin_b12": 0, "vitamin_b6": 0, "folate": 0 },
+  "minerals": { "calcium": 0, "iron": 0, "potassium": 0, "magnesium": 0, "zinc": 0, "phosphorus": 0 },
   "daily_values": {
-    "calories": 0,
-    "protein": 0,
-    "carbs": 0,
-    "fat": 0,
-    "fiber": 0,
-    "sugar": 0,
-    "sodium": 0,
-    "vitamin_a": 0,
-    "vitamin_c": 0,
-    "vitamin_d": 0,
-    "vitamin_b12": 0,
-    "vitamin_b6": 0,
-    "folate": 0,
-    "calcium": 0,
-    "iron": 0,
-    "potassium": 0,
-    "magnesium": 0,
-    "zinc": 0,
-    "phosphorus": 0
+    "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "fiber": 0, "sugar": 0, "sodium": 0,
+    "vitamin_a": 0, "vitamin_c": 0, "vitamin_d": 0, "vitamin_b12": 0, "vitamin_b6": 0, "folate": 0,
+    "calcium": 0, "iron": 0, "potassium": 0, "magnesium": 0, "zinc": 0, "phosphorus": 0
   }
 }
-All numeric values should be numbers not strings. Vitamin and mineral amounts in standard units (mg, mcg). Daily values as percentages (0-100).`
+All values are numbers. Vitamins/minerals in standard units (mg or mcg). Daily values as whole-number percentages (0–100).`
 
   const response = await anthropic.messages.create({
-    model: "claude-opus-4-6",
+    model: "claude-sonnet-5",
     max_tokens: 1000,
     messages: [{ role: "user", content: prompt }],
   })

@@ -133,13 +133,11 @@ export default function MealPlannerPage() {
     setAllRecipes(data.recipes || [])
   }
 
+
   async function generateMissingNutrition() {
     if (!planStatus?.canUseAI) return
-    const missingNutrition = meals.filter(m => !m.nutrition && m.ingredients)
-    if (missingNutrition.length === 0) {
-      alert("All recipes already have nutrition data!")
-      return
-    }
+    const missingNutrition = meals.filter((m: any) => !m.nutrition && m.ingredients)
+    if (missingNutrition.length === 0) return
     setGeneratingNutrition(true)
     for (const meal of missingNutrition) {
       await fetch("/api/nutrition", {
@@ -147,6 +145,7 @@ export default function MealPlannerPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           recipe_id: meal.recipe_id,
+          title: meal.title,
           ingredients: meal.ingredients,
           servings: parseInt(meal.servings) || 1,
         }),
@@ -394,7 +393,7 @@ export default function MealPlannerPage() {
 
   const weekAvg = getWeekAverages()
   const totalMealsPlanned = meals.length
-  const hasMissingNutrition = meals.some(m => !m.nutrition && m.ingredients)
+  const hasMissingNutrition = meals.some((m: any) => !m.nutrition && m.ingredients)
 
   const filteredRecipes = allRecipes.filter((r: any) => {
     const matchesSearch = r.title.toLowerCase().includes(recipeSearch.toLowerCase())
@@ -430,8 +429,8 @@ export default function MealPlannerPage() {
           <div className="hidden md:flex gap-3 items-center flex-wrap justify-end">
             <button onClick={() => setShowCategoryModal(true)} className="border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 bg-white">+ Category</button>
             {hasMissingNutrition && (
-              <button onClick={generateMissingNutrition} disabled={!planStatus?.canUseAI || generatingNutrition} title={!planStatus?.canUseAI ? "AI limit reached for this week" : undefined} className="border border-orange-200 text-orange-500 px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-50 disabled:opacity-50 transition bg-white">
-                {generatingNutrition ? "Generating..." : <><SparkleIcon size={13} /> Generate nutrition</>}
+              <button onClick={generateMissingNutrition} disabled={!planStatus?.canUseAI || generatingNutrition} title={!planStatus?.canUseAI ? "AI limit reached for this week" : undefined} className="flex items-center gap-1.5 border border-orange-200 text-orange-500 px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-50 disabled:opacity-50 transition bg-white">
+                <SparkleIcon size={13} />{generatingNutrition ? "Generating..." : "Generate nutrition"}
               </button>
             )}
             <button onClick={generateGroceryList} disabled={!planStatus?.canUseAI || generatingGrocery || meals.length === 0} title={!planStatus?.canUseAI ? "AI limit reached for this week" : undefined} className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 disabled:opacity-50 transition">
