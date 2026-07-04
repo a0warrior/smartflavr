@@ -366,26 +366,32 @@ export default function Dashboard() {
     if (file.type.startsWith("image/")) {
       const reader = new FileReader()
       reader.onloadend = async () => {
-        const res = await fetch("/api/extract-file", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: reader.result, type: "image" }) })
-        const data = await res.json()
-        if (data.success) setImportedRecipes(data.recipes); else alert("Could not extract recipe.")
+        try {
+          const res = await fetch("/api/extract-file", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: reader.result, type: "image" }) })
+          const data = await res.json()
+          if (data.success) setImportedRecipes(data.recipes); else alert("Could not extract recipe.")
+        } catch { alert("Could not extract recipe.") }
         setImporting(false)
       }
       reader.readAsDataURL(file)
     } else if (file.type === "application/pdf") {
       const reader = new FileReader()
       reader.onloadend = async () => {
-        const res = await fetch("/api/extract-file", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: reader.result, type: "pdf" }) })
-        const data = await res.json()
-        if (data.success) setImportedRecipes(data.recipes); else alert("Could not extract recipe.")
+        try {
+          const res = await fetch("/api/extract-file", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: reader.result, type: "pdf" }) })
+          const data = await res.json()
+          if (data.success) setImportedRecipes(data.recipes); else alert("Could not extract recipe.")
+        } catch { alert("Could not extract recipe.") }
         setImporting(false)
       }
       reader.readAsDataURL(file)
     } else {
-      const text = await file.text()
-      const res = await fetch("/api/extract-file", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, type: "text" }) })
-      const data = await res.json()
-      if (data.success) setImportedRecipes(data.recipes); else alert("Could not extract recipe.")
+      try {
+        const text = await file.text()
+        const res = await fetch("/api/extract-file", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, type: "text" }) })
+        const data = await res.json()
+        if (data.success) setImportedRecipes(data.recipes); else alert("Could not extract recipe.")
+      } catch { alert("Could not extract recipe.") }
       setImporting(false)
     }
   }
@@ -765,7 +771,7 @@ export default function Dashboard() {
             <h2 className="text-lg font-medium mb-4">New Cookbook</h2>
             <div className="mb-4">
               <label className="text-sm text-gray-500 mb-1 block">Title</label>
-              <input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Italian Classics" className="border border-gray-200 rounded-lg px-3 py-2 w-full text-sm"/>
+              <input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Italian Classics" className="border border-gray-200 rounded-lg px-3 py-2 w-full text-[16px] md:text-sm"/>
             </div>
             <div className="mb-4">
               <label className="text-sm text-gray-500 mb-1 block">Cover image (optional)</label>
@@ -810,7 +816,7 @@ export default function Dashboard() {
             <h2 className="text-lg font-medium mb-4">Edit Cookbook</h2>
             <div className="mb-4">
               <label className="text-sm text-gray-500 mb-1 block">Title</label>
-              <input value={editingCookbook.title} onChange={e => setEditingCookbook({ ...editingCookbook, title: e.target.value })} className="border border-gray-200 rounded-lg px-3 py-2 w-full text-sm"/>
+              <input value={editingCookbook.title} onChange={e => setEditingCookbook({ ...editingCookbook, title: e.target.value })} className="border border-gray-200 rounded-lg px-3 py-2 w-full text-[16px] md:text-sm"/>
             </div>
             <div className="mb-4">
               <label className="text-sm text-gray-500 mb-1 block">Cover image (optional)</label>

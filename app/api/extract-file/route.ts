@@ -52,7 +52,8 @@ Return ONLY the JSON object, no other text. If multiple recipes are found, retur
       messages = [{ role: "user", content: `Extract the recipe from this text. Return as JSON.\n\n${text}` }]
     }
 
-    const response = await anthropic.messages.create({ model: "claude-haiku-4-5-20251001", max_tokens: 2000, system: systemPrompt, messages })
+    const model = type === "pdf" ? "claude-sonnet-5" : "claude-haiku-4-5-20251001"
+    const response = await anthropic.messages.create({ model, max_tokens: 2000, system: systemPrompt, messages })
     const content = response.content[0].type === "text" ? response.content[0].text : ""
     const clean = content.replace(/```json|```/g, "").trim()
     const parsed = JSON.parse(clean)
