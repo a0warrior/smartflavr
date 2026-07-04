@@ -40,7 +40,6 @@ export default function CookingMode({ recipe, onClose }: { recipe: any, onClose:
   const [timers, setTimers] = useState<Timer[]>([])
   const [, setTick] = useState(0)
   const audioCtx = useRef<AudioContext | null>(null)
-  const notifiedTimers = useRef<Set<number>>(new Set())
 
   // Keep the screen awake while cooking
   useEffect(() => {
@@ -76,19 +75,20 @@ export default function CookingMode({ recipe, onClose }: { recipe: any, onClose:
     const interval = setInterval(() => {
       setTick(t => t + 1)
       const now = Date.now()
-      setTimers(prev => prev.map(t => {
-        if (!t.done && now >= t.endsAt) {
-          if (!notifiedTimers.current.has(t.id)) {
-            notifiedTimers.current.add(t.id)
-            ringAlarm()
-          }
-          return { ...t, done: true }
-        }
-        return t
-      }))
+      setTimers(prev => prev.map(t => (!t.done && now >= t.endsAt) ? { ...t, done: true } : t))
     }, 500)
     return () => clearInterval(interval)
   }, [timers.length])
+
+  // Ring repeatedly while any finished timer is still on screen
+  const hasDoneTimer = timers.some(t => t.done)
+  useEffect(() => {
+    if (!hasDoneTimer) return
+    ringAlarm()
+    const interval = setInterval(ringAlarm, 1800)
+    return () => clearInterval(interval)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasDoneTimer])
 
   function ringAlarm() {
     try { (navigator as any).vibrate?.([300, 120, 300, 120, 300]) } catch {}

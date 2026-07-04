@@ -50,14 +50,47 @@ export default function InventoryPage() {
   const [showGroceryModal, setShowGroceryModal] = useState(false)
   const [groceryItem, setGroceryItem] = useState<any>(null)
   const [targetListId, setTargetListId] = useState<string>("")
+  const [planStatus, setPlanStatus] = useState<any>(null)
+  const [finding, setFinding] = useState(false)
+  const [matches, setMatches] = useState<any[] | null>(null)
+  const [showMatches, setShowMatches] = useState(false)
+  const [matchListId, setMatchListId] = useState<string>("")
+  const [addedMissing, setAddedMissing] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login?code=returning")
     if (status === "authenticated") {
       fetchInventory()
       fetchGroceryLists()
+      fetch("/api/subscription").then(r => r.ok ? r.json() : null).then(d => d && setPlanStatus(d)).catch(() => {})
     }
   }, [status])
+
+  async function findRecipes() {
+    setFinding(true)
+    const res = await fetch("/api/what-can-i-make", { method: "POST" })
+    const data = await res.json()
+    setFinding(false)
+    if (data.error === "limit_reached") return toast.info("You've used all your AI actions for this week.")
+    if (data.error === "no_recipes") return toast.info("Add some recipes to your cookbooks first.")
+    if (data.error === "no_inventory") return toast.info("Add items to your inventory first.")
+    if (data.error) return toast.error("Something went wrong. Try again.")
+    setMatches(data.results || [])
+    setAddedMissing(new Set())
+    setMatchListId(groceryLists[0]?.id?.toString() || "")
+    setShowMatches(true)
+  }
+
+  async function addMissingToList(match: any) {
+    if (!matchListId || match.missing.length === 0) return
+    await fetch("/api/grocery-lists", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: parseInt(matchListId), addItems: match.missing }),
+    })
+    setAddedMissing(prev => new Set(prev).add(match.id))
+    toast.success(`Missing ingredients added to your list!`)
+  }
 
   async function fetchInventory() {
     setLoading(true)
@@ -218,6 +251,20 @@ export default function InventoryPage() {
             <div className="text-2xl font-medium text-gray-900">{usedUp.length}</div>
             <div className="text-xs text-gray-400 mt-1">Used up</div>
           </div>
+        </div>
+
+        <div className="bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl p-5 flex items-center justify-between gap-4 mb-3">
+          <div className="min-w-0">
+            <div className="text-base font-semibold text-white flex items-center gap-2"><SparkleIcon size={16} />What can I make?</div>
+            <div className="text-xs text-orange-50 mt-1">AI checks your kitchen against your cookbooks and finds recipes you can cook right now</div>
+          </div>
+          <button
+            onClick={findRecipes}
+            disabled={finding || inStock.length === 0 || (planStatus && !planStatus.canUseAI)}
+            title={planStatus && !planStatus.canUseAI ? "AI limit reached for this week" : undefined}
+            className="bg-white text-orange-600 px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-orange-50 transition whitespace-nowrap flex-shrink-0 disabled:opacity-60">
+            {finding ? "Checking..." : "Find recipes"}
+          </button>
         </div>
 
         <div className="bg-white border border-gray-100 rounded-2xl p-4 flex items-center justify-between gap-4 mb-6">
@@ -415,6 +462,80 @@ export default function InventoryPage() {
                 {importing ? "Importing..." : `Import ${selectedItems.size} item${selectedItems.size !== 1 ? "s" : ""} to inventory`}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showMatches && matches && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl w-full max-w-md mx-4 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <div>
+                <h2 className="text-base font-medium flex items-center gap-2"><SparkleIcon size={15} className="text-orange-500" />What you can make</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Based on {inStock.length} items in your kitchen</p>
+              </div>
+              <button onClick={() => setShowMatches(false)} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {matches.length === 0 && (
+                <p className="text-sm text-gray-400 text-center py-10">No good matches right now — try adding more staples to your inventory.</p>
+              )}
+              {matches.map((m: any) => (
+                <div key={m.id} className="border border-gray-100 rounded-2xl p-3">
+                  <div className="flex items-center gap-3">
+                    {m.image_url ? (
+                      <img src={m.image_url} className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center text-orange-300 flex-shrink-0"><PlateIcon size={22} /></div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gray-900 truncate">{m.title}</div>
+                      <div className="text-xs text-gray-400 truncate">{m.cookbook_title}{m.prep_time ? ` · ${m.prep_time}` : ""}</div>
+                    </div>
+                    {m.status === "ready" ? (
+                      <span className="text-[10px] font-semibold text-green-600 bg-green-50 border border-green-100 rounded-full px-2.5 py-1 flex-shrink-0">✓ Ready</span>
+                    ) : (
+                      <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-100 rounded-full px-2.5 py-1 flex-shrink-0">Missing {m.missing.length}</span>
+                    )}
+                  </div>
+                  {m.missing.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2.5">
+                      {m.missing.map((ing: string, i: number) => (
+                        <span key={i} className="text-xs bg-gray-50 border border-gray-100 text-gray-500 rounded-full px-2.5 py-0.5">{ing}</span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 mt-3">
+                    <a
+                      href={`/cookbook/${m.cookbook_id}?recipe=${m.id}`}
+                      className="flex-1 text-center bg-orange-500 text-white rounded-xl py-2 text-xs font-semibold hover:bg-orange-600 transition">
+                      Open recipe
+                    </a>
+                    {m.missing.length > 0 && groceryLists.length > 0 && (
+                      <button
+                        onClick={() => addMissingToList(m)}
+                        disabled={addedMissing.has(m.id)}
+                        className="flex-1 border border-gray-200 text-gray-600 rounded-xl py-2 text-xs font-semibold hover:bg-gray-50 transition disabled:opacity-60">
+                        {addedMissing.has(m.id) ? "✓ Added to list" : "+ Missing to list"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {groceryLists.length > 1 && matches.some((m: any) => m.missing.length > 0) && (
+              <div className="px-4 py-3 border-t border-gray-100 flex items-center gap-2">
+                <span className="text-xs text-gray-400 flex-shrink-0">Add missing items to:</span>
+                <select
+                  value={matchListId}
+                  onChange={e => setMatchListId(e.target.value)}
+                  className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-xs outline-none">
+                  {groceryLists.map((l: any) => (
+                    <option key={l.id} value={l.id}>{l.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </div>
       )}
