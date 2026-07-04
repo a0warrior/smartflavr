@@ -420,16 +420,16 @@ export default function MealPlannerPage() {
       {/* ── SHARED HEADER ── */}
       <div className="max-w-7xl mx-auto px-4 md:px-6 pt-6 pb-4">
         {/* Week nav row */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <button onClick={prevWeek} className="w-9 h-9 flex items-center justify-center border border-gray-200 rounded-xl text-gray-500 hover:bg-gray-50 bg-white text-base">←</button>
-            <div>
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-3">
+          <div className="flex items-center justify-between md:justify-start md:gap-3">
+            <button onClick={prevWeek} className="w-9 h-9 flex items-center justify-center border border-gray-200 rounded-xl text-gray-500 hover:bg-gray-50 bg-white text-base flex-shrink-0">←</button>
+            <div className="text-center md:text-left">
               <h1 className="text-base font-semibold text-gray-900">Meal Planner</h1>
               <p className="text-xs text-gray-400">
                 {weekDates.length > 0 && `${formatDateDisplay(weekDates[0])} – ${formatDateDisplay(weekDates[6])}`}
               </p>
             </div>
-            <button onClick={nextWeek} className="w-9 h-9 flex items-center justify-center border border-gray-200 rounded-xl text-gray-500 hover:bg-gray-50 bg-white text-base">→</button>
+            <button onClick={nextWeek} className="w-9 h-9 flex items-center justify-center border border-gray-200 rounded-xl text-gray-500 hover:bg-gray-50 bg-white text-base flex-shrink-0">→</button>
           </div>
           {/* Desktop-only action buttons */}
           <div className="hidden md:flex gap-3 items-center flex-wrap justify-end">
@@ -450,14 +450,14 @@ export default function MealPlannerPage() {
           </div>
           {/* Mobile-only quick actions */}
           <div className="flex md:hidden gap-2">
-            <button onClick={generateGroceryList} disabled={!planStatus?.canUseAI || generatingGrocery || meals.length === 0} className="px-3 py-2 bg-orange-500 text-white rounded-xl text-xs font-semibold hover:bg-orange-600 disabled:opacity-50 transition">
+            <button onClick={generateGroceryList} disabled={!planStatus?.canUseAI || generatingGrocery || meals.length === 0} className="flex-1 py-2.5 bg-orange-500 text-white rounded-xl text-xs font-semibold hover:bg-orange-600 disabled:opacity-50 transition">
               {generatingGrocery ? "..." : "Grocery"}
             </button>
-            <button onClick={toggleLiveSync} disabled={syncing} className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition border ${liveSync ? "bg-blue-500 text-white border-blue-500" : "bg-white text-gray-500 border-gray-200"}`}>
-              <div className={`w-2 h-2 rounded-full ${liveSync ? "bg-white" : "bg-gray-300"}`}/>
+            <button onClick={toggleLiveSync} disabled={syncing} className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold transition border ${liveSync ? "bg-blue-500 text-white border-blue-500" : "bg-white text-gray-500 border-gray-200"}`}>
+              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${liveSync ? "bg-white" : "bg-gray-300"}`}/>
               {syncing ? "..." : liveSync ? "Cal: On" : "Cal: Off"}
             </button>
-            <button onClick={() => setShowSyncModal(true)} className="px-3 py-2 rounded-xl text-xs font-semibold bg-white text-gray-500 border border-gray-200">
+            <button onClick={() => setShowSyncModal(true)} className="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-white text-gray-500 border border-gray-200">
               Sync
             </button>
           </div>
