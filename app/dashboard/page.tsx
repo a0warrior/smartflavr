@@ -364,10 +364,19 @@ export default function Dashboard() {
     const file = e.target.files?.[0]
     if (!file || !planStatus?.canUseAI) return
     setImporting(true); setShowImportModal(true); setImportedRecipes([]); setImportCookbooks({})
-    if (file.type.startsWith("image/") || file.type === "application/pdf") {
+    if (file.type.startsWith("image/")) {
       const reader = new FileReader()
       reader.onloadend = async () => {
         const res = await fetch("/api/extract-file", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: reader.result, type: "image" }) })
+        const data = await res.json()
+        if (data.success) setImportedRecipes(data.recipes); else alert("Could not extract recipe.")
+        setImporting(false)
+      }
+      reader.readAsDataURL(file)
+    } else if (file.type === "application/pdf") {
+      const reader = new FileReader()
+      reader.onloadend = async () => {
+        const res = await fetch("/api/extract-file", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: reader.result, type: "pdf" }) })
         const data = await res.json()
         if (data.success) setImportedRecipes(data.recipes); else alert("Could not extract recipe.")
         setImporting(false)

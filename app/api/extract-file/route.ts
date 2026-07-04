@@ -40,11 +40,19 @@ Return ONLY the JSON object, no other text. If multiple recipes are found, retur
           { type: "text", text: "Extract the recipe from this image. Return as JSON." }
         ]
       }]
+    } else if (type === "pdf") {
+      messages = [{
+        role: "user",
+        content: [
+          { type: "document", source: { type: "base64", media_type: "application/pdf", data: image.split(",")[1] } },
+          { type: "text", text: "Extract the recipe from this PDF. Return as JSON." }
+        ]
+      }]
     } else {
       messages = [{ role: "user", content: `Extract the recipe from this text. Return as JSON.\n\n${text}` }]
     }
 
-    const response = await anthropic.messages.create({ model: "claude-opus-4-6", max_tokens: 2000, system: systemPrompt, messages })
+    const response = await anthropic.messages.create({ model: "claude-haiku-4-5-20251001", max_tokens: 2000, system: systemPrompt, messages })
     const content = response.content[0].type === "text" ? response.content[0].text : ""
     const clean = content.replace(/```json|```/g, "").trim()
     const parsed = JSON.parse(clean)
