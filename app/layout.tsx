@@ -8,8 +8,8 @@ export const metadata = {
   title: "SmartFlavr",
   description: "Your AI-powered recipe cookbook",
   icons: {
-    icon: "/icon-192.png",
-    apple: "/apple-touch-icon.png",
+    icon: "/icon-192-v2.png",
+    apple: "/apple-touch-icon-v2.png",
   },
   appleWebApp: {
     capable: true,
