@@ -97,10 +97,9 @@ export default function Dashboard() {
   const [activeGroceryList, setActiveGroceryList] = useState<any>(null)
   const [showNewGroceryModal, setShowNewGroceryModal] = useState(false)
   const [newListName, setNewListName] = useState("")
-  const [newListItem, setNewListItem] = useState("")
-  const [newListItems, setNewListItems] = useState<string[]>([])
+  const [newListItems, setNewListItems] = useState<string[]>([""])
+  const [editItemLines, setEditItemLines] = useState<string[]>([""])
   const [savingNewList, setSavingNewList] = useState(false)
-  const [editItemInput, setEditItemInput] = useState("")
   const [showDeleteCookbookModal, setShowDeleteCookbookModal] = useState(false)
   const [cookbookToDelete, setCookbookToDelete] = useState<string | null>(null)
   const [isPublic, setIsPublic] = useState(0)
@@ -220,10 +219,9 @@ export default function Dashboard() {
     setGroceryLists(prev => prev.map((l: any) => l.id === updated.id ? updated : l))
   }
 
-  async function addItemToList() {
-    if (!editItemInput.trim()) return
-    await fetch("/api/grocery-lists", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: activeGroceryList.id, addItems: [editItemInput.trim()] }) })
-    setEditItemInput("")
+  async function addItemToList(value: string) {
+    if (!value.trim()) return
+    await fetch("/api/grocery-lists", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: activeGroceryList.id, addItems: [value.trim()] }) })
     await refreshActiveList(activeGroceryList.id)
   }
 
@@ -303,15 +301,10 @@ export default function Dashboard() {
   async function createNewGroceryList() {
     if (!newListName.trim()) return
     setSavingNewList(true)
-    await fetch("/api/grocery-lists", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: newListName.trim(), items: newListItems }) })
+    const items = newListItems.filter(i => i.trim())
+    await fetch("/api/grocery-lists", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: newListName.trim(), items }) })
     await fetchGroceryLists()
-    setShowNewGroceryModal(false); setNewListName(""); setNewListItems([]); setNewListItem(""); setSavingNewList(false)
-  }
-
-  function addItemToNewList() {
-    if (!newListItem.trim()) return
-    setNewListItems(prev => [...prev, newListItem.trim()])
-    setNewListItem("")
+    setShowNewGroceryModal(false); setNewListName(""); setNewListItems([""]); setSavingNewList(false)
   }
 
   async function uploadCoverImage(e: React.ChangeEvent<HTMLInputElement>, isEdit = false) {
@@ -589,7 +582,7 @@ export default function Dashboard() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-medium text-gray-900">My Grocery Lists</h2>
-            <button onClick={() => { setShowNewGroceryModal(true); setNewListName(""); setNewListItems([]); setNewListItem("") }} className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 transition">+ New List</button>
+            <button onClick={() => { setShowNewGroceryModal(true); setNewListName(""); setNewListItems([""]) }} className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 transition">+ New List</button>
           </div>
           {groceryLists.length === 0 ? (
             <div className="bg-white border border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center p-10 text-center">
@@ -633,7 +626,7 @@ export default function Dashboard() {
       {showGroceryListModal && activeGroceryList && (
         <div
           className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
-          onClick={e => { if (e.target === e.currentTarget) { setShowGroceryListModal(false); setActiveGroceryList(null); setEditItemInput("") } }}>
+          onClick={e => { if (e.target === e.currentTarget) { setShowGroceryListModal(false); setActiveGroceryList(null); setEditItemLines([""]) } }}>
           <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4 max-h-[85vh] overflow-y-auto">
             {/* List name */}
             <div className="mb-3">
@@ -677,9 +670,39 @@ export default function Dashboard() {
                 <LinkIcon size={13} /><span className="text-xs font-medium text-gray-600">Fareway</span>
               </a>
             </div>
-            <div className="flex gap-2 mb-4">
-              <input value={editItemInput} onChange={e => setEditItemInput(e.target.value)} onKeyDown={e => e.key === "Enter" && addItemToList()} placeholder="Add an item..." className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none"/>
-              <button onClick={addItemToList} className="px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-medium hover:bg-orange-600">Add</button>
+            <div className="border border-gray-200 rounded-xl overflow-hidden mb-4">
+              {editItemLines.map((item, i) => (
+                <div key={i} className="flex items-center gap-2.5 px-3 border-b border-gray-100 last:border-0 group">
+                  <div className="w-3.5 h-3.5 rounded-full border-2 border-gray-200 flex-shrink-0" />
+                  <input
+                    data-edititem={i}
+                    value={item}
+                    onChange={e => setEditItemLines(prev => { const a = [...prev]; a[i] = e.target.value; return a })}
+                    onKeyDown={async e => {
+                      if (e.key === "Enter") {
+                        e.preventDefault()
+                        if (item.trim()) {
+                          await addItemToList(item)
+                          setEditItemLines(prev => { const a = [...prev]; a[i] = ""; a.splice(i + 1, 0, ""); return a })
+                          setTimeout(() => { const els = document.querySelectorAll<HTMLInputElement>("[data-edititem]"); els[i + 1]?.focus() }, 0)
+                        } else {
+                          setEditItemLines(prev => { const a = [...prev]; a.splice(i + 1, 0, ""); return a })
+                          setTimeout(() => { const els = document.querySelectorAll<HTMLInputElement>("[data-edititem]"); els[i + 1]?.focus() }, 0)
+                        }
+                      } else if (e.key === "Backspace" && item === "" && editItemLines.length > 1) {
+                        e.preventDefault()
+                        setEditItemLines(prev => { const a = [...prev]; a.splice(i, 1); return a })
+                        setTimeout(() => { const els = document.querySelectorAll<HTMLInputElement>("[data-edititem]"); els[Math.max(0, i - 1)]?.focus() }, 0)
+                      }
+                    }}
+                    placeholder={i === 0 ? "e.g. 2 cups chicken broth" : "Add item..."}
+                    className="flex-1 text-sm outline-none bg-transparent py-2.5 min-w-0"
+                  />
+                  {editItemLines.length > 1 && (
+                    <button onClick={() => setEditItemLines(prev => prev.filter((_, j) => j !== i))} className="text-gray-200 hover:text-red-400 text-xs opacity-0 group-hover:opacity-100 transition p-1">✕</button>
+                  )}
+                </div>
+              ))}
             </div>
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleGroceryDragEnd}>
               <SortableContext items={activeGroceryList.items?.map((i: any) => i.id) || []} strategy={verticalListSortingStrategy}>
@@ -690,7 +713,7 @@ export default function Dashboard() {
                 </div>
               </SortableContext>
             </DndContext>
-            <button onClick={() => { setShowGroceryListModal(false); setActiveGroceryList(null); setEditItemInput("") }} className="w-full border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Done</button>
+            <button onClick={() => { setShowGroceryListModal(false); setActiveGroceryList(null); setEditItemLines([""]) }} className="w-full border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Done</button>
           </div>
         </div>
       )}
@@ -703,26 +726,37 @@ export default function Dashboard() {
               <label className="text-sm text-gray-500 mb-1 block">List name</label>
               <input value={newListName} onChange={e => setNewListName(e.target.value)} placeholder="e.g. Weekly Shop" className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none"/>
             </div>
-            <div className="mb-4">
-              <label className="text-sm text-gray-500 mb-1 block">Add items</label>
-              <div className="flex gap-2">
-                <input value={newListItem} onChange={e => setNewListItem(e.target.value)} onKeyDown={e => e.key === "Enter" && addItemToNewList()} placeholder="e.g. 2 cups chicken broth" className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none"/>
-                <button onClick={addItemToNewList} className="px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-medium hover:bg-orange-600">Add</button>
+            <div className="mb-6">
+              <label className="text-sm text-gray-500 mb-1 block">Items</label>
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                {newListItems.map((item, i) => (
+                  <div key={i} className="flex items-center gap-2.5 px-3 border-b border-gray-100 last:border-0 group">
+                    <div className="w-3.5 h-3.5 rounded-full border-2 border-gray-200 flex-shrink-0" />
+                    <input
+                      data-newitem={i}
+                      value={item}
+                      onChange={e => setNewListItems(prev => { const a = [...prev]; a[i] = e.target.value; return a })}
+                      onKeyDown={e => {
+                        if (e.key === "Enter") {
+                          e.preventDefault()
+                          setNewListItems(prev => { const a = [...prev]; a.splice(i + 1, 0, ""); return a })
+                          setTimeout(() => { const els = document.querySelectorAll<HTMLInputElement>("[data-newitem]"); els[i + 1]?.focus() }, 0)
+                        } else if (e.key === "Backspace" && item === "" && newListItems.length > 1) {
+                          e.preventDefault()
+                          setNewListItems(prev => { const a = [...prev]; a.splice(i, 1); return a })
+                          setTimeout(() => { const els = document.querySelectorAll<HTMLInputElement>("[data-newitem]"); els[Math.max(0, i - 1)]?.focus() }, 0)
+                        }
+                      }}
+                      placeholder={i === 0 ? "e.g. 2 cups chicken broth" : "Add item..."}
+                      className="flex-1 text-sm outline-none bg-transparent py-2.5 min-w-0"
+                    />
+                    {newListItems.length > 1 && (
+                      <button onClick={() => setNewListItems(prev => prev.filter((_, j) => j !== i))} className="text-gray-200 hover:text-red-400 text-xs opacity-0 group-hover:opacity-100 transition p-1">✕</button>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
-            {newListItems.length > 0 && (
-              <div className="mb-6 space-y-1">
-                {newListItems.map((item, i) => {
-                  const { measurement, rest } = parseMeasurement(item)
-                  return (
-                    <div key={i} className="flex items-center gap-3 py-2 px-3 bg-gray-50 rounded-xl group">
-                      <span className="text-sm flex-1 text-gray-700">{measurement ? <><span className="font-semibold">{measurement}</span>{rest ? ` ${rest}` : ""}</> : item}</span>
-                      <button onClick={() => setNewListItems(prev => prev.filter((_, idx) => idx !== i))} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 text-xs transition">✕</button>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
             <div className="flex gap-3">
               <button onClick={() => setShowNewGroceryModal(false)} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Cancel</button>
               <button onClick={createNewGroceryList} disabled={savingNewList || !newListName.trim()} className="flex-1 bg-orange-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-orange-600 disabled:opacity-50">{savingNewList ? "Creating..." : "Create List"}</button>
