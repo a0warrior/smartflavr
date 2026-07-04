@@ -194,25 +194,55 @@ export default function CookingMode({ recipe, onClose }: { recipe: any, onClose:
         </div>
       </div>
 
-      {/* Running timers */}
-      {(activeTimers.length > 0 || doneTimers.length > 0) && (
-        <div className="px-4 pb-2 flex gap-2 overflow-x-auto flex-shrink-0">
+      {/* Finished timers — full-width alarm banner */}
+      {doneTimers.length > 0 && (
+        <div className="px-4 pb-2 space-y-2 flex-shrink-0">
           {doneTimers.map(t => (
             <button
               key={t.id}
               onClick={() => dismissTimer(t.id)}
-              className="flex items-center gap-2 pl-3 pr-2.5 py-2 bg-green-500 text-white rounded-full text-sm font-semibold whitespace-nowrap animate-pulse">
-              ✓ {t.label} done
-              <span className="text-white/70 text-xs">tap to dismiss</span>
+              className="w-full flex items-center justify-between bg-green-500 text-white rounded-2xl px-5 py-4 animate-pulse active:scale-[0.99] transition">
+              <span className="flex items-center gap-3 min-w-0">
+                <span className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                </span>
+                <span className="text-left min-w-0">
+                  <span className="block text-sm font-bold truncate">{t.label} — done!</span>
+                  <span className="block text-xs text-white/80">Tap to stop the alarm</span>
+                </span>
+              </span>
+              <span className="text-xs font-semibold bg-white/20 rounded-full px-3 py-1.5 flex-shrink-0">Dismiss</span>
             </button>
           ))}
-          {activeTimers.map(t => (
-            <div key={t.id} className="flex items-center gap-2 pl-3 pr-1.5 py-1.5 bg-gray-900 text-white rounded-full text-sm whitespace-nowrap">
-              <span className="font-mono font-semibold tabular-nums">{formatCountdown(t.endsAt - Date.now())}</span>
-              <span className="text-gray-400 text-xs max-w-28 truncate">{t.label}</span>
-              <button onClick={() => dismissTimer(t.id)} className="w-5 h-5 rounded-full bg-white/10 text-gray-300 text-xs flex items-center justify-center hover:bg-white/20">✕</button>
-            </div>
-          ))}
+        </div>
+      )}
+
+      {/* Running timers — countdown cards with progress */}
+      {activeTimers.length > 0 && (
+        <div className="px-4 pb-2 flex gap-2.5 overflow-x-auto flex-shrink-0">
+          {activeTimers.map(t => {
+            const remaining = t.endsAt - Date.now()
+            const pct = Math.max(0, Math.min(100, (remaining / t.totalMs) * 100))
+            return (
+              <div key={t.id} className="relative bg-gray-900 text-white rounded-2xl px-4 py-3 min-w-[150px] flex-shrink-0 overflow-hidden">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-2xl font-bold tabular-nums leading-tight">{formatCountdown(remaining)}</div>
+                    <div className="text-xs text-gray-400 truncate mt-0.5 max-w-36">{t.label}</div>
+                  </div>
+                  <button
+                    onClick={() => dismissTimer(t.id)}
+                    aria-label="Cancel timer"
+                    className="w-7 h-7 rounded-full bg-white/10 text-gray-300 text-sm flex items-center justify-center hover:bg-white/20 flex-shrink-0 -mr-1 -mt-0.5">
+                    ✕
+                  </button>
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10">
+                  <div className="h-1 bg-orange-500 transition-all duration-500" style={{ width: `${pct}%` }} />
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
 
