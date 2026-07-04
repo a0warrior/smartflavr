@@ -405,7 +405,8 @@ export default function Dashboard() {
     let saved = 0
     for (let i = 0; i < importedRecipes.length; i++) {
       for (const cookbookId of (importCookbooks[i] || [])) {
-        await fetch("/api/recipes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...importedRecipes[i], cookbook_id: cookbookId }) })
+        const { nutrition: _n, ...recipeData } = importedRecipes[i]
+        await fetch("/api/recipes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...recipeData, cookbook_id: cookbookId }) })
         saved++
       }
     }
@@ -416,7 +417,8 @@ export default function Dashboard() {
   async function saveRecipe() {
     if (selectedCookbooks.length === 0 || !extractedRecipe) return
     for (const cookbookId of selectedCookbooks) {
-      await fetch("/api/recipes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...extractedRecipe, cookbook_id: cookbookId }) })
+      const { nutrition: _n, ...recipeData } = extractedRecipe
+      await fetch("/api/recipes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...recipeData, cookbook_id: cookbookId }) })
     }
     setExtractedRecipe(null); setSelectedCookbooks([])
     alert(`Recipe saved to ${selectedCookbooks.length} cookbook${selectedCookbooks.length > 1 ? "s" : ""}!`)

@@ -1,0 +1,1 @@
+ALTER TABLE grocery_lists ADD COLUMN share_token VARCHAR(64) UNIQUE NULL;
