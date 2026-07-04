@@ -99,6 +99,7 @@ export default function Dashboard() {
   const [newListName, setNewListName] = useState("")
   const [newListItems, setNewListItems] = useState<string[]>([""])
   const [editItemLines, setEditItemLines] = useState<string[]>([""])
+  const [confirmCloseGrocery, setConfirmCloseGrocery] = useState(false)
   const [savingNewList, setSavingNewList] = useState(false)
   const [showDeleteCookbookModal, setShowDeleteCookbookModal] = useState(false)
   const [cookbookToDelete, setCookbookToDelete] = useState<string | null>(null)
@@ -582,7 +583,7 @@ export default function Dashboard() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-medium text-gray-900">My Grocery Lists</h2>
-            <button onClick={() => { setShowNewGroceryModal(true); setNewListName(""); setNewListItems([""]) }} className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 transition">+ New List</button>
+            <button onClick={() => { setShowNewGroceryModal(true); setNewListName(""); setNewListItems([""]); setConfirmCloseGrocery(false) }} className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 transition">+ New List</button>
           </div>
           {groceryLists.length === 0 ? (
             <div className="bg-white border border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center p-10 text-center">
@@ -626,7 +627,11 @@ export default function Dashboard() {
       {showGroceryListModal && activeGroceryList && (
         <div
           className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
-          onClick={e => { if (e.target === e.currentTarget) { setShowGroceryListModal(false); setActiveGroceryList(null); setEditItemLines([""]) } }}>
+          onClick={e => {
+            if (e.target !== e.currentTarget) return
+            if (editItemLines.some(l => l.trim())) { setConfirmCloseGrocery(true); return }
+            setShowGroceryListModal(false); setActiveGroceryList(null); setEditItemLines([""])
+          }}>
           <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4 max-h-[85vh] overflow-y-auto">
             {/* List name */}
             <div className="mb-3">
@@ -696,7 +701,7 @@ export default function Dashboard() {
                       }
                     }}
                     placeholder={i === 0 ? "e.g. 2 cups chicken broth" : "Add item..."}
-                    className="flex-1 text-sm outline-none bg-transparent py-2.5 min-w-0"
+                    className="flex-1 text-[16px] md:text-sm outline-none bg-transparent py-2.5 min-w-0"
                   />
                   {editItemLines.length > 1 && (
                     <button onClick={() => setEditItemLines(prev => prev.filter((_, j) => j !== i))} className="text-gray-200 hover:text-red-400 text-xs opacity-0 group-hover:opacity-100 transition p-1">✕</button>
@@ -713,7 +718,20 @@ export default function Dashboard() {
                 </div>
               </SortableContext>
             </DndContext>
-            <button onClick={() => { setShowGroceryListModal(false); setActiveGroceryList(null); setEditItemLines([""]) }} className="w-full border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Done</button>
+            {confirmCloseGrocery ? (
+              <div className="border border-orange-200 bg-orange-50 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+                <span className="text-sm text-orange-800">Discard unsaved items?</span>
+                <div className="flex gap-2 flex-shrink-0">
+                  <button onClick={() => setConfirmCloseGrocery(false)} className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg text-gray-600 hover:bg-white">Keep editing</button>
+                  <button onClick={() => { setShowGroceryListModal(false); setActiveGroceryList(null); setEditItemLines([""]); setConfirmCloseGrocery(false) }} className="px-3 py-1.5 text-xs bg-orange-500 text-white rounded-lg hover:bg-orange-600">Discard</button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={() => {
+                if (editItemLines.some(l => l.trim())) { setConfirmCloseGrocery(true); return }
+                setShowGroceryListModal(false); setActiveGroceryList(null); setEditItemLines([""])
+              }} className="w-full border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Done</button>
+            )}
           </div>
         </div>
       )}
@@ -748,7 +766,7 @@ export default function Dashboard() {
                         }
                       }}
                       placeholder={i === 0 ? "e.g. 2 cups chicken broth" : "Add item..."}
-                      className="flex-1 text-sm outline-none bg-transparent py-2.5 min-w-0"
+                      className="flex-1 text-[16px] md:text-sm outline-none bg-transparent py-2.5 min-w-0"
                     />
                     {newListItems.length > 1 && (
                       <button onClick={() => setNewListItems(prev => prev.filter((_, j) => j !== i))} className="text-gray-200 hover:text-red-400 text-xs opacity-0 group-hover:opacity-100 transition p-1">✕</button>
