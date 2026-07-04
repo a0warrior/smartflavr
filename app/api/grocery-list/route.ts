@@ -17,11 +17,16 @@ export async function POST(req: Request) {
   const { ingredients } = await req.json()
   if (!ingredients || ingredients.length === 0) return NextResponse.json({ success: true, list: {} })
 
-  const prompt = `Take these recipe ingredients and create an organized grocery list.
-Combine duplicates, add up quantities where possible, and group by category.
+  const prompt = `Take these recipe ingredients and create an organized grocery list a shopper can walk the store with.
 
-Ingredients:
+Ingredients (may contain duplicates across recipes):
 ${ingredients.join("\n")}
+
+Rules:
+1. MERGE duplicates into a single line and ADD UP the quantities, converting units where sensible (e.g. "2 cloves garlic" + "3 cloves garlic" → "5 cloves"; "1/2 cup butter" + "4 tbsp butter" → "3/4 cup"). Never list the same ingredient twice.
+2. Normalize names (e.g. "diced yellow onion" and "onion, chopped" are both "Yellow onion").
+3. Drop non-purchasable items like water. Keep salt/pepper/oil only if a recipe needs unusual amounts or types.
+4. Group items into store sections, in the order a typical grocery store is laid out: "Produce", "Meat & Seafood", "Dairy & Eggs", "Bakery", "Pantry", "Frozen", "Other".
 
 Return ONLY a JSON object like this, no other text:
 {
@@ -29,19 +34,15 @@ Return ONLY a JSON object like this, no other text:
     { "item": "Bananas", "amount": "3 large" },
     { "item": "Yellow onion", "amount": "2 medium" }
   ],
-  "Meat & protein": [
+  "Meat & Seafood": [
     { "item": "Ground beef 80/20", "amount": "4 lbs" }
-  ],
-  "Dairy": [],
-  "Pantry": [],
-  "Frozen": [],
-  "Other": []
+  ]
 }
-Only include categories that have items. Combine similar ingredients.`
+Only include sections that have items.`
 
   const response = await anthropic.messages.create({
-    model: "claude-opus-4-6",
-    max_tokens: 1000,
+    model: "claude-sonnet-5",
+    max_tokens: 1500,
     messages: [{ role: "user", content: prompt }],
   })
 

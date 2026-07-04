@@ -8,6 +8,8 @@ import { toast } from "@/app/components/Toast"
 import { PageSkeleton } from "@/app/components/Skeletons"
 import { SparkleIcon, PlateIcon, ClockIcon, UserIcon, FlameIcon } from "@/app/components/Icons"
 import { pulse, subscribe } from "@/lib/firebase"
+import { DndContext, PointerSensor, useSensor, useSensors, useDraggable, useDroppable, DragEndEvent } from "@dnd-kit/core"
+import { CSS } from "@dnd-kit/utilities"
 
 function getWeekDates(date: Date) {
   const day = date.getDay()
@@ -31,6 +33,35 @@ function formatDateDisplay(date: Date) {
 function isToday(date: Date) {
   const today = new Date()
   return date.toDateString() === today.toDateString()
+}
+
+function DraggableMeal({ meal, onRemove }: { meal: any, onRemove: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: `meal-${meal.id}`, data: { meal } })
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Translate.toString(transform), zIndex: isDragging ? 40 : undefined }}
+      {...listeners}
+      {...attributes}
+      className={`bg-orange-50 border border-orange-100 rounded-lg p-1.5 group relative cursor-grab active:cursor-grabbing touch-none ${isDragging ? "opacity-80 shadow-lg ring-2 ring-orange-300" : ""}`}>
+      <div className="text-xs font-medium text-orange-800 leading-tight pr-4">{meal.recipe_title}</div>
+      {meal.nutrition && (() => {
+        const n = typeof meal.nutrition === "string" ? JSON.parse(meal.nutrition) : meal.nutrition
+        return <div className="text-xs text-orange-500 mt-0.5">{Math.round(n.calories)} cal</div>
+      })()}
+      {meal.synced_to_calendar === 1 && <div className="text-xs text-blue-400 mt-0.5">Synced</div>}
+      <button onClick={onRemove} className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-orange-300 hover:text-red-400 text-xs transition">×</button>
+    </div>
+  )
+}
+
+function DroppableCell({ date, category, isTodayCell, children }: { date: string, category: string, isTodayCell: boolean, children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id: `cell-${date}-${category}`, data: { date, category } })
+  return (
+    <div ref={setNodeRef} className={`p-2 border-b border-r border-gray-100 last:border-r-0 min-h-16 transition-colors ${isOver ? "bg-orange-100/70 ring-1 ring-inset ring-orange-300" : isTodayCell ? "bg-orange-50/30" : ""}`}>
+      {children}
+    </div>
+  )
 }
 
 export default function MealPlannerPage() {
@@ -68,6 +99,12 @@ export default function MealPlannerPage() {
   const [mobileDate, setMobileDate] = useState<Date>(new Date())
   const [planStatus, setPlanStatus] = useState<any>(null)
   const [userId, setUserId] = useState<number | null>(null)
+  const [goals, setGoals] = useState<any>(null)
+  const [showGoalsModal, setShowGoalsModal] = useState(false)
+  const [goalInputs, setGoalInputs] = useState({ calories: "", protein: "", carbs: "", fat: "" })
+  const [copyingWeek, setCopyingWeek] = useState(false)
+
+  const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
   const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
@@ -79,6 +116,7 @@ export default function MealPlannerPage() {
       fetchExistingLists()
       fetch("/api/subscription").then(r => r.ok ? r.json() : null).then(d => d && setPlanStatus(d)).catch(() => {})
       fetch("/api/profile").then(r => r.json()).then(d => { if (d.user?.id) setUserId(d.user.id) }).catch(() => {})
+      fetch("/api/nutrition-goals").then(r => r.ok ? r.json() : null).then(d => d && setGoals(d.goals)).catch(() => {})
       const saved = localStorage.getItem("smartflavr_live_sync")
       if (saved === "true") setLiveSync(true)
     }
@@ -248,6 +286,95 @@ export default function MealPlannerPage() {
     })
     fetchMeals()
     if (userId) pulse(`/updates/users/${userId}/mealplan`)
+  }
+
+  async function moveMeal(meal: any, newDate: string, newCategory: string) {
+    const oldDate = meal.meal_date?.split("T")[0]
+    if (oldDate === newDate && meal.meal_type === newCategory) return
+    // Optimistic update so the card lands instantly
+    setMeals(prev => prev.map(m => m.id === meal.id ? { ...m, meal_date: newDate, meal_type: newCategory, synced_to_calendar: 0, gcal_event_id: null } : m))
+    if (liveSync && meal.gcal_event_id) await deleteMealFromCalendar(meal)
+    await fetch("/api/meal-plans", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: meal.id, meal_date: newDate, meal_type: newCategory }),
+    })
+    if (liveSync) {
+      const start = formatDate(weekDates[0])
+      const end = formatDate(weekDates[6])
+      const res = await fetch(`/api/meal-plans?start=${start}&end=${end}`)
+      const data = await res.json()
+      await syncMealsToCalendar(data.meals || [])
+    }
+    fetchMeals()
+    if (userId) pulse(`/updates/users/${userId}/mealplan`)
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const meal = event.active?.data?.current?.meal
+    const target = event.over?.data?.current as { date: string, category: string } | undefined
+    if (!meal || !target) return
+    moveMeal(meal, target.date, target.category)
+  }
+
+  async function copyLastWeek() {
+    setCopyingWeek(true)
+    const prevStart = new Date(weekDates[0]); prevStart.setDate(prevStart.getDate() - 7)
+    const prevEnd = new Date(weekDates[6]); prevEnd.setDate(prevEnd.getDate() - 7)
+    const res = await fetch(`/api/meal-plans?start=${formatDate(prevStart)}&end=${formatDate(prevEnd)}`)
+    const data = await res.json()
+    const prevMeals = data.meals || []
+    if (prevMeals.length === 0) {
+      toast.info("Last week has no meals to copy.")
+      setCopyingWeek(false)
+      return
+    }
+    if (meals.length > 0 && !confirm("This week already has meals. Copy last week's meals on top of them?")) {
+      setCopyingWeek(false)
+      return
+    }
+    for (const m of prevMeals) {
+      const base = new Date(`${m.meal_date.split("T")[0]}T00:00:00Z`)
+      base.setUTCDate(base.getUTCDate() + 7)
+      await fetch("/api/meal-plans", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recipe_id: m.recipe_id, meal_date: base.toISOString().split("T")[0], meal_type: m.meal_type }),
+      })
+    }
+    await fetchMeals()
+    toast.success(`Copied ${prevMeals.length} meal${prevMeals.length !== 1 ? "s" : ""} from last week!`)
+    if (userId) pulse(`/updates/users/${userId}/mealplan`)
+    setCopyingWeek(false)
+  }
+
+  function openGoalsModal() {
+    setGoalInputs({
+      calories: goals?.calories ? String(goals.calories) : "",
+      protein: goals?.protein ? String(goals.protein) : "",
+      carbs: goals?.carbs ? String(goals.carbs) : "",
+      fat: goals?.fat ? String(goals.fat) : "",
+    })
+    setShowGoalsModal(true)
+  }
+
+  async function saveGoals() {
+    const parsed = {
+      calories: parseInt(goalInputs.calories) || 0,
+      protein: parseInt(goalInputs.protein) || 0,
+      carbs: parseInt(goalInputs.carbs) || 0,
+      fat: parseInt(goalInputs.fat) || 0,
+    }
+    const hasAny = Object.values(parsed).some(v => v > 0)
+    const next = hasAny ? parsed : null
+    await fetch("/api/nutrition-goals", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ goals: next }),
+    })
+    setGoals(next)
+    setShowGoalsModal(false)
+    toast.success(hasAny ? "Nutrition goals saved!" : "Nutrition goals cleared.")
   }
 
   async function addCategory() {
@@ -434,6 +561,8 @@ export default function MealPlannerPage() {
           {/* Desktop-only action buttons */}
           <div className="hidden md:flex gap-3 items-center flex-wrap justify-end">
             <button onClick={() => setShowCategoryModal(true)} className="border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 bg-white">+ Category</button>
+            <button onClick={copyLastWeek} disabled={copyingWeek} title="Copy last week's meals into this week" className="border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 bg-white disabled:opacity-50">{copyingWeek ? "Copying..." : "Copy last week"}</button>
+            <button onClick={openGoalsModal} title="Set daily calorie and macro targets" className="border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 bg-white">Goals</button>
             <button onClick={() => setShowSyncModal(true)} title="Invite a friend to see each other's meal plans" className="border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 bg-white">Collaborate</button>
             {hasMissingNutrition && (
               <button onClick={generateMissingNutrition} disabled={!planStatus?.canUseAI || generatingNutrition} title={!planStatus?.canUseAI ? "AI limit reached for this week" : undefined} className="flex items-center gap-1.5 border border-orange-200 text-orange-500 px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-50 disabled:opacity-50 transition bg-white">
@@ -459,6 +588,15 @@ export default function MealPlannerPage() {
             </button>
             <button onClick={() => setShowSyncModal(true)} className="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-white text-gray-500 border border-gray-200">
               Collaborate
+            </button>
+          </div>
+          {/* Mobile secondary actions */}
+          <div className="flex md:hidden gap-2">
+            <button onClick={copyLastWeek} disabled={copyingWeek} className="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-white text-gray-500 border border-gray-200 disabled:opacity-50">
+              {copyingWeek ? "Copying..." : "Copy last week"}
+            </button>
+            <button onClick={openGoalsModal} className="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-white text-gray-500 border border-gray-200">
+              Goals
             </button>
           </div>
         </div>
@@ -494,19 +632,23 @@ export default function MealPlannerPage() {
         {(() => {
           const n = getDayNutrition(mobileDate)
           if (n.calories === 0) return null
+          const stats = [
+            { label: "Cal", val: n.calories.toLocaleString(), current: n.calories, goal: goals?.calories },
+            { label: "Protein", val: `${n.protein}g`, current: n.protein, goal: goals?.protein },
+            { label: "Carbs", val: `${n.carbs}g`, current: n.carbs, goal: goals?.carbs },
+            { label: "Fat", val: `${n.fat}g`, current: n.fat, goal: goals?.fat },
+          ]
           return (
             <div className="grid grid-cols-4 gap-2 mb-4">
-              {[
-                { label: "Cal", val: n.calories.toLocaleString() },
-                { label: "Protein", val: `${n.protein}g` },
-                { label: "Carbs", val: `${n.carbs}g` },
-                { label: "Fat", val: `${n.fat}g` },
-              ].map(s => (
-                <div key={s.label} className="bg-white border border-gray-100 rounded-xl p-2.5 text-center">
-                  <div className="text-sm font-bold text-gray-900">{s.val}</div>
-                  <div className="text-[10px] text-gray-400 mt-0.5">{s.label}</div>
-                </div>
-              ))}
+              {stats.map(s => {
+                const over = s.goal > 0 && s.current > s.goal
+                return (
+                  <div key={s.label} className="bg-white border border-gray-100 rounded-xl p-2.5 text-center">
+                    <div className={`text-sm font-bold ${s.goal > 0 ? (over ? "text-red-500" : "text-green-600") : "text-gray-900"}`}>{s.val}</div>
+                    <div className="text-[10px] text-gray-400 mt-0.5">{s.goal > 0 ? `of ${s.goal.toLocaleString()}` : s.label}</div>
+                  </div>
+                )
+              })}
             </div>
           )
         })()}
@@ -540,7 +682,7 @@ export default function MealPlannerPage() {
                         <button onClick={() => removeMeal(meal)} className="text-orange-300 hover:text-red-400 transition flex-shrink-0 text-lg leading-none px-1">×</button>
                       </div>
                     ))}
-                    {collaboratorMeals.filter((m: any) => m.date === formatDate(mobileDate) && m.category_name === cat.name).map((meal: any) => (
+                    {collaboratorMeals.filter((m: any) => m.meal_date?.split("T")[0] === formatDate(mobileDate) && m.meal_type === cat.name).map((meal: any) => (
                       <div key={`collab-${meal.id}`} className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5">
                         {meal.partner_image ? (
                           <img src={meal.partner_image} className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
@@ -578,13 +720,13 @@ export default function MealPlannerPage() {
         {weekAvg && (
           <div className="grid grid-cols-4 gap-4 mb-6">
             {[
-              { label: "Avg daily calories", val: weekAvg.calories.toLocaleString() },
-              { label: "Avg daily protein", val: `${weekAvg.protein}g` },
-              { label: "Meals planned", val: totalMealsPlanned },
-              { label: "Days planned", val: weekAvg.daysWithData },
+              { label: goals?.calories ? `Avg daily calories · goal ${goals.calories.toLocaleString()}` : "Avg daily calories", val: weekAvg.calories.toLocaleString(), goal: goals?.calories, current: weekAvg.calories },
+              { label: goals?.protein ? `Avg daily protein · goal ${goals.protein}g` : "Avg daily protein", val: `${weekAvg.protein}g`, goal: goals?.protein, current: weekAvg.protein },
+              { label: "Meals planned", val: totalMealsPlanned, goal: 0, current: 0 },
+              { label: "Days planned", val: weekAvg.daysWithData, goal: 0, current: 0 },
             ].map(s => (
               <div key={s.label} className="bg-white border border-gray-100 rounded-2xl p-4">
-                <div className="text-xl font-medium text-gray-900">{s.val}</div>
+                <div className={`text-xl font-medium ${s.goal > 0 ? (s.current > s.goal ? "text-red-500" : "text-green-600") : "text-gray-900"}`}>{s.val}</div>
                 <div className="text-xs text-gray-400 mt-1">{s.label}</div>
               </div>
             ))}
@@ -592,6 +734,7 @@ export default function MealPlannerPage() {
         )}
 
         <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden mb-6">
+          <DndContext sensors={dndSensors} onDragEnd={handleDragEnd}>
           <div className="grid" style={{ gridTemplateColumns: `120px repeat(7, 1fr)` }}>
             <div className="p-3 border-b border-r border-gray-100"/>
             {weekDates.map((date, i) => (
@@ -610,20 +753,12 @@ export default function MealPlannerPage() {
                 {weekDates.map((date, i) => {
                   const cellMeals = getMealsForCell(date, cat.name)
                   return (
-                    <div key={`${cat.id}-${i}`} className={`p-2 border-b border-r border-gray-100 last:border-r-0 min-h-16 ${isToday(date) ? "bg-orange-50/30" : ""}`}>
+                    <DroppableCell key={`${cat.id}-${i}`} date={formatDate(date)} category={cat.name} isTodayCell={isToday(date)}>
                       <div className="space-y-1">
                         {cellMeals.map((meal: any) => (
-                          <div key={meal.id} className="bg-orange-50 border border-orange-100 rounded-lg p-1.5 group relative">
-                            <div className="text-xs font-medium text-orange-800 leading-tight pr-4">{meal.recipe_title}</div>
-                            {meal.nutrition && (() => {
-                              const n = typeof meal.nutrition === "string" ? JSON.parse(meal.nutrition) : meal.nutrition
-                              return <div className="text-xs text-orange-500 mt-0.5">{Math.round(n.calories)} cal</div>
-                            })()}
-                            {meal.synced_to_calendar === 1 && <div className="text-xs text-blue-400 mt-0.5">Synced</div>}
-                            <button onClick={() => removeMeal(meal)} className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-orange-300 hover:text-red-400 text-xs transition">×</button>
-                          </div>
+                          <DraggableMeal key={meal.id} meal={meal} onRemove={() => removeMeal(meal)} />
                         ))}
-                        {collaboratorMeals.filter((m: any) => m.date === formatDate(date) && m.category_name === cat.name).map((meal: any) => (
+                        {collaboratorMeals.filter((m: any) => m.meal_date?.split("T")[0] === formatDate(date) && m.meal_type === cat.name).map((meal: any) => (
                           <div key={`collab-${meal.id}`} className="bg-blue-50 border border-blue-100 rounded-lg p-1.5 relative">
                             <div className="flex items-center gap-1 mb-0.5">
                               {meal.partner_image ? (
@@ -638,7 +773,7 @@ export default function MealPlannerPage() {
                         ))}
                         <button onClick={() => { setSelectedDate(formatDate(date)); setSelectedCategory(cat.name); setShowAddModal(true) }} className="w-full text-center text-gray-300 hover:text-orange-400 text-lg leading-none py-1 transition">+</button>
                       </div>
-                    </div>
+                    </DroppableCell>
                   )
                 })}
               </React.Fragment>
@@ -647,12 +782,29 @@ export default function MealPlannerPage() {
             <div className="p-3 border-r border-gray-100"><span className="text-xs font-medium text-gray-400">Totals</span></div>
             {weekDates.map((date, i) => {
               const n = getDayNutrition(date)
+              const calGoal = goals?.calories || 0
+              const overGoal = calGoal > 0 && n.calories > calGoal
               return (
                 <div key={i} className={`p-2 border-r border-gray-100 last:border-r-0 ${isToday(date) ? "bg-orange-50/30" : ""}`}>
                   {n.calories > 0 ? (
                     <div className="bg-gray-50 rounded-lg p-2 text-center">
-                      <div className="text-xs font-medium text-gray-900">{n.calories.toLocaleString()} cal</div>
-                      <div className="text-xs text-gray-400 mt-0.5">P:{n.protein}g C:{n.carbs}g F:{n.fat}g</div>
+                      <div className={`text-xs font-semibold ${calGoal > 0 ? (overGoal ? "text-red-500" : "text-green-600") : "text-gray-900"}`}>
+                        {n.calories.toLocaleString()} cal
+                      </div>
+                      {calGoal > 0 && (
+                        <div className={`text-[10px] mt-0.5 ${overGoal ? "text-red-400" : "text-gray-400"}`}>
+                          {overGoal ? `${(n.calories - calGoal).toLocaleString()} over` : `${(calGoal - n.calories).toLocaleString()} left`} of {calGoal.toLocaleString()}
+                        </div>
+                      )}
+                      <div className="text-xs text-gray-400 mt-0.5">
+                        P:<span className={goals?.protein ? (n.protein >= goals.protein ? "text-green-600 font-medium" : "") : ""}>{n.protein}g</span>
+                        {" "}C:{n.carbs}g F:{n.fat}g
+                      </div>
+                      {calGoal > 0 && (
+                        <div className="w-full bg-gray-200 rounded-full h-1 mt-1.5 overflow-hidden">
+                          <div className={`h-1 rounded-full ${overGoal ? "bg-red-400" : "bg-green-500"}`} style={{ width: `${Math.min(100, (n.calories / calGoal) * 100)}%` }} />
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="text-center text-xs text-gray-300">—</div>
@@ -661,6 +813,7 @@ export default function MealPlannerPage() {
               )
             })}
           </div>
+          </DndContext>
         </div>
       </div>
 
@@ -884,6 +1037,46 @@ export default function MealPlannerPage() {
 
       {showSyncModal && (
         <MealPlanSyncModal onClose={() => setShowSyncModal(false)} onSyncChange={fetchMeals} />
+      )}
+
+      {showGoalsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm mx-4">
+            <h2 className="text-lg font-medium mb-1">Nutrition goals</h2>
+            <p className="text-sm text-gray-400 mb-5">Daily targets — the planner totals turn green when you're on track and red when you're over.</p>
+            <div className="grid grid-cols-2 gap-3 mb-5">
+              {([
+                { key: "calories", label: "Calories", placeholder: "e.g. 2200" },
+                { key: "protein", label: "Protein (g)", placeholder: "e.g. 150" },
+                { key: "carbs", label: "Carbs (g)", placeholder: "e.g. 250" },
+                { key: "fat", label: "Fat (g)", placeholder: "e.g. 70" },
+              ] as const).map(f => (
+                <div key={f.key}>
+                  <label className="text-xs text-gray-500 mb-1 block">{f.label}</label>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={goalInputs[f.key]}
+                    onChange={e => setGoalInputs(prev => ({ ...prev, [f.key]: e.target.value }))}
+                    placeholder={f.placeholder}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-base md:text-sm outline-none"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setShowGoalsModal(false)} className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm text-gray-500 hover:bg-gray-50">Cancel</button>
+              {goals && (
+                <button
+                  onClick={() => { setGoalInputs({ calories: "", protein: "", carbs: "", fat: "" }); }}
+                  className="flex-1 border border-red-100 text-red-400 rounded-xl py-2.5 text-sm hover:bg-red-50">
+                  Clear
+                </button>
+              )}
+              <button onClick={saveGoals} className="flex-1 bg-orange-500 text-white rounded-xl py-2.5 text-sm font-medium hover:bg-orange-600">Save</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

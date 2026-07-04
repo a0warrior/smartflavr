@@ -80,6 +80,23 @@ export async function POST(req: Request) {
   return NextResponse.json({ success: true })
 }
 
+// Move a meal to a different day/category
+export async function PUT(req: Request) {
+  const session = await auth()
+  if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const [currentUser] = await pool.query("SELECT id FROM users WHERE email = ?", [session.user.email]) as any[]
+
+  const { id, meal_date, meal_type } = await req.json()
+
+  await pool.query(
+    "UPDATE meal_plans SET meal_date = ?, meal_type = ?, synced_to_calendar = 0, gcal_event_id = NULL WHERE id = ? AND user_id = ?",
+    [meal_date, meal_type, id, currentUser[0].id]
+  )
+
+  return NextResponse.json({ success: true })
+}
+
 export async function DELETE(req: Request) {
   const session = await auth()
   if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
