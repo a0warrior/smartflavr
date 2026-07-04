@@ -57,9 +57,6 @@ export default function MealPlannerPage() {
   const [groceryListName, setGroceryListName] = useState("")
   const [savingGroceryList, setSavingGroceryList] = useState(false)
   const [grocerySaved, setGrocerySaved] = useState(false)
-  const [savedListId, setSavedListId] = useState<number | null>(null)
-  const [sharingList, setSharingList] = useState(false)
-  const [shareLink, setShareLink] = useState("")
   const [saveMode, setSaveMode] = useState<"new" | "existing">("new")
   const [existingLists, setExistingLists] = useState<any[]>([])
   const [selectedExistingList, setSelectedExistingList] = useState("")
@@ -320,13 +317,11 @@ export default function MealPlannerPage() {
 
     if (saveMode === "new") {
       if (!groceryListName.trim()) { setSavingGroceryList(false); return }
-      const res = await fetch("/api/grocery-lists", {
+      await fetch("/api/grocery-lists", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: groceryListName, items }),
       })
-      const data = await res.json()
-      if (data.id) setSavedListId(data.id)
     } else {
       if (!selectedExistingList) { setSavingGroceryList(false); return }
       await fetch("/api/grocery-lists", {
@@ -334,33 +329,11 @@ export default function MealPlannerPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: parseInt(selectedExistingList), addItems: items }),
       })
-      setSavedListId(parseInt(selectedExistingList))
     }
 
     setSavingGroceryList(false)
     setGrocerySaved(true)
-    setShareLink("")
     await fetchExistingLists()
-  }
-
-  async function shareGroceryList() {
-    if (!savedListId) return
-    setSharingList(true)
-    try {
-      const res = await fetch("/api/grocery-lists/share", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ list_id: savedListId }),
-      })
-      const data = await res.json()
-      if (data.token) {
-        const url = `${window.location.origin}/grocery/${data.token}`
-        await navigator.clipboard.writeText(url)
-        setShareLink(url)
-      }
-    } finally {
-      setSharingList(false)
-    }
   }
 
   function getMealsForCell(date: Date, category: string) {
@@ -868,20 +841,7 @@ export default function MealPlannerPage() {
               )}
             </div>
 
-            {grocerySaved && savedListId && (
-              <div className="mt-3">
-                <button
-                  onClick={shareGroceryList}
-                  disabled={sharingList}
-                  className="w-full flex items-center justify-center gap-2 border border-gray-200 rounded-xl py-2 text-sm text-gray-600 hover:bg-gray-50 transition disabled:opacity-50">
-                  {sharingList ? "Getting link..." : shareLink ? "✓ Link copied!" : "Share list"}
-                </button>
-                {shareLink && (
-                  <p className="text-xs text-gray-400 text-center mt-1.5 break-all">{shareLink}</p>
-                )}
-              </div>
-            )}
-            <button onClick={() => { setShowGroceryModal(false); setGrocerySaved(false); setSavedListId(null); setShareLink("") }} className="w-full border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50 mt-3">Done</button>
+            <button onClick={() => { setShowGroceryModal(false); setGrocerySaved(false) }} className="w-full border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50 mt-4">Done</button>
           </div>
         </div>
       )}

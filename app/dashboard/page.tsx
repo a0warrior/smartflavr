@@ -109,6 +109,8 @@ export default function Dashboard() {
   const [listNameInput, setListNameInput] = useState("")
   const [checking, setChecking] = useState(true)
   const [groceryCopied, setGroceryCopied] = useState(false)
+  const [groceryShareLink, setGroceryShareLink] = useState("")
+  const [sharingGrocery, setSharingGrocery] = useState(false)
   const [planStatus, setPlanStatus] = useState<any>(null)
   const [showAllCookbooks, setShowAllCookbooks] = useState(false)
   const [showAllCollabCookbooks, setShowAllCollabCookbooks] = useState(false)
@@ -236,6 +238,26 @@ export default function Dashboard() {
     setActiveGroceryList(updated)
     setGroceryLists(prev => prev.map((l: any) => l.id === updated.id ? updated : l))
     await fetch("/api/grocery-lists", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: activeGroceryList.id, reorderItems: newOrder.map((item: any, index: number) => ({ id: item.id, sort_order: index })) }) })
+  }
+
+  async function shareGroceryList() {
+    if (!activeGroceryList) return
+    setSharingGrocery(true)
+    try {
+      const res = await fetch("/api/grocery-lists/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ list_id: activeGroceryList.id }),
+      })
+      const data = await res.json()
+      if (data.token) {
+        const url = `${window.location.origin}/grocery/${data.token}`
+        await navigator.clipboard.writeText(url)
+        setGroceryShareLink(url)
+      }
+    } finally {
+      setSharingGrocery(false)
+    }
   }
 
   async function deleteGroceryList(id: number) { setGroceryListToDelete(id); setShowDeleteGroceryModal(true) }
@@ -674,6 +696,7 @@ export default function Dashboard() {
               <div className="flex-1" />
               <button onClick={printGroceryList} className="text-xs text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg px-3 py-2 flex items-center gap-1.5 transition"><PrintIcon size={12} />Print</button>
               <button onClick={copyGroceryText} className="text-xs text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg px-3 py-2 flex items-center gap-1.5 transition">{groceryCopied ? <><CheckIcon size={12} />Copied!</> : <><ListIcon size={12} />Copy</>}</button>
+              <button onClick={shareGroceryList} disabled={sharingGrocery} className="text-xs text-orange-500 hover:text-orange-600 border border-orange-200 hover:border-orange-300 rounded-lg px-3 py-2 flex items-center gap-1.5 transition disabled:opacity-50">{groceryShareLink ? <><CheckIcon size={12} />Link copied!</> : sharingGrocery ? "..." : "Collaborate"}</button>
             </div>
             <p className="text-xs text-gray-400 mb-2">{activeGroceryList.items?.filter((i: any) => i.checked).length} of {activeGroceryList.items?.length} items checked</p>
             <div className="w-full bg-gray-100 rounded-full h-1.5 mb-4">
