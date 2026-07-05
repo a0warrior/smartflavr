@@ -123,7 +123,7 @@ export default async function ShareRecipePage({
             </div>
           )}
 
-          <NutritionPanel recipe={recipe}/>
+          <NutritionPanel recipe={recipe} readOnly/>
         </div>
 
         {isLoggedIn ? (

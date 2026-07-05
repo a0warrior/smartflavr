@@ -29,7 +29,7 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 
-import { HeartIcon, ShareIcon, PeopleIcon, PrintIcon, SearchIcon, ClockIcon, ChevronRightIcon, SortIcon, ListIcon, LeaveIcon, SparkleIcon, UserIcon, StarIcon, LightBulbIcon, CameraIcon, PlateIcon, TrashIcon, LockIcon, LinkIcon, CheckIcon } from "@/app/components/Icons"
+import { HeartIcon, ShareIcon, PeopleIcon, PrintIcon, SearchIcon, ClockIcon, ChevronRightIcon, SortIcon, ListIcon, LeaveIcon, SparkleIcon, UserIcon, StarIcon, LightBulbIcon, CameraIcon, PlateIcon, TrashIcon, LockIcon, LinkIcon, CheckIcon, BookIcon } from "@/app/components/Icons"
 
 function SortableRecipeItem({ recipe, isSelected, onClick, isOwner, isFavorited, onToggleFavorite, onRename, onDelete }: any) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: recipe.id })
@@ -1237,6 +1237,11 @@ export default function CookbookPage() {
                   Save to my cookbook
                 </button>
               )}
+              {canEdit && recipe && !editMode && (
+                <button onClick={openCopyModal} title="Copy this recipe to another of your cookbooks" className="px-3 py-1.5 border border-gray-200 text-gray-500 rounded-lg text-sm hover:bg-gray-50 transition">
+                  Copy to…
+                </button>
+              )}
               {isOwner && recipe && !editMode && (
                 <button onClick={() => deleteRecipe(recipe.id)} className="px-3 py-1.5 border border-red-100 text-red-400 rounded-lg text-sm hover:bg-red-50 transition">
                   Delete
@@ -1319,7 +1324,7 @@ export default function CookbookPage() {
                         <div className="bg-amber-50 rounded-xl p-4 text-sm text-amber-800 leading-relaxed flex gap-2"><LightBulbIcon size={15} className="flex-shrink-0 mt-0.5" /><span>{recipe.notes}</span></div>
                       </div>
                     )}
-                    <NutritionPanel recipe={recipe}/>
+                    <NutritionPanel recipe={recipe} readOnly={!canEdit}/>
                     <div className="flex items-center gap-3 mt-4 flex-wrap">
                       <button
                         onClick={() => {
@@ -1697,6 +1702,13 @@ export default function CookbookPage() {
             )}
             <div className="px-2">
               {recipe && <RecipePDFButton recipe={recipe} className="w-full text-left px-4 py-3.5 text-sm text-gray-700 hover:bg-gray-50 rounded-xl flex items-center gap-3" />}
+              {recipe && (
+                <button
+                  onClick={() => { openCopyModal(); setShowMobileActions(false) }}
+                  className="w-full text-left px-4 py-3.5 text-sm text-gray-700 hover:bg-gray-50 rounded-xl flex items-center gap-3">
+                  <BookIcon size={16} /> Copy to another cookbook
+                </button>
+              )}
               {isOwner && recipe && (
                 <button
                   onClick={() => { deleteRecipe(recipe.id); setShowMobileActions(false) }}

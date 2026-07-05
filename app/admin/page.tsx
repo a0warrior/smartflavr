@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Navbar from "@/app/components/Navbar"
 import { ClockIcon, WarningIcon } from "@/app/components/Icons"
+import { subscribe } from "@/lib/firebase"
 
 function formatCode(val: string) {
   const clean = val.replace(/[^A-Za-z0-9]/g, "").toUpperCase()
@@ -40,6 +41,12 @@ export default function AdminPage() {
     if (status === "unauthenticated") router.push("/login?code=returning")
     if (status === "authenticated") fetchData()
   }, [status])
+
+  // Codes flip to Used live when someone redeems one
+  useEffect(() => {
+    return subscribe("/updates/invites", fetchData)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function fetchData() {
     const res = await fetch("/api/admin")

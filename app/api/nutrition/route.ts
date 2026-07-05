@@ -17,6 +17,32 @@ export async function POST(req: Request) {
 
   const { recipe_id, title, ingredients, servings } = await req.json()
 
+  // Only the cookbook owner or an editor collaborator may write nutrition to a recipe
+  const [users]: any = await pool.query("SELECT id FROM users WHERE email = ?", [session.user.email])
+  const userId = users[0]?.id
+  const [rows]: any = await pool.query(
+    "SELECT c.id as cookbook_id, c.user_id FROM recipes r JOIN cookbooks c ON r.cookbook_id = c.id WHERE r.id = ?",
+    [recipe_id]
+  )
+  if (!rows[0]) return NextResponse.json({ error: "Recipe not found" }, { status: 404 })
+  if (rows[0].user_id !== userId) {
+    let allowed = false
+    try {
+      const [collabs]: any = await pool.query(
+        "SELECT role FROM cookbook_collaborators WHERE cookbook_id = ? AND user_id = ? AND status = 'accepted'",
+        [rows[0].cookbook_id, userId]
+      )
+      allowed = !!collabs[0] && collabs[0].role !== "viewer"
+    } catch {
+      const [collabs]: any = await pool.query(
+        "SELECT id FROM cookbook_collaborators WHERE cookbook_id = ? AND user_id = ? AND status = 'accepted'",
+        [rows[0].cookbook_id, userId]
+      )
+      allowed = !!collabs[0]
+    }
+    if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
+
   const prompt = `You are a registered dietitian calculating precise nutrition facts for a recipe.
 
 Recipe: ${title || ""}

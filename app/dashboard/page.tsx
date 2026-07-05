@@ -123,6 +123,8 @@ export default function Dashboard() {
   const [importing, setImporting] = useState(false)
   const [importedRecipes, setImportedRecipes] = useState<any[]>([])
   const [importCookbooks, setImportCookbooks] = useState<{[key: number]: string[]}>({})
+  const [expandedImports, setExpandedImports] = useState<Set<number>>(new Set())
+  const [savingRecipes, setSavingRecipes] = useState(false)
   const [groceryLists, setGroceryLists] = useState<any[]>([])
   const [showGroceryListModal, setShowGroceryListModal] = useState(false)
   const [activeGroceryList, setActiveGroceryList] = useState<any>(null)
@@ -178,6 +180,8 @@ export default function Dashboard() {
         const inviteData = await inviteRes.json()
         localStorage.removeItem("pendingInviteCode")
         if (inviteData.success) {
+          // Let anyone watching the invite codes (admin panel) see it flip to Used
+          pulse("/updates/invites")
           router.replace("/welcome")
           return
         }
@@ -521,11 +525,12 @@ export default function Dashboard() {
   }
 
   async function saveImportedRecipes() {
-    if (importedRecipes.length === 0) return
+    if (importedRecipes.length === 0 || savingRecipes) return
+    setSavingRecipes(true)
     let fallbackId: string | null = null
     if (cookbooks.length === 0) {
       fallbackId = await ensureDefaultCookbook()
-      if (!fallbackId) return toast.error("Could not create a cookbook. Try again.")
+      if (!fallbackId) { setSavingRecipes(false); return toast.error("Could not create a cookbook. Try again.") }
     }
     let saved = 0
     for (let i = 0; i < importedRecipes.length; i++) {
@@ -536,17 +541,19 @@ export default function Dashboard() {
         saved++
       }
     }
-    setShowImportModal(false); setImportedRecipes([]); setImportCookbooks({})
+    setShowImportModal(false); setImportedRecipes([]); setImportCookbooks({}); setExpandedImports(new Set())
+    setSavingRecipes(false)
     toast.success(fallbackId ? `Saved ${saved} recipe${saved !== 1 ? "s" : ""} to your new "My Recipes" cookbook!` : `Saved ${saved} recipe${saved !== 1 ? "s" : ""}!`)
   }
 
   async function saveRecipe() {
-    if (!extractedRecipe) return
+    if (!extractedRecipe || savingRecipes) return
+    setSavingRecipes(true)
     let targets = selectedCookbooks
     if (targets.length === 0) {
-      if (cookbooks.length > 0) return
+      if (cookbooks.length > 0) { setSavingRecipes(false); return }
       const fallbackId = await ensureDefaultCookbook()
-      if (!fallbackId) return toast.error("Could not create a cookbook. Try again.")
+      if (!fallbackId) { setSavingRecipes(false); return toast.error("Could not create a cookbook. Try again.") }
       targets = [fallbackId]
     }
     for (const cookbookId of targets) {
@@ -554,6 +561,7 @@ export default function Dashboard() {
       await fetch("/api/recipes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...recipeData, cookbook_id: cookbookId }) })
     }
     setExtractedRecipe(null); setSelectedCookbooks([])
+    setSavingRecipes(false)
     toast.success(`Recipe saved to ${targets.length} cookbook${targets.length > 1 ? "s" : ""}!`)
   }
 
@@ -1113,8 +1121,8 @@ export default function Dashboard() {
             </div>
             <div className="flex gap-3">
               <button onClick={() => { setExtractedRecipe(null); setSelectedCookbooks([]) }} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Discard</button>
-              <button onClick={saveRecipe} disabled={selectedCookbooks.length === 0 && cookbooks.length > 0} className="flex-1 bg-orange-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-orange-600 disabled:opacity-50">
-                {cookbooks.length === 0 ? "Save to a new cookbook" : `Save to ${selectedCookbooks.length > 0 ? `${selectedCookbooks.length} cookbook${selectedCookbooks.length > 1 ? "s" : ""}` : "cookbook"}`}
+              <button onClick={saveRecipe} disabled={savingRecipes || (selectedCookbooks.length === 0 && cookbooks.length > 0)} className="flex-1 bg-orange-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-orange-600 disabled:opacity-50">
+                {savingRecipes ? "Saving..." : cookbooks.length === 0 ? "Save to a new cookbook" : `Save to ${selectedCookbooks.length > 0 ? `${selectedCookbooks.length} cookbook${selectedCookbooks.length > 1 ? "s" : ""}` : "cookbook"}`}
               </button>
             </div>
           </div>
@@ -1144,11 +1152,38 @@ export default function Dashboard() {
                     <div key={i} className="bg-gray-50 rounded-xl p-3">
                       <div className="font-medium text-sm mb-1">{r.title}</div>
                       {r.description && <div className="text-xs text-gray-500 mb-2 line-clamp-2">{r.description}</div>}
-                      <div className="flex gap-3 mb-3 text-xs text-gray-400">
+                      <div className="flex gap-3 mb-2 text-xs text-gray-400">
                         {r.prep_time && <span className="flex items-center gap-1"><ClockIcon size={11} />{r.prep_time}</span>}
                         {r.servings && <span className="flex items-center gap-1"><UserIcon size={11} />{r.servings}</span>}
                         {r.difficulty && <span className="flex items-center gap-1"><StarIcon size={11} />{r.difficulty}</span>}
                       </div>
+                      <button
+                        onClick={() => setExpandedImports(prev => { const next = new Set(prev); next.has(i) ? next.delete(i) : next.add(i); return next })}
+                        className="text-xs text-orange-500 hover:text-orange-600 mb-2">
+                        {expandedImports.has(i) ? "Hide full recipe ▴" : "See full recipe ▾"}
+                      </button>
+                      {expandedImports.has(i) && (
+                        <div className="bg-white rounded-lg p-3 mb-3 space-y-3 border border-gray-100">
+                          {r.ingredients && (
+                            <div>
+                              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Ingredients</p>
+                              <p className="text-xs text-gray-700 whitespace-pre-line leading-relaxed">{r.ingredients}</p>
+                            </div>
+                          )}
+                          {r.instructions && (
+                            <div>
+                              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Instructions</p>
+                              <p className="text-xs text-gray-700 whitespace-pre-line leading-relaxed">{r.instructions}</p>
+                            </div>
+                          )}
+                          {r.notes && (
+                            <div>
+                              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Notes</p>
+                              <p className="text-xs text-gray-700 whitespace-pre-line leading-relaxed">{r.notes}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                       <p className="text-xs text-gray-500 mb-2">Save to:</p>
                       <div className="space-y-1">
                         {cookbooks.map((book: any) => (
@@ -1181,8 +1216,8 @@ export default function Dashboard() {
                 )}
                 <div className="flex gap-3">
                   <button onClick={() => { setShowImportModal(false); setImportedRecipes([]); setImportCookbooks({}) }} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Cancel</button>
-                  <button onClick={saveImportedRecipes} disabled={cookbooks.length > 0 && Object.values(importCookbooks).every(v => v.length === 0)} className="flex-1 bg-orange-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-orange-600 disabled:opacity-50">
-                    {cookbooks.length === 0 ? `Save ${importedRecipes.length} to a new cookbook` : `Save ${Object.values(importCookbooks).flat().length} to cookbook${Object.values(importCookbooks).flat().length !== 1 ? "s" : ""}`}
+                  <button onClick={saveImportedRecipes} disabled={savingRecipes || (cookbooks.length > 0 && Object.values(importCookbooks).every(v => v.length === 0))} className="flex-1 bg-orange-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-orange-600 disabled:opacity-50">
+                    {savingRecipes ? "Saving..." : cookbooks.length === 0 ? `Save ${importedRecipes.length} to a new cookbook` : `Save ${Object.values(importCookbooks).flat().length} to cookbook${Object.values(importCookbooks).flat().length !== 1 ? "s" : ""}`}
                   </button>
                 </div>
               </>

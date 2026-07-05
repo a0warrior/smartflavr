@@ -2,7 +2,7 @@
 import { useState } from "react"
 import { SparkleIcon } from "@/app/components/Icons"
 
-export default function NutritionPanel({ recipe, onNutritionGenerated }: { recipe: any, onNutritionGenerated?: (nutrition: any) => void }) {
+export default function NutritionPanel({ recipe, onNutritionGenerated, readOnly }: { recipe: any, onNutritionGenerated?: (nutrition: any) => void, readOnly?: boolean }) {
   const [nutrition, setNutrition] = useState<any>(
     recipe.nutrition ? (typeof recipe.nutrition === "string" ? JSON.parse(recipe.nutrition) : recipe.nutrition) : null
   )
@@ -52,6 +52,7 @@ export default function NutritionPanel({ recipe, onNutritionGenerated }: { recip
   const multiplier = perServing ? 1 : servings
 
   if (!nutrition && !loading) {
+    if (readOnly) return null
     return (
       <div className="mt-6 border-t border-gray-100 pt-6">
         <div className="flex items-center justify-between mb-4">
@@ -83,12 +84,14 @@ export default function NutritionPanel({ recipe, onNutritionGenerated }: { recip
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wide">Nutrition facts</h3>
         <div className="flex items-center gap-2">
-          <button
-            onClick={generateNutrition}
-            disabled={loading}
-            className="flex items-center gap-1 text-xs text-gray-400 hover:text-orange-500 transition px-2 py-1 rounded-lg hover:bg-orange-50">
-            <SparkleIcon size={11} /> Regenerate
-          </button>
+          {!readOnly && (
+            <button
+              onClick={generateNutrition}
+              disabled={loading}
+              className="flex items-center gap-1 text-xs text-gray-400 hover:text-orange-500 transition px-2 py-1 rounded-lg hover:bg-orange-50">
+              <SparkleIcon size={11} /> Regenerate
+            </button>
+          )}
           <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
             <button
               onClick={() => setPerServing(true)}
