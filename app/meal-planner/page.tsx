@@ -146,13 +146,22 @@ export default function MealPlannerPage() {
 
   // Live-sync with meal plan partners: refetch when an accepted partner changes their plan
   const [partnerIds, setPartnerIds] = useState<number[]>([])
-  useEffect(() => {
-    if (status !== "authenticated") return
+  function fetchPartners() {
     fetch("/api/meal-plan-collaborators")
       .then(r => r.json())
       .then(d => setPartnerIds((d.syncs || []).filter((s: any) => s.status === "accepted").map((s: any) => s.partner.id)))
       .catch(() => {})
+  }
+  useEffect(() => {
+    if (status !== "authenticated") return
+    fetchPartners()
   }, [status, showSyncModal])
+  // When someone accepts our sync invite, pick up the new partner immediately
+  useEffect(() => {
+    if (!userId) return
+    return subscribe(`/updates/collabs/mealplan/${userId}`, () => { fetchPartners(); fetchMeals() })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId])
   useEffect(() => {
     const unsubs = partnerIds.map(pid => subscribe(`/updates/users/${pid}/mealplan`, fetchMeals))
     return () => unsubs.forEach(u => u())
@@ -543,6 +552,14 @@ export default function MealPlannerPage() {
   const totalMealsPlanned = meals.length
   const hasMissingNutrition = meals.some((m: any) => !m.nutrition && m.ingredients)
 
+  // Partner meals whose category names don't exist in this user's planner still
+  // need somewhere to render — give them their own read-only rows
+  const partnerOnlyCategories = Array.from(new Set(
+    collaboratorMeals
+      .map((m: any) => m.meal_type)
+      .filter((t: string) => t && !categories.some((c: any) => c.name === t))
+  ))
+
   const filteredRecipes = allRecipes.filter((r: any) => {
     const matchesSearch = r.title.toLowerCase().includes(recipeSearch.toLowerCase())
     const matchesCategory = !selectedCategoryFilter || r.category_name === selectedCategoryFilter
@@ -720,6 +737,33 @@ export default function MealPlannerPage() {
                 </div>
               )
             })}
+            {partnerOnlyCategories.map((catName: string) => {
+              const dayPartnerMeals = collaboratorMeals.filter((m: any) => m.meal_date?.split("T")[0] === formatDate(mobileDate) && m.meal_type === catName)
+              if (dayPartnerMeals.length === 0) return null
+              return (
+                <div key={`partner-${catName}`} className="bg-white border border-blue-100 rounded-2xl overflow-hidden">
+                  <div className="flex items-center gap-2 px-4 py-3 border-b border-blue-50">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                    <span className="text-sm font-semibold text-blue-600">{catName}</span>
+                  </div>
+                  <div className="p-3 space-y-2">
+                    {dayPartnerMeals.map((meal: any) => (
+                      <div key={`collab-${meal.id}`} className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5">
+                        {meal.partner_image ? (
+                          <img src={meal.partner_image} className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
+                        ) : (
+                          <div className="w-6 h-6 rounded-full bg-blue-400 flex items-center justify-center text-white text-[10px] flex-shrink-0">{meal.partner_name?.charAt(0)}</div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-blue-800 truncate">{meal.recipe_title}</p>
+                          <p className="text-xs text-blue-400 mt-0.5">{meal.partner_name}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
             <button
               onClick={() => setShowCategoryModal(true)}
               className="w-full py-3 rounded-2xl border border-dashed border-gray-200 text-sm text-gray-400 hover:border-orange-200 hover:text-orange-400 hover:bg-orange-50 transition">
@@ -791,6 +835,34 @@ export default function MealPlannerPage() {
                     </DroppableCell>
                   )
                 })}
+              </React.Fragment>
+            ))}
+
+            {partnerOnlyCategories.map((catName: string) => (
+              <React.Fragment key={`partner-${catName}`}>
+                <div className="p-3 border-b border-r border-gray-100 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
+                  <span className="text-xs font-medium text-blue-500 truncate">{catName}</span>
+                </div>
+                {weekDates.map((date, i) => (
+                  <div key={`partner-${catName}-${i}`} className={`p-2 border-b border-r border-gray-100 last:border-r-0 min-h-16 ${isToday(date) ? "bg-orange-50/30" : ""}`}>
+                    <div className="space-y-1">
+                      {collaboratorMeals.filter((m: any) => m.meal_date?.split("T")[0] === formatDate(date) && m.meal_type === catName).map((meal: any) => (
+                        <div key={`collab-${meal.id}`} className="bg-blue-50 border border-blue-100 rounded-lg p-1.5 relative">
+                          <div className="flex items-center gap-1 mb-0.5">
+                            {meal.partner_image ? (
+                              <img src={meal.partner_image} className="w-3.5 h-3.5 rounded-full object-cover flex-shrink-0" />
+                            ) : (
+                              <div className="w-3.5 h-3.5 rounded-full bg-blue-400 flex items-center justify-center text-white text-[8px] flex-shrink-0">{meal.partner_name?.charAt(0)}</div>
+                            )}
+                            <span className="text-[10px] text-blue-400 truncate">{meal.partner_name}</span>
+                          </div>
+                          <div className="text-xs font-medium text-blue-800 leading-tight">{meal.recipe_title}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </React.Fragment>
             ))}
 

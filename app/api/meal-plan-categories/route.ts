@@ -13,10 +13,25 @@ export async function GET(req: Request) {
     [session.user.email]
   ) as any[]
 
-  const [categories] = await pool.query(
+  let [categories] = await pool.query(
     "SELECT * FROM meal_plan_categories WHERE user_id = ? ORDER BY sort_order ASC",
     [currentUser[0].id]
   ) as any[]
+
+  // Everyone starts with the standard four — seed them when a user has none
+  if ((categories as any[]).length === 0) {
+    const defaults = ["Breakfast", "Lunch", "Dinner", "Snack"]
+    for (let i = 0; i < defaults.length; i++) {
+      await pool.query(
+        "INSERT INTO meal_plan_categories (user_id, name, sort_order) VALUES (?, ?, ?)",
+        [currentUser[0].id, defaults[i], i]
+      )
+    }
+    ;[categories] = await pool.query(
+      "SELECT * FROM meal_plan_categories WHERE user_id = ? ORDER BY sort_order ASC",
+      [currentUser[0].id]
+    ) as any[]
+  }
 
   return NextResponse.json({ categories })
 }

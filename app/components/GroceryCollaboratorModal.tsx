@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import { ClockIcon } from "@/app/components/Icons"
+import { subscribe } from "@/lib/firebase"
 
 export default function GroceryCollaboratorModal({
   listId,
@@ -22,6 +23,11 @@ export default function GroceryCollaboratorModal({
     fetch("/api/friends").then(r => r.json()).then(d => setFriends(d.friends || []))
     fetchCollaborators()
   }, [])
+
+  // Live-update statuses when an invitee accepts or declines
+  useEffect(() => {
+    return subscribe(`/updates/collabs/grocery/${listId}`, fetchCollaborators)
+  }, [listId])
 
   async function fetchCollaborators() {
     const res = await fetch(`/api/grocery-list-collaborators?list_id=${listId}`)

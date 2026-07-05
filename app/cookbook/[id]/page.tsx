@@ -245,10 +245,19 @@ export default function CookbookPage() {
     if (!params.id) return
     const recipesRef = ref(db, `cookbooks/${params.id}/lastUpdate`)
     let initialized = false
-    onValue(recipesRef, (snapshot) => {
+    onValue(recipesRef, async (snapshot) => {
       if (!initialized) { initialized = true; return }
       const data = snapshot.val()
-      if (data && data.updatedBy !== session?.user?.email) fetchRecipes()
+      if (data && data.updatedBy !== session?.user?.email) {
+        // If the cookbook was deleted while we're viewing it, leave gracefully
+        const check = await fetch(`/api/cookbooks/${params.id}`)
+        if (check.status === 404) {
+          toast.info("This cookbook was deleted by its owner.")
+          router.push("/dashboard")
+          return
+        }
+        fetchRecipes()
+      }
     })
     return () => off(recipesRef)
   }, [params.id, session])

@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import { ClockIcon } from "@/app/components/Icons"
+import { subscribe } from "@/lib/firebase"
 
 export default function MealPlanSyncModal({ onClose, onSyncChange }: { onClose: () => void, onSyncChange: () => void }) {
   const [syncs, setSyncs] = useState<any[]>([])
@@ -13,6 +14,16 @@ export default function MealPlanSyncModal({ onClose, onSyncChange }: { onClose: 
   useEffect(() => {
     fetch("/api/friends").then(r => r.json()).then(d => setFriends(d.friends || []))
     fetchSyncs()
+  }, [])
+
+  // Live-update statuses when an invitee accepts or declines
+  useEffect(() => {
+    let unsub: (() => void) | undefined
+    fetch("/api/profile").then(r => r.json()).then(d => {
+      if (d.user?.id) unsub = subscribe(`/updates/collabs/mealplan/${d.user.id}`, () => { fetchSyncs(); onSyncChange() })
+    })
+    return () => unsub?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function fetchSyncs() {

@@ -5,7 +5,7 @@ import Image from "next/image"
 import { useState, useEffect } from "react"
 import { BellIcon, HeartIcon, UserIcon, CommentIcon, BookIcon, BanIcon, WarningIcon, SparkleIcon } from "@/app/components/Icons"
 import BottomNav from "@/app/components/BottomNav"
-import { subscribe } from "@/lib/firebase"
+import { pulse, subscribe } from "@/lib/firebase"
 
 const navLinks = [
   { href: "/feed", label: "Feed" },
@@ -85,6 +85,13 @@ export default function Navbar() {
       fetchNotifications()
       return
     }
+    // Let the inviter's open collaborator modal update in real time
+    try {
+      const data = typeof notification.data === "string" ? JSON.parse(notification.data) : (notification.data || {})
+      if (notification.type === "collab_invite" && data.cookbook_id) pulse(`/updates/collabs/cookbook/${data.cookbook_id}`)
+      if (notification.type === "grocery_invite" && data.list_id) pulse(`/updates/collabs/grocery/${data.list_id}`)
+      if (notification.type === "meal_plan_invite" && data.owner_user_id) pulse(`/updates/collabs/mealplan/${data.owner_user_id}`)
+    } catch {}
     if (action === "accept") {
       window.location.href = notification.type === "meal_plan_invite" ? "/meal-planner" : "/dashboard"
     } else {

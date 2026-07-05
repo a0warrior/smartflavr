@@ -214,7 +214,17 @@ export default function Dashboard() {
         const data = await res.json()
         const lists = data.lists || []
         setGroceryLists(lists)
-        setActiveGroceryList((prev: any) => prev ? (lists.find((fl: any) => fl.id === prev.id) || prev) : prev)
+        setActiveGroceryList((prev: any) => {
+          if (!prev) return prev
+          const fresh = lists.find((fl: any) => fl.id === prev.id)
+          if (!fresh) {
+            // The list we're viewing was deleted (or we were removed) — close it
+            setShowGroceryListModal(false)
+            toast.info("This grocery list is no longer available.")
+            return null
+          }
+          return fresh
+        })
       })
     )
     return () => unsubs.forEach((u: any) => u())
@@ -266,6 +276,7 @@ export default function Dashboard() {
   async function confirmDeleteGroceryList() {
     if (!groceryListToDelete) return
     await fetch("/api/grocery-lists", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: groceryListToDelete }) })
+    pulse(`/updates/grocery/${groceryListToDelete}`)
     setGroceryLists(prev => prev.filter((l: any) => l.id !== groceryListToDelete))
     if (activeGroceryList?.id === groceryListToDelete) { setShowGroceryListModal(false); setActiveGroceryList(null) }
     setShowDeleteGroceryModal(false)
@@ -368,6 +379,8 @@ export default function Dashboard() {
   async function confirmDeleteCookbook() {
     if (!cookbookToDelete) return
     await fetch(`/api/cookbooks/${cookbookToDelete}`, { method: "DELETE" })
+    // Kick collaborators who are viewing this cookbook right now
+    pulse(`cookbooks/${cookbookToDelete}/lastUpdate`)
     setShowDeleteCookbookModal(false); setCookbookToDelete(null); setShowEditModal(false); setEditingCookbook(null)
     fetchCookbooks()
     if (userId) pulse(`/updates/users/${userId}/cookbooks`)
@@ -664,9 +677,9 @@ export default function Dashboard() {
                 return (
                   <div key={list.id} className="bg-white border border-gray-100 rounded-2xl p-4 flex items-center justify-between gap-4 hover:shadow-sm transition">
                     <div className="flex-1 cursor-pointer min-w-0" onClick={() => { setActiveGroceryList(list); setShowGroceryListModal(true) }}>
-                      <div className="font-medium text-sm text-gray-900 truncate flex items-center gap-2">
-                        {list.name}
-                        {list.shared_by && <span className="text-[10px] font-medium text-blue-500 bg-blue-50 border border-blue-100 rounded-full px-2 py-0.5 flex-shrink-0">Shared by {list.shared_by}</span>}
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="font-medium text-sm text-gray-900 truncate">{list.name}</span>
+                        {list.shared_by && <span className="text-[10px] font-medium text-blue-500 bg-blue-50 border border-blue-100 rounded-full px-2 py-0.5 flex-shrink-0 max-w-[45%] truncate">Shared by {list.shared_by}</span>}
                       </div>
                       <div className="text-xs text-gray-400 mt-1">{total} items · {pct}% done</div>
                       <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2">

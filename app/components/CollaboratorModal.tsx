@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import { ClockIcon } from "@/app/components/Icons"
+import { subscribe } from "@/lib/firebase"
 
 export default function CollaboratorModal({
   cookbookId,
@@ -21,6 +22,15 @@ export default function CollaboratorModal({
   useEffect(() => {
     fetchFriends()
   }, [])
+
+  // Live-update statuses when an invitee accepts or declines
+  useEffect(() => {
+    return subscribe(`/updates/collabs/cookbook/${cookbookId}`, async () => {
+      const res = await fetch(`/api/collaborators?cookbook_id=${cookbookId}`)
+      const data = await res.json()
+      setLocalCollaborators(data.collaborators || [])
+    })
+  }, [cookbookId])
 
   async function fetchFriends() {
     const res = await fetch("/api/friends")
