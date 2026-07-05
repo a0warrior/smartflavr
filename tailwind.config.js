@@ -49,6 +49,15 @@ module.exports = {
           '70%':  { transform: 'scale(1.12)' },
           '100%': { transform: 'scale(1)' },
         },
+        'pop-in': {
+          '0%':   { opacity: '0', transform: 'scale(0.5)' },
+          '60%':  { opacity: '1', transform: 'scale(1.06)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        'check-draw': {
+          '0%':   { strokeDashoffset: '24' },
+          '100%': { strokeDashoffset: '0' },
+        },
       },
       animation: {
         float: 'float 8s ease-in-out infinite',
@@ -58,6 +67,8 @@ module.exports = {
         'bell-ring': 'bell-ring 0.7s ease-out',
         'heart-pop': 'heart-pop 0.35s cubic-bezier(.36,.07,.19,.97)',
         'bubble-pop': 'bubble-pop 0.3s ease-out',
+        'pop-in': 'pop-in 0.45s cubic-bezier(.34,1.4,.64,1) forwards',
+        'check-draw': 'check-draw 0.4s ease-out 0.2s forwards',
       },
     },
   },

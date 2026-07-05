@@ -24,7 +24,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { ClockIcon, UserIcon, StarIcon, LinkIcon, DocumentIcon, CameraIcon, PrintIcon, ListIcon, CheckIcon, PencilIcon, GlobeIcon, LockIcon, SparkleIcon, PinIcon } from "@/app/components/Icons"
+import { ClockIcon, UserIcon, StarIcon, LinkIcon, DocumentIcon, CameraIcon, PrintIcon, ListIcon, CheckIcon, PencilIcon, GlobeIcon, LockIcon, SparkleIcon, PinIcon, SearchIcon } from "@/app/components/Icons"
 import { pulse, subscribe } from "@/lib/firebase"
 
 const COLORS = [
@@ -131,6 +131,7 @@ export default function Dashboard() {
   const [newListItems, setNewListItems] = useState<string[]>([""])
   const [addItemValue, setAddItemValue] = useState("")
   const [addAsHousehold, setAddAsHousehold] = useState(false)
+  const [grocerySearch, setGrocerySearch] = useState("")
   const [savingNewList, setSavingNewList] = useState(false)
   const [showDeleteCookbookModal, setShowDeleteCookbookModal] = useState(false)
   const [cookbookToDelete, setCookbookToDelete] = useState<string | null>(null)
@@ -177,7 +178,7 @@ export default function Dashboard() {
         const inviteData = await inviteRes.json()
         localStorage.removeItem("pendingInviteCode")
         if (inviteData.success) {
-          router.replace("/profile/settings?new=true")
+          router.replace("/welcome")
           return
         }
         // Code already used — fall through to profile check below
@@ -185,7 +186,7 @@ export default function Dashboard() {
       const res = await fetch("/api/profile", { cache: "no-store" })
       const data = await res.json()
       if (!data.user) { router.replace("/"); return }
-      if (!data.user.username) { router.replace("/profile/settings?new=true"); return }
+      if (!data.user.username) { router.replace("/welcome"); return }
       if (data.user.id) setUserId(data.user.id)
       fetchCookbooks()
       fetchGroceryLists()
@@ -856,26 +857,51 @@ export default function Dashboard() {
                 <LinkIcon size={13} /><span className="text-xs font-medium text-gray-600">Fareway</span>
               </a>
             </div>
+            {(activeGroceryList.items?.length || 0) > 5 && (
+              <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2 mb-3">
+                <SearchIcon size={13} className="text-gray-300 flex-shrink-0" />
+                <input
+                  value={grocerySearch}
+                  onChange={e => setGrocerySearch(e.target.value)}
+                  placeholder="Search this list..."
+                  className="flex-1 text-[16px] md:text-sm outline-none bg-transparent min-w-0 placeholder:text-gray-300"
+                />
+                {grocerySearch && <button onClick={() => setGrocerySearch("")} className="text-gray-300 hover:text-gray-500 text-xs flex-shrink-0">✕</button>}
+              </div>
+            )}
             <div className="border border-gray-200 rounded-xl overflow-hidden mb-4">
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleGroceryDragEnd}>
-                <SortableContext items={activeGroceryList.items?.filter((i: any) => !i.is_household).map((i: any) => i.id) || []} strategy={verticalListSortingStrategy}>
-                  {activeGroceryList.items?.filter((i: any) => !i.is_household).map((item: any) => (
-                    <SortableGroceryItem key={item.id} item={item} onToggle={toggleGroceryItem} onDelete={deleteGroceryItem} onHousehold={toggleItemHousehold}/>
-                  ))}
-                </SortableContext>
-              </DndContext>
-              {activeGroceryList.items?.some((i: any) => i.is_household) && (
-                <>
-                  <div className="flex items-center gap-2 px-3 pt-3 pb-1 border-t border-gray-100">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-                    <span className="text-[10px] font-semibold text-blue-400 uppercase tracking-wide">Household</span>
-                    <span className="text-[10px] text-gray-300">not added to inventory</span>
-                  </div>
-                  {activeGroceryList.items?.filter((i: any) => i.is_household).map((item: any) => (
-                    <HouseholdGroceryItem key={item.id} item={item} onToggle={toggleGroceryItem} onDelete={deleteGroceryItem} onHousehold={toggleItemHousehold}/>
-                  ))}
-                </>
-              )}
+              {(() => {
+                const q = grocerySearch.trim().toLowerCase()
+                const matches = (i: any) => !q || i.ingredient.toLowerCase().includes(q)
+                const foodItems = (activeGroceryList.items || []).filter((i: any) => !i.is_household && matches(i))
+                const householdItems = (activeGroceryList.items || []).filter((i: any) => i.is_household && matches(i))
+                return (
+                  <>
+                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleGroceryDragEnd}>
+                      <SortableContext items={foodItems.map((i: any) => i.id)} strategy={verticalListSortingStrategy}>
+                        {foodItems.map((item: any) => (
+                          <SortableGroceryItem key={item.id} item={item} onToggle={toggleGroceryItem} onDelete={deleteGroceryItem} onHousehold={toggleItemHousehold}/>
+                        ))}
+                      </SortableContext>
+                    </DndContext>
+                    {householdItems.length > 0 && (
+                      <>
+                        <div className="flex items-center gap-2 px-3 pt-3 pb-1 border-t border-gray-100">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                          <span className="text-[10px] font-semibold text-blue-400 uppercase tracking-wide">Household</span>
+                          <span className="text-[10px] text-gray-300">not added to inventory</span>
+                        </div>
+                        {householdItems.map((item: any) => (
+                          <HouseholdGroceryItem key={item.id} item={item} onToggle={toggleGroceryItem} onDelete={deleteGroceryItem} onHousehold={toggleItemHousehold}/>
+                        ))}
+                      </>
+                    )}
+                    {q && foodItems.length === 0 && householdItems.length === 0 && (
+                      <p className="text-sm text-gray-300 text-center py-6">Nothing matches "{grocerySearch}"</p>
+                    )}
+                  </>
+                )
+              })()}
               <div className={`flex items-center gap-2.5 px-3 ${activeGroceryList.items?.length > 0 ? "border-t border-dashed border-gray-200" : ""}`}>
                 <div className="w-3.5 h-3.5 rounded-full border-2 border-dashed border-gray-300 flex-shrink-0" />
                 <input
@@ -899,7 +925,7 @@ export default function Dashboard() {
                 </button>
               </div>
             </div>
-            <button onClick={() => { setShowGroceryListModal(false); setActiveGroceryList(null); setAddItemValue("") }} className="w-full border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Done</button>
+            <button onClick={() => { setShowGroceryListModal(false); setActiveGroceryList(null); setAddItemValue(""); setGrocerySearch("") }} className="w-full border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Done</button>
           </div>
         </div>
       )}
