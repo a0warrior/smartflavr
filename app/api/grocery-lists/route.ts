@@ -2,12 +2,20 @@ import { NextResponse } from "next/server"
 import pool from "@/lib/db"
 import { auth } from "@/auth"
 
+// Household (non-food) items live on grocery lists but stay out of the kitchen inventory
+async function ensureHouseholdColumn() {
+  try {
+    await pool.query("ALTER TABLE grocery_list_items ADD COLUMN IF NOT EXISTS is_household TINYINT(1) NOT NULL DEFAULT 0")
+  } catch {}
+}
+
 export async function GET() {
   const session = await auth()
   if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const [currentUser] = await pool.query("SELECT id FROM users WHERE email = ?", [session.user.email]) as any[]
 
+  await ensureHouseholdColumn()
   const [lists] = await pool.query(
     `SELECT gl.*, NULL as shared_by
      FROM grocery_lists gl
@@ -65,7 +73,8 @@ export async function PUT(req: Request) {
 
   const [currentUser] = await pool.query("SELECT id FROM users WHERE email = ?", [session.user.email]) as any[]
 
-  const { id, name, addItems, deleteItemIds, reorderItems } = await req.json()
+  const { id, name, addItems, deleteItemIds, reorderItems, household, setHousehold } = await req.json()
+  await ensureHouseholdColumn()
 
   // Verify ownership or accepted collaboration
   const [lists] = await pool.query(
@@ -91,10 +100,18 @@ export async function PUT(req: Request) {
     const startOrder = countResult[0].count
     await Promise.all(addItems.map((ingredient: string, index: number) =>
       pool.query(
-        "INSERT INTO grocery_list_items (grocery_list_id, ingredient, sort_order) VALUES (?, ?, ?)",
-        [id, ingredient.trim(), startOrder + index]
+        "INSERT INTO grocery_list_items (grocery_list_id, ingredient, sort_order, is_household) VALUES (?, ?, ?, ?)",
+        [id, ingredient.trim(), startOrder + index, household ? 1 : 0]
       )
     ))
+  }
+
+  // Move an item between food and household
+  if (setHousehold && setHousehold.id !== undefined) {
+    await pool.query(
+      "UPDATE grocery_list_items SET is_household = ? WHERE id = ? AND grocery_list_id = ?",
+      [setHousehold.is_household ? 1 : 0, setHousehold.id, id]
+    )
   }
 
   // Delete items

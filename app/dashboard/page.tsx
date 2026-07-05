@@ -45,7 +45,7 @@ function parseMeasurement(ingredient: string) {
   return { measurement: "", rest: ingredient }
 }
 
-function SortableGroceryItem({ item, onToggle, onDelete }: any) {
+function SortableGroceryItem({ item, onToggle, onDelete, onHousehold }: any) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id })
   const style = { transform: CSS.Transform.toString(transform), transition }
   const { measurement, rest } = parseMeasurement(item.ingredient)
@@ -67,6 +67,34 @@ function SortableGroceryItem({ item, onToggle, onDelete }: any) {
         className={`text-sm flex-1 cursor-pointer ${item.checked ? "line-through text-gray-400" : "text-gray-900"}`}>
         {displayText}
       </span>
+      {onHousehold && (
+        <button onClick={() => onHousehold(item)} title="Move to Household" className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-blue-400 transition flex-shrink-0">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        </button>
+      )}
+      <button onClick={() => onDelete(item.id)} className="text-gray-300 hover:text-red-400 text-xs transition flex-shrink-0">✕</button>
+    </div>
+  )
+}
+
+// Household (non-food) rows — same look, no drag ordering
+function HouseholdGroceryItem({ item, onToggle, onDelete, onHousehold }: any) {
+  return (
+    <div className={`flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-gray-50 transition group ${item.checked ? "opacity-50" : ""}`}>
+      <span className="w-4 flex-shrink-0" />
+      <div
+        onClick={() => onToggle(item.id, !item.checked)}
+        className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition cursor-pointer ${item.checked ? "bg-blue-500 border-blue-500" : "border-gray-300"}`}>
+        {item.checked ? <span className="text-white text-xs">✓</span> : null}
+      </div>
+      <span
+        onClick={() => onToggle(item.id, !item.checked)}
+        className={`text-sm flex-1 cursor-pointer ${item.checked ? "line-through text-gray-400" : "text-gray-900"}`}>
+        {item.ingredient}
+      </span>
+      <button onClick={() => onHousehold(item)} title="Move back to Food" className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-orange-400 transition flex-shrink-0">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/></svg>
+      </button>
       <button onClick={() => onDelete(item.id)} className="text-gray-300 hover:text-red-400 text-xs transition flex-shrink-0">✕</button>
     </div>
   )
@@ -102,6 +130,7 @@ export default function Dashboard() {
   const [newListName, setNewListName] = useState("")
   const [newListItems, setNewListItems] = useState<string[]>([""])
   const [addItemValue, setAddItemValue] = useState("")
+  const [addAsHousehold, setAddAsHousehold] = useState(false)
   const [savingNewList, setSavingNewList] = useState(false)
   const [showDeleteCookbookModal, setShowDeleteCookbookModal] = useState(false)
   const [cookbookToDelete, setCookbookToDelete] = useState<string | null>(null)
@@ -252,8 +281,15 @@ export default function Dashboard() {
 
   async function addItemToList(value: string) {
     if (!value.trim()) return
-    await fetch("/api/grocery-lists", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: activeGroceryList.id, addItems: [value.trim()] }) })
+    await fetch("/api/grocery-lists", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: activeGroceryList.id, addItems: [value.trim()], household: addAsHousehold }) })
     await refreshActiveList(activeGroceryList.id)
+    pulse(`/updates/grocery/${activeGroceryList.id}`)
+  }
+
+  async function toggleItemHousehold(item: any) {
+    const next = item.is_household ? 0 : 1
+    setActiveGroceryList((prev: any) => ({ ...prev, items: prev.items.map((i: any) => i.id === item.id ? { ...i, is_household: next } : i) }))
+    await fetch("/api/grocery-lists", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: activeGroceryList.id, setHousehold: { id: item.id, is_household: next } }) })
     pulse(`/updates/grocery/${activeGroceryList.id}`)
   }
 
@@ -285,7 +321,8 @@ export default function Dashboard() {
 
   function printGroceryList() {
     const list = activeGroceryList
-    const unchecked = list.items?.filter((i: any) => !i.checked) || []
+    const unchecked = list.items?.filter((i: any) => !i.checked && !i.is_household) || []
+    const household = list.items?.filter((i: any) => !i.checked && i.is_household) || []
     const checked = list.items?.filter((i: any) => i.checked) || []
     const rows = (items: any[], done: boolean) =>
       items.map((i: any) => `<div class="item ${done ? "done" : ""}"><span class="box">${done ? "✓" : ""}</span><span>${i.ingredient}</span></div>`).join("")
@@ -306,6 +343,7 @@ export default function Dashboard() {
       <h1>${list.name}</h1>
       <div class="progress">${checked.length} of ${list.items?.length || 0} items checked</div>
       ${unchecked.length ? rows(unchecked, false) : ""}
+      ${household.length ? `<div class="section">Household</div>${rows(household, false)}` : ""}
       ${checked.length ? `<div class="section">Checked</div>${rows(checked, true)}` : ""}
       <div class="footer"><span>SmartFlavr</span><span>${list.name}</span></div>
     </body></html>`
@@ -319,12 +357,14 @@ export default function Dashboard() {
 
   function copyGroceryText() {
     const list = activeGroceryList
-    const unchecked = list.items?.filter((i: any) => !i.checked) || []
+    const unchecked = list.items?.filter((i: any) => !i.checked && !i.is_household) || []
+    const household = list.items?.filter((i: any) => !i.checked && i.is_household) || []
     const checked = list.items?.filter((i: any) => i.checked) || []
     const lines = [
       list.name,
       "",
       ...unchecked.map((i: any) => `• ${i.ingredient}`),
+      ...(household.length ? ["", "— household —", ...household.map((i: any) => `• ${i.ingredient}`)] : []),
       ...(checked.length ? ["", "— checked —", ...checked.map((i: any) => `✓ ${i.ingredient}`)] : []),
     ]
     navigator.clipboard.writeText(lines.join("\n"))
@@ -818,12 +858,24 @@ export default function Dashboard() {
             </div>
             <div className="border border-gray-200 rounded-xl overflow-hidden mb-4">
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleGroceryDragEnd}>
-                <SortableContext items={activeGroceryList.items?.map((i: any) => i.id) || []} strategy={verticalListSortingStrategy}>
-                  {activeGroceryList.items?.map((item: any) => (
-                    <SortableGroceryItem key={item.id} item={item} onToggle={toggleGroceryItem} onDelete={deleteGroceryItem}/>
+                <SortableContext items={activeGroceryList.items?.filter((i: any) => !i.is_household).map((i: any) => i.id) || []} strategy={verticalListSortingStrategy}>
+                  {activeGroceryList.items?.filter((i: any) => !i.is_household).map((item: any) => (
+                    <SortableGroceryItem key={item.id} item={item} onToggle={toggleGroceryItem} onDelete={deleteGroceryItem} onHousehold={toggleItemHousehold}/>
                   ))}
                 </SortableContext>
               </DndContext>
+              {activeGroceryList.items?.some((i: any) => i.is_household) && (
+                <>
+                  <div className="flex items-center gap-2 px-3 pt-3 pb-1 border-t border-gray-100">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                    <span className="text-[10px] font-semibold text-blue-400 uppercase tracking-wide">Household</span>
+                    <span className="text-[10px] text-gray-300">not added to inventory</span>
+                  </div>
+                  {activeGroceryList.items?.filter((i: any) => i.is_household).map((item: any) => (
+                    <HouseholdGroceryItem key={item.id} item={item} onToggle={toggleGroceryItem} onDelete={deleteGroceryItem} onHousehold={toggleItemHousehold}/>
+                  ))}
+                </>
+              )}
               <div className={`flex items-center gap-2.5 px-3 ${activeGroceryList.items?.length > 0 ? "border-t border-dashed border-gray-200" : ""}`}>
                 <div className="w-3.5 h-3.5 rounded-full border-2 border-dashed border-gray-300 flex-shrink-0" />
                 <input
@@ -836,9 +888,15 @@ export default function Dashboard() {
                       setAddItemValue("")
                     }
                   }}
-                  placeholder="Add item..."
+                  placeholder={addAsHousehold ? "Add household item..." : "Add item..."}
                   className="flex-1 text-[16px] md:text-sm outline-none bg-transparent py-2.5 min-w-0 placeholder:text-gray-300"
                 />
+                <button
+                  onClick={() => setAddAsHousehold(h => !h)}
+                  title="Household items (toilet paper, soap...) stay out of your kitchen inventory"
+                  className={`text-[10px] font-semibold rounded-full px-2.5 py-1 border transition flex-shrink-0 ${addAsHousehold ? "bg-blue-500 text-white border-blue-500" : "border-gray-200 text-gray-400 hover:bg-gray-50"}`}>
+                  Household
+                </button>
               </div>
             </div>
             <button onClick={() => { setShowGroceryListModal(false); setActiveGroceryList(null); setAddItemValue("") }} className="w-full border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Done</button>

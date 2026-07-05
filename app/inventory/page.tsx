@@ -227,11 +227,16 @@ export default function InventoryPage() {
     toast.success("Added to grocery list!")
   }
 
+  // Household items (toilet paper, soap...) never belong in the kitchen inventory
+  function foodItemsOf(list: any) {
+    return (list?.items || []).filter((i: any) => !i.is_household)
+  }
+
   function openImportModal() {
     if (groceryLists.length === 0) return toast.info("You don't have any grocery lists yet.")
     const first = groceryLists[0]
     setSelectedList(first)
-    setSelectedItems(new Set(first?.items?.map((i: any) => i.id) || []))
+    setSelectedItems(new Set(foodItemsOf(first).map((i: any) => i.id)))
     setShowImportModal(true)
   }
 
@@ -239,7 +244,7 @@ export default function InventoryPage() {
     const list = groceryLists.find((l: any) => l.id === parseInt(listId))
     if (!list) return
     setSelectedList(list)
-    setSelectedItems(new Set(list?.items?.map((i: any) => i.id) || []))
+    setSelectedItems(new Set(foodItemsOf(list).map((i: any) => i.id)))
   }
 
   function toggleSelectItem(id: number) {
@@ -251,10 +256,10 @@ export default function InventoryPage() {
   }
 
   function toggleSelectAll() {
-    if (selectedItems.size === selectedList?.items?.length) {
+    if (selectedItems.size === foodItemsOf(selectedList).length) {
       setSelectedItems(new Set())
     } else {
-      setSelectedItems(new Set(selectedList?.items?.map((i: any) => i.id) || []))
+      setSelectedItems(new Set(foodItemsOf(selectedList).map((i: any) => i.id)))
     }
   }
 
@@ -527,17 +532,20 @@ export default function InventoryPage() {
               <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={selectedItems.size === selectedList?.items?.length && selectedList?.items?.length > 0}
+                  checked={selectedItems.size === foodItemsOf(selectedList).length && foodItemsOf(selectedList).length > 0}
                   onChange={toggleSelectAll}
                   className="w-4 h-4 accent-orange-500"
                   onClick={e => e.stopPropagation()}
                 />
                 Select all
               </label>
-              <span className="text-xs text-gray-400">{selectedItems.size} of {selectedList?.items?.length || 0} selected</span>
+              <span className="text-xs text-gray-400">{selectedItems.size} of {foodItemsOf(selectedList).length} selected</span>
             </div>
+            {(selectedList?.items || []).some((i: any) => i.is_household) && (
+              <p className="text-xs text-blue-400 mb-2">Household items are left out — they don't belong in your kitchen inventory.</p>
+            )}
             <div className="flex-1 overflow-y-auto space-y-0.5 mb-4">
-              {selectedList?.items?.map((item: any) => (
+              {foodItemsOf(selectedList).map((item: any) => (
                 <div
                   key={item.id}
                   onClick={() => toggleSelectItem(item.id)}
