@@ -21,6 +21,8 @@ export const metadata = {
 export const viewport = {
   width: "device-width",
   initialScale: 1,
+  // Stops iOS auto-zooming when focusing inputs; manual pinch-zoom still works
+  maximumScale: 1,
   viewportFit: "cover" as const,
   themeColor: "#F97316",
 }
