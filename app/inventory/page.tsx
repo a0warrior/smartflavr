@@ -59,6 +59,7 @@ export default function InventoryPage() {
   const [customCategories, setCustomCategories] = useState<any[]>([])
   const [showNewCatModal, setShowNewCatModal] = useState(false)
   const [newCatName, setNewCatName] = useState("")
+  const [moveItem, setMoveItem] = useState<any>(null)
   const nameInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -158,6 +159,18 @@ export default function InventoryPage() {
     setAdding(false)
     // Keep the flow going — focus back on the name field so you can keep typing
     nameInputRef.current?.focus()
+  }
+
+  async function changeItemCategory(item: any, category: string) {
+    setMoveItem(null)
+    if (item.category === category) return
+    setItems(prev => prev.map(i => i.id === item.id ? { ...i, category } : i))
+    await fetch("/api/inventory", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: item.id, category }),
+    })
+    toast.success(`Moved to ${category}`)
   }
 
   async function markUsed(id: number) {
@@ -412,7 +425,14 @@ export default function InventoryPage() {
                     <div key={item.id} className="bg-white border border-gray-100 rounded-2xl p-3 flex flex-col gap-1">
                       <div className="text-sm font-medium text-gray-900 truncate">{item.name}</div>
                       {item.quantity && <div className="text-xs text-gray-400">{item.quantity}</div>}
-                      <div className="flex justify-end mt-2">
+                      <div className="flex items-center justify-between mt-2">
+                        <button
+                          onClick={() => setMoveItem(item)}
+                          title="Move to another category"
+                          className="text-xs text-gray-300 hover:text-orange-500 transition flex items-center gap-1">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg>
+                          Move
+                        </button>
                         <button
                           onClick={() => markUsed(item.id)}
                           className="text-xs text-gray-300 hover:text-red-400 transition">
@@ -605,6 +625,26 @@ export default function InventoryPage() {
                 </select>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {moveItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50" onClick={() => setMoveItem(null)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
+            <h2 className="text-lg font-medium mb-1">Move item</h2>
+            <p className="text-sm text-gray-400 mb-4">Pick a category for <span className="font-medium text-gray-700">{moveItem.name}</span>.</p>
+            <div className="flex flex-wrap gap-2 mb-5">
+              {allCategories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => changeItemCategory(moveItem, cat)}
+                  className={`text-sm px-4 py-2 rounded-full border transition ${moveItem.category === cat ? "bg-orange-500 text-white border-orange-500" : "border-gray-200 text-gray-600 hover:bg-orange-50 hover:border-orange-200"}`}>
+                  {cat}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setMoveItem(null)} className="w-full border border-gray-200 rounded-xl py-2.5 text-sm text-gray-500 hover:bg-gray-50">Cancel</button>
           </div>
         </div>
       )}

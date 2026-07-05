@@ -44,12 +44,17 @@ export async function PUT(req: Request) {
   const session = await auth()
   if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const { id, in_stock } = await req.json()
+  const { id, in_stock, category } = await req.json()
 
-  await pool.query(
-    "UPDATE inventory_items SET in_stock = ?, used_at = ? WHERE id = ?",
-    [in_stock, in_stock === 0 ? new Date() : null, id]
-  )
+  if (category !== undefined) {
+    await pool.query("UPDATE inventory_items SET category = ? WHERE id = ?", [category, id])
+  }
+  if (in_stock !== undefined) {
+    await pool.query(
+      "UPDATE inventory_items SET in_stock = ?, used_at = ? WHERE id = ?",
+      [in_stock, in_stock === 0 ? new Date() : null, id]
+    )
+  }
 
   return NextResponse.json({ success: true })
 }
