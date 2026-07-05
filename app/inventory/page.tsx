@@ -59,7 +59,10 @@ export default function InventoryPage() {
   const [customCategories, setCustomCategories] = useState<any[]>([])
   const [showNewCatModal, setShowNewCatModal] = useState(false)
   const [newCatName, setNewCatName] = useState("")
-  const [moveItem, setMoveItem] = useState<any>(null)
+  const [editItem, setEditItem] = useState<any>(null)
+  const [editName, setEditName] = useState("")
+  const [editQty, setEditQty] = useState("")
+  const [editCat, setEditCat] = useState("")
   const nameInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -161,16 +164,24 @@ export default function InventoryPage() {
     nameInputRef.current?.focus()
   }
 
-  async function changeItemCategory(item: any, category: string) {
-    setMoveItem(null)
-    if (item.category === category) return
-    setItems(prev => prev.map(i => i.id === item.id ? { ...i, category } : i))
+  function openEditItem(item: any) {
+    setEditItem(item)
+    setEditName(item.name || "")
+    setEditQty(item.quantity || "")
+    setEditCat(item.category || "Pantry")
+  }
+
+  async function saveItemEdit() {
+    if (!editItem || !editName.trim()) return
+    const patch = { name: editName.trim(), quantity: editQty.trim(), category: editCat }
+    setItems(prev => prev.map(i => i.id === editItem.id ? { ...i, ...patch } : i))
+    setEditItem(null)
     await fetch("/api/inventory", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: item.id, category }),
+      body: JSON.stringify({ id: editItem.id, ...patch }),
     })
-    toast.success(`Moved to ${category}`)
+    toast.success("Item updated!")
   }
 
   async function markUsed(id: number) {
@@ -423,15 +434,15 @@ export default function InventoryPage() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {catItems.map((item: any) => (
                     <div key={item.id} className="bg-white border border-gray-100 rounded-2xl p-3 flex flex-col gap-1">
-                      <div className="text-sm font-medium text-gray-900 truncate">{item.name}</div>
+                      <div onClick={() => openEditItem(item)} className="text-sm font-medium text-gray-900 truncate cursor-pointer">{item.name}</div>
                       {item.quantity && <div className="text-xs text-gray-400">{item.quantity}</div>}
                       <div className="flex items-center justify-between mt-2">
                         <button
-                          onClick={() => setMoveItem(item)}
-                          title="Move to another category"
+                          onClick={() => openEditItem(item)}
+                          title="Edit name, quantity, or category"
                           className="text-xs text-gray-300 hover:text-orange-500 transition flex items-center gap-1">
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg>
-                          Move
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg>
+                          Edit
                         </button>
                         <button
                           onClick={() => markUsed(item.id)}
@@ -629,22 +640,41 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {moveItem && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50" onClick={() => setMoveItem(null)}>
+      {editItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50" onClick={() => setEditItem(null)}>
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
-            <h2 className="text-lg font-medium mb-1">Move item</h2>
-            <p className="text-sm text-gray-400 mb-4">Pick a category for <span className="font-medium text-gray-700">{moveItem.name}</span>.</p>
+            <h2 className="text-lg font-medium mb-4">Edit item</h2>
+            <label className="text-xs text-gray-500 mb-1 block">Name</label>
+            <input
+              value={editName}
+              onChange={e => setEditName(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && saveItemEdit()}
+              autoFocus
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none mb-3"
+            />
+            <label className="text-xs text-gray-500 mb-1 block">Quantity <span className="text-gray-300">(optional)</span></label>
+            <input
+              value={editQty}
+              onChange={e => setEditQty(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && saveItemEdit()}
+              placeholder="e.g. 2 lbs"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none mb-3"
+            />
+            <label className="text-xs text-gray-500 mb-2 block">Category</label>
             <div className="flex flex-wrap gap-2 mb-5">
               {allCategories.map(cat => (
                 <button
                   key={cat}
-                  onClick={() => changeItemCategory(moveItem, cat)}
-                  className={`text-sm px-4 py-2 rounded-full border transition ${moveItem.category === cat ? "bg-orange-500 text-white border-orange-500" : "border-gray-200 text-gray-600 hover:bg-orange-50 hover:border-orange-200"}`}>
+                  onClick={() => setEditCat(cat)}
+                  className={`text-sm px-4 py-2 rounded-full border transition ${editCat === cat ? "bg-orange-500 text-white border-orange-500" : "border-gray-200 text-gray-600 hover:bg-orange-50 hover:border-orange-200"}`}>
                   {cat}
                 </button>
               ))}
             </div>
-            <button onClick={() => setMoveItem(null)} className="w-full border border-gray-200 rounded-xl py-2.5 text-sm text-gray-500 hover:bg-gray-50">Cancel</button>
+            <div className="flex gap-3">
+              <button onClick={() => setEditItem(null)} className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm text-gray-500 hover:bg-gray-50">Cancel</button>
+              <button onClick={saveItemEdit} disabled={!editName.trim()} className="flex-1 bg-orange-500 text-white rounded-xl py-2.5 text-sm font-medium hover:bg-orange-600 disabled:opacity-50">Save</button>
+            </div>
           </div>
         </div>
       )}
