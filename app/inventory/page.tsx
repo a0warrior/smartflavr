@@ -145,7 +145,7 @@ export default function InventoryPage() {
   }
 
   async function addItem() {
-    if (!newName.trim()) return
+    if (!newName.trim() || adding) return
     setAdding(true)
     await fetch("/api/inventory", {
       method: "POST",
@@ -326,7 +326,7 @@ export default function InventoryPage() {
           </button>
         </div>
 
-        <div className="flex gap-2 mb-6 flex-wrap">
+        <div className="flex flex-col md:flex-row gap-2 mb-6">
           <input
             ref={nameInputRef}
             value={newName}
@@ -334,32 +334,36 @@ export default function InventoryPage() {
             onKeyDown={e => e.key === "Enter" && addItem()}
             enterKeyHint="done"
             placeholder='e.g. "2 lbs chicken breast" or just "milk"'
-            className="flex-1 min-w-0 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-white"
+            className="w-full md:flex-1 min-w-0 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-white"
           />
-          <input
-            value={newQty}
-            onChange={e => setNewQty(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && addItem()}
-            enterKeyHint="done"
-            placeholder="Qty"
-            className="w-24 border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none bg-white"
-          />
-          <select
-            value={newCategory}
-            onChange={e => {
-              if (e.target.value === "__new") { setShowNewCatModal(true); return }
-              setNewCategory(e.target.value)
-            }}
-            className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none bg-white">
-            {allCategories.map(c => <option key={c}>{c}</option>)}
-            <option value="__new">＋ New category…</option>
-          </select>
-          <button
-            onClick={addItem}
-            disabled={adding || !newName.trim()}
-            className="bg-orange-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-orange-600 transition disabled:opacity-50">
-            {adding ? "Adding..." : "Add"}
-          </button>
+          <div className="flex gap-2">
+            <input
+              value={newQty}
+              onChange={e => setNewQty(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && addItem()}
+              enterKeyHint="done"
+              placeholder="Qty"
+              className="w-20 flex-shrink-0 border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none bg-white"
+            />
+            <select
+              value={newCategory}
+              onChange={e => setNewCategory(e.target.value)}
+              className="flex-1 min-w-0 border border-gray-200 rounded-xl px-2 py-2.5 text-sm outline-none bg-white">
+              {allCategories.map(c => <option key={c}>{c}</option>)}
+            </select>
+            <button
+              onClick={() => setShowNewCatModal(true)}
+              title="New category"
+              className="w-11 flex-shrink-0 border border-gray-200 rounded-xl text-gray-400 hover:text-orange-500 hover:border-orange-200 transition text-lg leading-none bg-white">
+              +
+            </button>
+            <button
+              onClick={addItem}
+              disabled={adding || !newName.trim()}
+              className="bg-orange-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-orange-600 transition disabled:opacity-50 flex-shrink-0">
+              {adding ? "..." : "Add"}
+            </button>
+          </div>
         </div>
 
         <div className="flex gap-2 flex-wrap mb-6">

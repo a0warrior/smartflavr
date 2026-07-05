@@ -185,6 +185,7 @@ export default function CookingMode({ recipe, onClose }: { recipe: any, onClose:
           <div className="px-5 pt-5 pb-3">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Ingredients</p>
             <div className="bg-white border border-gray-100 rounded-2xl px-4 py-1">
+              {ingredients.length === 0 && <p className="text-sm text-gray-300 py-3">No ingredients listed.</p>}
               {ingredients.map((ing, i) => (
                 <label key={i} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0 cursor-pointer">
                   <input

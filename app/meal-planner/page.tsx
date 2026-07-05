@@ -848,6 +848,11 @@ export default function MealPlannerPage() {
                   <option key={b.id} value={b.id}>{b.cover_emoji} {b.title}</option>
                 ))}
               </select>
+              {cookbooks.length === 0 && (
+                <p className="text-xs text-gray-400 mt-2">
+                  You don't have any cookbooks with recipes yet — <a href="/dashboard" className="text-orange-500 underline">create one on your dashboard</a> first.
+                </p>
+              )}
             </div>
             {selectedCookbook && (
               <div className="flex gap-2 mb-3">
@@ -869,6 +874,11 @@ export default function MealPlannerPage() {
                   </select>
                 )}
               </div>
+            )}
+            {selectedCookbook && filteredRecipes.length === 0 && (
+              <p className="text-sm text-gray-400 text-center py-6">
+                {allRecipes.length === 0 ? "This cookbook doesn't have any recipes yet." : "No recipes match your search."}
+              </p>
             )}
             {filteredRecipes.length > 0 && (
               <div className="space-y-2">

@@ -967,6 +967,13 @@ export default function FeedPage() {
                     <option key={b.id} value={b.id}>{b.cover_emoji} {b.title}{postType === "recipe" && b.is_public !== 1 ? " (private)" : ""}</option>
                   ))}
                 </select>
+                {(postType === "cookbook" ? myCookbooks.filter((b: any) => b.is_public === 1) : myCookbooks).length === 0 && (
+                  <p className="text-xs text-gray-400 mb-2">
+                    {postType === "cookbook"
+                      ? "You don't have any public cookbooks yet — open a cookbook on your dashboard and make it public first."
+                      : <>You don't have any cookbooks yet — <Link href="/dashboard" className="text-orange-500 underline">create one on your dashboard</Link> first.</>}
+                  </p>
+                )}
                 {postType === "recipe" && postCookbookId && (
                   <>
                     <label className="text-sm text-gray-500 mb-1 block">Select recipe</label>
