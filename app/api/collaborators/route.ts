@@ -2,6 +2,14 @@ import { NextResponse } from "next/server"
 import pool from "@/lib/db"
 import { auth } from "@/auth"
 
+// Collaborators can be editors (full edit access) or viewers (can see a
+// private cookbook but not change it). Lazily add the role column.
+async function ensureRoleColumn() {
+  try {
+    await pool.query("ALTER TABLE cookbook_collaborators ADD COLUMN IF NOT EXISTS role VARCHAR(10) NOT NULL DEFAULT 'editor'")
+  } catch {}
+}
+
 export async function GET(req: Request) {
   const session = await auth()
   if (!session?.user?.email) {
@@ -11,8 +19,9 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const cookbook_id = searchParams.get("cookbook_id")
 
+  await ensureRoleColumn()
   const [collaborators] = await pool.query(
-    `SELECT users.id, users.name, users.username, users.profile_image, cookbook_collaborators.status
+    `SELECT users.id, users.name, users.username, users.profile_image, cookbook_collaborators.status, cookbook_collaborators.role
      FROM cookbook_collaborators
      LEFT JOIN users ON cookbook_collaborators.user_id = users.id
      WHERE cookbook_collaborators.cookbook_id = ?`,
@@ -33,7 +42,9 @@ export async function POST(req: Request) {
     [session.user.email]
   ) as any[]
 
-  const { cookbook_id, username } = await req.json()
+  const { cookbook_id, username, role } = await req.json()
+  const collabRole = role === "viewer" ? "viewer" : "editor"
+  await ensureRoleColumn()
 
   const [cookbook] = await pool.query(
     "SELECT id, title FROM cookbooks WHERE id = ? AND user_id = ?",
@@ -77,16 +88,18 @@ export async function POST(req: Request) {
   }
 
   await pool.query(
-    "INSERT INTO cookbook_collaborators (cookbook_id, user_id, invited_by, status) VALUES (?, ?, ?, 'pending')",
-    [cookbook_id, targetUser[0].id, currentUser[0].id]
+    "INSERT INTO cookbook_collaborators (cookbook_id, user_id, invited_by, status, role) VALUES (?, ?, ?, 'pending', ?)",
+    [cookbook_id, targetUser[0].id, currentUser[0].id, collabRole]
   )
 
   await pool.query(
     `INSERT INTO notifications (user_id, type, message, data) VALUES (?, 'collab_invite', ?, ?)`,
     [
       targetUser[0].id,
-      `${currentUser[0].name} invited you to collaborate on "${cookbook[0].title}"`,
-      JSON.stringify({ cookbook_id: cookbook[0].id, cookbook_title: cookbook[0].title, invited_by: currentUser[0].name })
+      collabRole === "viewer"
+        ? `${currentUser[0].name} invited you to view "${cookbook[0].title}"`
+        : `${currentUser[0].name} invited you to collaborate on "${cookbook[0].title}"`,
+      JSON.stringify({ cookbook_id: cookbook[0].id, cookbook_title: cookbook[0].title, invited_by: currentUser[0].name, role: collabRole })
     ]
   )
 

@@ -138,6 +138,7 @@ export default function CookbookPage() {
   const [cookbookInfo, setCookbookInfo] = useState<any>(null)
   const [isOwner, setIsOwner] = useState(false)
   const [isCollaborator, setIsCollaborator] = useState(false)
+  const [isViewer, setIsViewer] = useState(false)
   const [collaborators, setCollaborators] = useState<any[]>([])
   const [showCollaboratorModal, setShowCollaboratorModal] = useState(false)
   const [activeUsers, setActiveUsers] = useState<any[]>([])
@@ -326,10 +327,12 @@ export default function CookbookPage() {
         const owner = cookbookData.cookbook.user_id === profileData.user.id
         setIsOwner(owner)
         if (!owner) {
-          const isCollab = (collaboratorsData.collaborators || []).some(
+          const mine = (collaboratorsData.collaborators || []).find(
             (c: any) => c.id === profileData.user.id && c.status === "accepted"
           )
-          setIsCollaborator(isCollab)
+          // Editors get full edit access; viewers can see a private cookbook but not change it
+          setIsCollaborator(!!mine && mine.role !== "viewer")
+          setIsViewer(!!mine && mine.role === "viewer")
         }
       }
     }
@@ -814,7 +817,7 @@ export default function CookbookPage() {
                   <PrintIcon size={18} />
                   <span>Print</span>
                 </CookbookPDFButton>
-                {isCollaborator && !isOwner && (
+                {(isCollaborator || isViewer) && !isOwner && (
                   <button
                     onClick={async () => {
                       if (!confirm("Leave this cookbook?")) return
@@ -1050,7 +1053,7 @@ export default function CookbookPage() {
               className="flex-1 flex flex-col items-center gap-1 py-3 text-xs text-gray-500 hover:bg-gray-50 hover:text-orange-500 transition">
               <PrintIcon size={17} />Print
             </CookbookPDFButton>
-            {isCollaborator && !isOwner && (
+            {(isCollaborator || isViewer) && !isOwner && (
               <button
                 onClick={async () => {
                   if (!confirm("Leave this cookbook?")) return

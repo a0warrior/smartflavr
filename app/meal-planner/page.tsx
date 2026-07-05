@@ -6,6 +6,7 @@ import Navbar from "@/app/components/Navbar"
 import MealPlanSyncModal from "@/app/components/MealPlanSyncModal"
 import { toast } from "@/app/components/Toast"
 import { PageSkeleton } from "@/app/components/Skeletons"
+import CookingMode from "@/app/components/CookingMode"
 import { SparkleIcon, PlateIcon, ClockIcon, UserIcon, FlameIcon } from "@/app/components/Icons"
 import { pulse, subscribe } from "@/lib/firebase"
 import { DndContext, PointerSensor, useSensor, useSensors, useDraggable, useDroppable, DragEndEvent } from "@dnd-kit/core"
@@ -35,7 +36,7 @@ function isToday(date: Date) {
   return date.toDateString() === today.toDateString()
 }
 
-function DraggableMeal({ meal, onRemove }: { meal: any, onRemove: () => void }) {
+function DraggableMeal({ meal, onRemove, onOpen }: { meal: any, onRemove: () => void, onOpen: () => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: `meal-${meal.id}`, data: { meal } })
   return (
     <div
@@ -43,14 +44,15 @@ function DraggableMeal({ meal, onRemove }: { meal: any, onRemove: () => void }) 
       style={{ transform: CSS.Translate.toString(transform), zIndex: isDragging ? 40 : undefined }}
       {...listeners}
       {...attributes}
-      className={`bg-orange-50 border border-orange-100 rounded-lg p-1.5 group relative cursor-grab active:cursor-grabbing touch-none ${isDragging ? "opacity-80 shadow-lg ring-2 ring-orange-300" : ""}`}>
+      onClick={onOpen}
+      className={`bg-orange-50 border border-orange-100 rounded-lg p-1.5 group relative cursor-pointer touch-none hover:border-orange-300 transition ${isDragging ? "opacity-80 shadow-lg ring-2 ring-orange-300 cursor-grabbing" : ""}`}>
       <div className="text-xs font-medium text-orange-800 leading-tight pr-4">{meal.recipe_title}</div>
       {meal.nutrition && (() => {
         const n = typeof meal.nutrition === "string" ? JSON.parse(meal.nutrition) : meal.nutrition
         return <div className="text-xs text-orange-500 mt-0.5">{Math.round(n.calories)} cal</div>
       })()}
       {meal.synced_to_calendar === 1 && <div className="text-xs text-blue-400 mt-0.5">Synced</div>}
-      <button onClick={onRemove} className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-orange-300 hover:text-red-400 text-xs transition">×</button>
+      <button onClick={e => { e.stopPropagation(); onRemove() }} className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-orange-300 hover:text-red-400 text-xs transition">×</button>
     </div>
   )
 }
@@ -99,6 +101,9 @@ export default function MealPlannerPage() {
   const [mobileDate, setMobileDate] = useState<Date>(new Date())
   const [planStatus, setPlanStatus] = useState<any>(null)
   const [userId, setUserId] = useState<number | null>(null)
+  const [viewingRecipe, setViewingRecipe] = useState<any>(null)
+  const [loadingRecipe, setLoadingRecipe] = useState(false)
+  const [cookingRecipe, setCookingRecipe] = useState(false)
   const [goals, setGoals] = useState<any>(null)
   const [showGoalsModal, setShowGoalsModal] = useState(false)
   const [goalInputs, setGoalInputs] = useState({ calories: "", protein: "", carbs: "", fat: "" })
@@ -310,6 +315,16 @@ export default function MealPlannerPage() {
     })
     fetchMeals()
     if (userId) pulse(`/updates/users/${userId}/mealplan`)
+  }
+
+  async function openMealRecipe(meal: any) {
+    if (loadingRecipe) return
+    setLoadingRecipe(true)
+    const res = await fetch(`/api/meal-plans/recipe?meal_id=${meal.id}`)
+    const data = await res.json()
+    setLoadingRecipe(false)
+    if (data.error) return toast.error("Couldn't open this recipe.")
+    setViewingRecipe({ ...data.recipe, partner_name: meal.partner_name || null })
   }
 
   async function moveMeal(meal: any, newDate: string, newCategory: string) {
@@ -704,7 +719,7 @@ export default function MealPlannerPage() {
                   <div className="p-3 space-y-2">
                     {cellMeals.map((meal: any) => (
                       <div key={meal.id} className="flex items-center gap-3 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2.5">
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => openMealRecipe(meal)}>
                           <p className="text-sm font-medium text-orange-800 truncate">{meal.recipe_title}</p>
                           {meal.nutrition && (() => {
                             const n = typeof meal.nutrition === "string" ? JSON.parse(meal.nutrition) : meal.nutrition
@@ -715,7 +730,7 @@ export default function MealPlannerPage() {
                       </div>
                     ))}
                     {collaboratorMeals.filter((m: any) => m.meal_date?.split("T")[0] === formatDate(mobileDate) && m.meal_type === cat.name).map((meal: any) => (
-                      <div key={`collab-${meal.id}`} className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5">
+                      <div key={`collab-${meal.id}`} onClick={() => openMealRecipe(meal)} className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5 cursor-pointer active:bg-blue-100 transition">
                         {meal.partner_image ? (
                           <img src={meal.partner_image} className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
                         ) : (
@@ -748,7 +763,7 @@ export default function MealPlannerPage() {
                   </div>
                   <div className="p-3 space-y-2">
                     {dayPartnerMeals.map((meal: any) => (
-                      <div key={`collab-${meal.id}`} className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5">
+                      <div key={`collab-${meal.id}`} onClick={() => openMealRecipe(meal)} className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5 cursor-pointer active:bg-blue-100 transition">
                         {meal.partner_image ? (
                           <img src={meal.partner_image} className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
                         ) : (
@@ -815,10 +830,10 @@ export default function MealPlannerPage() {
                     <DroppableCell key={`${cat.id}-${i}`} date={formatDate(date)} category={cat.name} isTodayCell={isToday(date)}>
                       <div className="space-y-1">
                         {cellMeals.map((meal: any) => (
-                          <DraggableMeal key={meal.id} meal={meal} onRemove={() => removeMeal(meal)} />
+                          <DraggableMeal key={meal.id} meal={meal} onRemove={() => removeMeal(meal)} onOpen={() => openMealRecipe(meal)} />
                         ))}
                         {collaboratorMeals.filter((m: any) => m.meal_date?.split("T")[0] === formatDate(date) && m.meal_type === cat.name).map((meal: any) => (
-                          <div key={`collab-${meal.id}`} className="bg-blue-50 border border-blue-100 rounded-lg p-1.5 relative">
+                          <div key={`collab-${meal.id}`} onClick={() => openMealRecipe(meal)} className="bg-blue-50 border border-blue-100 rounded-lg p-1.5 relative cursor-pointer hover:border-blue-300 transition">
                             <div className="flex items-center gap-1 mb-0.5">
                               {meal.partner_image ? (
                                 <img src={meal.partner_image} className="w-3.5 h-3.5 rounded-full object-cover flex-shrink-0" />
@@ -848,7 +863,7 @@ export default function MealPlannerPage() {
                   <div key={`partner-${catName}-${i}`} className={`p-2 border-b border-r border-gray-100 last:border-r-0 min-h-16 ${isToday(date) ? "bg-orange-50/30" : ""}`}>
                     <div className="space-y-1">
                       {collaboratorMeals.filter((m: any) => m.meal_date?.split("T")[0] === formatDate(date) && m.meal_type === catName).map((meal: any) => (
-                        <div key={`collab-${meal.id}`} className="bg-blue-50 border border-blue-100 rounded-lg p-1.5 relative">
+                        <div key={`collab-${meal.id}`} onClick={() => openMealRecipe(meal)} className="bg-blue-50 border border-blue-100 rounded-lg p-1.5 relative cursor-pointer hover:border-blue-300 transition">
                           <div className="flex items-center gap-1 mb-0.5">
                             {meal.partner_image ? (
                               <img src={meal.partner_image} className="w-3.5 h-3.5 rounded-full object-cover flex-shrink-0" />
@@ -1134,6 +1149,72 @@ export default function MealPlannerPage() {
 
       {showSyncModal && (
         <MealPlanSyncModal onClose={() => setShowSyncModal(false)} onSyncChange={fetchMeals} />
+      )}
+
+      {viewingRecipe && !cookingRecipe && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-end md:items-center justify-center z-50" onClick={() => setViewingRecipe(null)}>
+          <div className="bg-white rounded-t-3xl md:rounded-2xl w-full max-w-lg md:mx-4 max-h-[90vh] md:max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start justify-between px-5 pt-5 pb-3 border-b border-gray-100 flex-shrink-0">
+              <div className="min-w-0">
+                <h2 className="text-lg font-medium leading-snug">{viewingRecipe.title}</h2>
+                {viewingRecipe.partner_name && (
+                  <p className="text-xs text-blue-500 mt-0.5">From {viewingRecipe.partner_name}'s meal plan</p>
+                )}
+              </div>
+              <button onClick={() => setViewingRecipe(null)} className="text-gray-400 hover:text-gray-600 text-lg p-1 -mr-1 flex-shrink-0">✕</button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+              <div className="flex gap-2 mb-3 flex-wrap">
+                {viewingRecipe.prep_time && <span className="bg-gray-100 rounded-full px-3 py-1 text-xs text-gray-500 flex items-center gap-1.5"><ClockIcon size={11} />{viewingRecipe.prep_time}</span>}
+                {viewingRecipe.servings && <span className="bg-gray-100 rounded-full px-3 py-1 text-xs text-gray-500 flex items-center gap-1.5"><UserIcon size={11} />{viewingRecipe.servings}</span>}
+                {viewingRecipe.nutrition && (() => {
+                  const n = typeof viewingRecipe.nutrition === "string" ? JSON.parse(viewingRecipe.nutrition) : viewingRecipe.nutrition
+                  return n?.calories ? <span className="bg-gray-100 rounded-full px-3 py-1 text-xs text-gray-500 flex items-center gap-1.5"><FlameIcon size={11} />{Math.round(n.calories)} cal</span> : null
+                })()}
+              </div>
+              {viewingRecipe.image_url && <img src={viewingRecipe.image_url} className="w-full max-h-52 object-cover rounded-xl mb-4" />}
+              {viewingRecipe.description && <p className="text-sm text-gray-500 mb-4 leading-relaxed">{viewingRecipe.description}</p>}
+              {viewingRecipe.ingredients && (
+                <div className="mb-5">
+                  <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Ingredients</div>
+                  {viewingRecipe.ingredients.split("\n").filter(Boolean).map((ing: string, i: number) => (
+                    <div key={i} className="flex items-center gap-2.5 py-1.5 border-b border-gray-50 text-sm">
+                      <span className="w-1.5 h-1.5 rounded-full bg-orange-300 flex-shrink-0" />{ing}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {viewingRecipe.instructions && (
+                <div className="mb-5">
+                  <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Instructions</div>
+                  {viewingRecipe.instructions.split("\n").filter(Boolean).map((step: string, i: number) => (
+                    <div key={i} className="flex gap-2.5 mb-3">
+                      <div className="w-5 h-5 rounded-full bg-orange-50 text-orange-700 text-[10px] font-semibold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</div>
+                      <p className="text-sm leading-relaxed flex-1">{step}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {viewingRecipe.notes && (
+                <div className="bg-amber-50 rounded-xl p-3.5 text-sm text-amber-800 leading-relaxed mb-4">{viewingRecipe.notes}</div>
+              )}
+            </div>
+            {viewingRecipe.instructions && (
+              <div className="px-5 py-4 border-t border-gray-100 flex-shrink-0" style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}>
+                <button
+                  onClick={() => setCookingRecipe(true)}
+                  className="w-full flex items-center justify-center gap-2 bg-orange-500 text-white py-3 rounded-2xl text-sm font-semibold hover:bg-orange-600 active:scale-[0.99] transition">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+                  Start cooking
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {viewingRecipe && cookingRecipe && (
+        <CookingMode recipe={viewingRecipe} onClose={() => setCookingRecipe(false)} />
       )}
 
       {showGoalsModal && (

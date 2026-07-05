@@ -436,6 +436,37 @@ export default function Dashboard() {
     setImportCookbooks(prev => { const current = prev[recipeIndex] || []; return { ...prev, [recipeIndex]: current.includes(cookbookId) ? current.filter(id => id !== cookbookId) : [...current, cookbookId] } })
   }
 
+  const [quickCbName, setQuickCbName] = useState("")
+  const [showQuickCb, setShowQuickCb] = useState(false)
+  const [creatingCb, setCreatingCb] = useState(false)
+
+  // Create a cookbook inline from the save/import modals and select it
+  async function quickCreateCookbook(selectFor: "extract" | "import") {
+    if (!quickCbName.trim() || creatingCb) return
+    setCreatingCb(true)
+    const res = await fetch("/api/cookbooks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: quickCbName.trim(), cover_emoji: "📖", cover_color: "#F97316" }),
+    })
+    const data = await res.json()
+    setCreatingCb(false)
+    if (!data.id) return toast.error("Could not create cookbook.")
+    await fetchCookbooks()
+    if (selectFor === "extract") {
+      setSelectedCookbooks(prev => [...prev, data.id])
+    } else {
+      setImportCookbooks(prev => {
+        const next = { ...prev }
+        importedRecipes.forEach((_, i) => { next[i] = [...(next[i] || []), data.id] })
+        return next
+      })
+    }
+    setQuickCbName("")
+    setShowQuickCb(false)
+    toast.success(`"${quickCbName.trim()}" created!`)
+  }
+
   // Users with no cookbooks yet get one created automatically so saving always works
   async function ensureDefaultCookbook(): Promise<string | null> {
     const res = await fetch("/api/cookbooks", {
@@ -975,6 +1006,25 @@ export default function Dashboard() {
                     <span className="text-sm">{book.cover_emoji} {book.title}</span>
                   </label>
                 ))}
+                {showQuickCb ? (
+                  <div className="flex gap-2 p-2">
+                    <input
+                      value={quickCbName}
+                      onChange={e => setQuickCbName(e.target.value)}
+                      onKeyDown={e => e.key === "Enter" && quickCreateCookbook("extract")}
+                      placeholder="Cookbook name..."
+                      autoFocus
+                      className="flex-1 min-w-0 border border-gray-200 rounded-lg px-3 py-1.5 text-sm outline-none"
+                    />
+                    <button onClick={() => quickCreateCookbook("extract")} disabled={creatingCb || !quickCbName.trim()} className="px-3 py-1.5 bg-orange-500 text-white rounded-lg text-xs font-medium disabled:opacity-50">{creatingCb ? "..." : "Create"}</button>
+                    <button onClick={() => { setShowQuickCb(false); setQuickCbName("") }} className="px-2 text-gray-300 hover:text-gray-500">✕</button>
+                  </div>
+                ) : (
+                  <button onClick={() => setShowQuickCb(true)} className="flex items-center gap-3 p-2 rounded-xl hover:bg-orange-50 text-orange-500 text-sm w-full text-left">
+                    <span className="w-4 h-4 flex items-center justify-center text-base leading-none">+</span>
+                    New cookbook
+                  </button>
+                )}
               </div>
             </div>
             <div className="flex gap-3">
@@ -1027,6 +1077,24 @@ export default function Dashboard() {
                     </div>
                   ))}
                 </div>
+                {showQuickCb ? (
+                  <div className="flex gap-2 mb-3">
+                    <input
+                      value={quickCbName}
+                      onChange={e => setQuickCbName(e.target.value)}
+                      onKeyDown={e => e.key === "Enter" && quickCreateCookbook("import")}
+                      placeholder="Cookbook name..."
+                      autoFocus
+                      className="flex-1 min-w-0 border border-gray-200 rounded-lg px-3 py-1.5 text-sm outline-none"
+                    />
+                    <button onClick={() => quickCreateCookbook("import")} disabled={creatingCb || !quickCbName.trim()} className="px-3 py-1.5 bg-orange-500 text-white rounded-lg text-xs font-medium disabled:opacity-50">{creatingCb ? "..." : "Create"}</button>
+                    <button onClick={() => { setShowQuickCb(false); setQuickCbName("") }} className="px-2 text-gray-300 hover:text-gray-500">✕</button>
+                  </div>
+                ) : (
+                  <button onClick={() => setShowQuickCb(true)} className="text-sm text-orange-500 hover:text-orange-600 mb-3 flex items-center gap-1.5">
+                    <span className="text-base leading-none">+</span> New cookbook (selects it for all recipes)
+                  </button>
+                )}
                 <div className="flex gap-3">
                   <button onClick={() => { setShowImportModal(false); setImportedRecipes([]); setImportCookbooks({}) }} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Cancel</button>
                   <button onClick={saveImportedRecipes} disabled={cookbooks.length > 0 && Object.values(importCookbooks).every(v => v.length === 0)} className="flex-1 bg-orange-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-orange-600 disabled:opacity-50">

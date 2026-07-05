@@ -18,6 +18,7 @@ export default function CollaboratorModal({
   const [loadingInvite, setLoadingInvite] = useState<string | null>(null)
   const [manualUsername, setManualUsername] = useState("")
   const [localCollaborators, setLocalCollaborators] = useState(collaborators)
+  const [inviteRole, setInviteRole] = useState<"editor" | "viewer">("editor")
 
   useEffect(() => {
     fetchFriends()
@@ -45,7 +46,7 @@ export default function CollaboratorModal({
     const res = await fetch("/api/collaborators", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cookbook_id: cookbookId, username }),
+      body: JSON.stringify({ cookbook_id: cookbookId, username, role: inviteRole }),
     })
     const data = await res.json()
     if (data.error) {
@@ -82,6 +83,26 @@ export default function CollaboratorModal({
         </div>
 
         <div className="p-5">
+          {/* Invite role — editors change the cookbook, viewers can only see it */}
+          <div className="mb-5">
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Invite as</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setInviteRole("editor")}
+                className={`flex-1 py-2 rounded-xl text-xs font-medium border transition ${inviteRole === "editor" ? "bg-orange-500 text-white border-orange-500" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
+                Can edit
+              </button>
+              <button
+                onClick={() => setInviteRole("viewer")}
+                className={`flex-1 py-2 rounded-xl text-xs font-medium border transition ${inviteRole === "viewer" ? "bg-orange-500 text-white border-orange-500" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
+                View only
+              </button>
+            </div>
+            {inviteRole === "viewer" && (
+              <p className="text-xs text-gray-400 mt-1.5">Viewers can see this cookbook even if it's private, but can't change anything.</p>
+            )}
+          </div>
+
           {uninvitedFriends.length > 0 && (
             <div className="mb-5">
               <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Friends</p>
@@ -161,7 +182,7 @@ export default function CollaboratorModal({
                       <div>
                         <div className="text-sm font-medium">{c.name}</div>
                         <div className="text-xs text-gray-400">
-                          @{c.username} · {c.status === "pending" ? <><ClockIcon size={10} className="inline -mt-0.5" /> Pending</> : c.status === "accepted" ? "✓ Accepted" : "✗ Declined"}
+                          @{c.username} · {c.status === "pending" ? <><ClockIcon size={10} className="inline -mt-0.5" /> Pending</> : c.status === "accepted" ? "✓ Accepted" : "✗ Declined"}{c.role === "viewer" ? " · View only" : ""}
                         </div>
                       </div>
                     </div>
