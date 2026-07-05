@@ -164,7 +164,7 @@ export default function CookingMode({ recipe, onClose }: { recipe: any, onClose:
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
             onClick={() => setShowIngredients(true)}
-            className="px-3 py-1.5 border border-gray-200 rounded-xl text-xs font-medium text-gray-500 hover:bg-gray-50 transition">
+            className="md:hidden px-3 py-1.5 border border-gray-200 rounded-xl text-xs font-medium text-gray-500 hover:bg-gray-50 transition">
             Ingredients
           </button>
           <button onClick={onClose} className="p-2 rounded-xl text-gray-400 hover:bg-gray-50 transition" aria-label="Exit cooking mode">
@@ -178,19 +178,62 @@ export default function CookingMode({ recipe, onClose }: { recipe: any, onClose:
         <div className="h-1 bg-orange-500 transition-all duration-300" style={{ width: `${((stepIndex + 1) / steps.length) * 100}%` }} />
       </div>
 
-      {/* Step content */}
-      <div className="flex-1 overflow-y-auto px-6 md:px-10 py-8 flex items-start md:items-center justify-center">
-        <div className="max-w-2xl w-full">
-          <div className="w-10 h-10 rounded-full bg-orange-500 text-white text-base font-bold flex items-center justify-center mb-5">{stepIndex + 1}</div>
-          <p className="text-2xl md:text-3xl leading-relaxed md:leading-relaxed text-gray-900 font-medium">
-            {renderStepText(steps[stepIndex] || "")}
-          </p>
-          {steps[stepIndex + 1] && (
-            <p className="text-sm text-gray-300 mt-8 leading-relaxed">
-              <span className="font-semibold uppercase text-[10px] tracking-wide">Up next: </span>
-              {steps[stepIndex + 1]}
+      {/* Body: desktop gets a persistent sidebar; mobile keeps the single-column flow */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Desktop sidebar — ingredients + step overview */}
+        <div className="hidden md:flex md:flex-col w-80 lg:w-96 border-r border-gray-100 bg-gray-50/60 flex-shrink-0 overflow-y-auto">
+          <div className="px-5 pt-5 pb-3">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Ingredients</p>
+            <div className="bg-white border border-gray-100 rounded-2xl px-4 py-1">
+              {ingredients.map((ing, i) => (
+                <label key={i} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={checkedIngredients.has(i)}
+                    onChange={() => {
+                      const next = new Set(checkedIngredients)
+                      if (next.has(i)) next.delete(i); else next.add(i)
+                      setCheckedIngredients(next)
+                    }}
+                    className="w-4 h-4 accent-orange-500 flex-shrink-0"
+                  />
+                  <span className={`text-sm ${checkedIngredients.has(i) ? "text-gray-300 line-through" : "text-gray-700"}`}>{ing}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="px-5 pt-2 pb-5">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Steps</p>
+            <div className="space-y-1">
+              {steps.map((s, i) => (
+                <button
+                  key={i}
+                  onClick={() => setStepIndex(i)}
+                  className={`w-full text-left flex items-start gap-2.5 px-3 py-2 rounded-xl text-xs transition ${i === stepIndex ? "bg-orange-500 text-white" : i < stepIndex ? "text-gray-300 hover:bg-white" : "text-gray-500 hover:bg-white"}`}>
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold ${i === stepIndex ? "bg-white/25" : i < stepIndex ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-400"}`}>
+                    {i < stepIndex ? "✓" : i + 1}
+                  </span>
+                  <span className="line-clamp-2 leading-snug pt-0.5">{s}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Step content */}
+        <div className="flex-1 overflow-y-auto px-6 md:px-12 py-8 flex items-start md:items-center justify-center">
+          <div className="max-w-2xl w-full">
+            <div className="w-10 h-10 rounded-full bg-orange-500 text-white text-base font-bold flex items-center justify-center mb-5">{stepIndex + 1}</div>
+            <p className="text-2xl md:text-3xl leading-relaxed md:leading-relaxed text-gray-900 font-medium">
+              {renderStepText(steps[stepIndex] || "")}
             </p>
-          )}
+            {steps[stepIndex + 1] && (
+              <p className="text-sm text-gray-300 mt-8 leading-relaxed">
+                <span className="font-semibold uppercase text-[10px] tracking-wide">Up next: </span>
+                {steps[stepIndex + 1]}
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -247,18 +290,20 @@ export default function CookingMode({ recipe, onClose }: { recipe: any, onClose:
       )}
 
       {/* Navigation */}
-      <div className="flex gap-3 px-4 md:px-6 py-4 border-t border-gray-100 flex-shrink-0" style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}>
-        <button
-          onClick={() => setStepIndex(i => Math.max(0, i - 1))}
-          disabled={stepIndex === 0}
-          className="flex-1 py-3.5 border border-gray-200 rounded-2xl text-sm font-semibold text-gray-500 hover:bg-gray-50 disabled:opacity-40 transition">
-          ← Back
-        </button>
-        <button
-          onClick={() => isLast ? onClose() : setStepIndex(i => Math.min(steps.length - 1, i + 1))}
-          className={`flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white transition ${isLast ? "bg-green-500 hover:bg-green-600" : "bg-orange-500 hover:bg-orange-600"}`}>
-          {isLast ? "✓ Finish cooking" : "Next step →"}
-        </button>
+      <div className="px-4 md:px-6 py-4 border-t border-gray-100 flex-shrink-0" style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}>
+        <div className="flex gap-3 max-w-2xl mx-auto">
+          <button
+            onClick={() => setStepIndex(i => Math.max(0, i - 1))}
+            disabled={stepIndex === 0}
+            className="flex-1 py-3.5 border border-gray-200 rounded-2xl text-sm font-semibold text-gray-500 hover:bg-gray-50 disabled:opacity-40 transition">
+            ← Back
+          </button>
+          <button
+            onClick={() => isLast ? onClose() : setStepIndex(i => Math.min(steps.length - 1, i + 1))}
+            className={`flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white transition ${isLast ? "bg-green-500 hover:bg-green-600" : "bg-orange-500 hover:bg-orange-600"}`}>
+            {isLast ? "✓ Finish cooking" : "Next step →"}
+          </button>
+        </div>
       </div>
 
       {/* Ingredients sheet */}

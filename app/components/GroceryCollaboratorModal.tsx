@@ -1,5 +1,6 @@
 "use client"
 import { useState, useEffect } from "react"
+import { ClockIcon } from "@/app/components/Icons"
 
 export default function GroceryCollaboratorModal({
   listId,
@@ -146,7 +147,7 @@ export default function GroceryCollaboratorModal({
                       <div>
                         <div className="text-sm font-medium">{c.name}</div>
                         <div className="text-xs text-gray-400">
-                          @{c.username} · {c.status === "pending" ? "⏳ Pending" : c.status === "accepted" ? "✓ Accepted" : "✗ Declined"}
+                          @{c.username} · {c.status === "pending" ? <><ClockIcon size={10} className="inline -mt-0.5" /> Pending</> : c.status === "accepted" ? "✓ Accepted" : "✗ Declined"}
                         </div>
                       </div>
                     </div>

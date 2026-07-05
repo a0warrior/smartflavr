@@ -4,6 +4,7 @@ import { signIn } from "next-auth/react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { BookIcon, LinkIcon, PlateIcon, SparkleIcon, PencilIcon, SearchIcon } from "@/app/components/Icons"
+import InstallAppButton from "@/app/components/InstallAppButton"
 
 export default function HomePage() {
   const router = useRouter()
@@ -158,7 +159,7 @@ export default function HomePage() {
             className="flex flex-col items-center gap-3 animate-fade-up"
             style={{ animationDelay: "0.3s", opacity: 0 }}>
             {!showInvite ? (
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex flex-col sm:flex-row gap-3 items-center">
                 <button
                   onClick={() => setShowInvite(true)}
                   className="px-7 py-3 bg-orange-500 text-white rounded-xl font-semibold hover:bg-orange-600 active:scale-95 transition-all text-sm shadow-md shadow-orange-200">
@@ -172,6 +173,7 @@ export default function HomePage() {
                   className="px-7 py-3 border border-gray-200 bg-white text-gray-600 rounded-xl font-medium hover:bg-gray-50 active:scale-95 transition-all text-sm">
                   Sign in
                 </button>
+                <InstallAppButton className="px-7 py-3 border border-orange-200 bg-white text-orange-500 rounded-xl font-medium hover:bg-orange-50 active:scale-95 transition-all text-sm inline-flex items-center gap-2" />
               </div>
             ) : (
               <div className="bg-white border border-gray-200 rounded-2xl p-5 w-full max-w-xs text-left shadow-md">

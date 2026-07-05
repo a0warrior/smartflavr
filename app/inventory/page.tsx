@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Navbar from "@/app/components/Navbar"
@@ -56,15 +56,53 @@ export default function InventoryPage() {
   const [showMatches, setShowMatches] = useState(false)
   const [matchListId, setMatchListId] = useState<string>("")
   const [addedMissing, setAddedMissing] = useState<Set<number>>(new Set())
+  const [customCategories, setCustomCategories] = useState<any[]>([])
+  const [showNewCatModal, setShowNewCatModal] = useState(false)
+  const [newCatName, setNewCatName] = useState("")
+  const nameInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login?code=returning")
     if (status === "authenticated") {
       fetchInventory()
       fetchGroceryLists()
+      fetchCustomCategories()
       fetch("/api/subscription").then(r => r.ok ? r.json() : null).then(d => d && setPlanStatus(d)).catch(() => {})
     }
   }, [status])
+
+  async function fetchCustomCategories() {
+    const res = await fetch("/api/inventory-categories")
+    const data = await res.json()
+    setCustomCategories(data.categories || [])
+  }
+
+  async function addCustomCategory() {
+    if (!newCatName.trim()) return
+    const res = await fetch("/api/inventory-categories", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newCatName.trim() }),
+    })
+    const data = await res.json()
+    if (data.error) return toast.error(data.error)
+    setNewCategory(newCatName.trim())
+    setNewCatName("")
+    setShowNewCatModal(false)
+    fetchCustomCategories()
+    toast.success("Category added!")
+  }
+
+  async function deleteCustomCategory(cat: any) {
+    await fetch("/api/inventory-categories", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: cat.id }),
+    })
+    if (activeCategory === cat.name) setActiveCategory("All")
+    if (newCategory === cat.name) setNewCategory("Pantry")
+    fetchCustomCategories()
+  }
 
   async function findRecipes() {
     setFinding(true)
@@ -118,6 +156,8 @@ export default function InventoryPage() {
     setNewQty("")
     await fetchInventory()
     setAdding(false)
+    // Keep the flow going — focus back on the name field so you can keep typing
+    nameInputRef.current?.focus()
   }
 
   async function markUsed(id: number) {
@@ -226,7 +266,14 @@ export default function InventoryPage() {
     ? inStock
     : inStock.filter(i => i.category === activeCategory)
 
-  const grouped = CATEGORIES.reduce((acc: any, cat) => {
+  // Defaults + user categories + anything items already use (e.g. deleted custom categories)
+  const allCategories = Array.from(new Set([
+    ...CATEGORIES,
+    ...customCategories.map((c: any) => c.name),
+    ...items.map(i => i.category).filter(Boolean),
+  ]))
+
+  const grouped = allCategories.reduce((acc: any, cat) => {
     const catItems = filtered.filter(i => i.category === cat)
     if (catItems.length > 0) acc[cat] = catItems
     return acc
@@ -281,9 +328,11 @@ export default function InventoryPage() {
 
         <div className="flex gap-2 mb-6 flex-wrap">
           <input
+            ref={nameInputRef}
             value={newName}
             onChange={e => setNewName(e.target.value)}
             onKeyDown={e => e.key === "Enter" && addItem()}
+            enterKeyHint="done"
             placeholder='e.g. "2 lbs chicken breast" or just "milk"'
             className="flex-1 min-w-0 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none bg-white"
           />
@@ -291,14 +340,19 @@ export default function InventoryPage() {
             value={newQty}
             onChange={e => setNewQty(e.target.value)}
             onKeyDown={e => e.key === "Enter" && addItem()}
+            enterKeyHint="done"
             placeholder="Qty"
             className="w-24 border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none bg-white"
           />
           <select
             value={newCategory}
-            onChange={e => setNewCategory(e.target.value)}
+            onChange={e => {
+              if (e.target.value === "__new") { setShowNewCatModal(true); return }
+              setNewCategory(e.target.value)
+            }}
             className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none bg-white">
-            {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+            {allCategories.map(c => <option key={c}>{c}</option>)}
+            <option value="__new">＋ New category…</option>
           </select>
           <button
             onClick={addItem}
@@ -309,14 +363,25 @@ export default function InventoryPage() {
         </div>
 
         <div className="flex gap-2 flex-wrap mb-6">
-          {["All", ...CATEGORIES].map(cat => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={`text-xs px-3 py-1.5 rounded-full border transition ${activeCategory === cat ? "bg-orange-500 text-white border-orange-500" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
-              {cat}
-            </button>
-          ))}
+          {["All", ...allCategories].map(cat => {
+            const custom = customCategories.find((c: any) => c.name === cat)
+            return (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`text-xs px-3 py-1.5 rounded-full border transition flex items-center gap-1.5 ${activeCategory === cat ? "bg-orange-500 text-white border-orange-500" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
+                {cat}
+                {custom && (
+                  <span
+                    role="button"
+                    onClick={e => { e.stopPropagation(); deleteCustomCategory(custom) }}
+                    className={`leading-none ${activeCategory === cat ? "text-white/70 hover:text-white" : "text-gray-300 hover:text-red-400"}`}>
+                    ×
+                  </span>
+                )}
+              </button>
+            )
+          })}
         </div>
 
         {loading ? (
@@ -334,7 +399,7 @@ export default function InventoryPage() {
             {Object.entries(grouped).map(([cat, catItems]: any) => (
               <div key={cat}>
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="text-gray-400">{CATEGORY_ICONS[cat]}</span>
+                  <span className="text-gray-400">{CATEGORY_ICONS[cat] || <ListIcon size={13} />}</span>
                   <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">{cat}</span>
                   <span className="text-xs text-gray-300">{catItems.length} items</span>
                 </div>
@@ -536,6 +601,27 @@ export default function InventoryPage() {
                 </select>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {showNewCatModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm mx-4">
+            <h2 className="text-lg font-medium mb-1">New category</h2>
+            <p className="text-sm text-gray-400 mb-4">Add your own inventory category, like "Baking" or "Drinks".</p>
+            <input
+              value={newCatName}
+              onChange={e => setNewCatName(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && addCustomCategory()}
+              placeholder="Category name"
+              autoFocus
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none mb-4"
+            />
+            <div className="flex gap-3">
+              <button onClick={() => { setShowNewCatModal(false); setNewCatName("") }} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Cancel</button>
+              <button onClick={addCustomCategory} disabled={!newCatName.trim()} className="flex-1 bg-orange-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-orange-600 disabled:opacity-50">Add</button>
+            </div>
           </div>
         </div>
       )}

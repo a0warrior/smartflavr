@@ -29,7 +29,7 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 
-import { HeartIcon, ShareIcon, PeopleIcon, PrintIcon, SearchIcon, ClockIcon, ChevronRightIcon, SortIcon, ListIcon, LeaveIcon, SparkleIcon, UserIcon, StarIcon, LightBulbIcon, CameraIcon, PlateIcon, TrashIcon } from "@/app/components/Icons"
+import { HeartIcon, ShareIcon, PeopleIcon, PrintIcon, SearchIcon, ClockIcon, ChevronRightIcon, SortIcon, ListIcon, LeaveIcon, SparkleIcon, UserIcon, StarIcon, LightBulbIcon, CameraIcon, PlateIcon, TrashIcon, LockIcon, LinkIcon, CheckIcon } from "@/app/components/Icons"
 
 function SortableRecipeItem({ recipe, isSelected, onClick, isOwner, isFavorited, onToggleFavorite, onRename, onDelete }: any) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: recipe.id })
@@ -261,7 +261,7 @@ export default function CookbookPage() {
       if (!initialized) { initialized = true; return }
       const data = snapshot.val()
       if (!data || data._by === session?.user?.email) return
-      const SYNC_FIELDS = ["title", "prep_time", "servings", "difficulty", "category_id", "description", "ingredients", "instructions", "notes", "source_url"]
+      const SYNC_FIELDS = ["title", "prep_time", "servings", "difficulty", "category_id", "description", "ingredients", "instructions", "notes", "source_url", "image_url"]
       setEdited((prev: any) => {
         if (!prev) return prev
         const patch: any = {}
@@ -863,7 +863,7 @@ export default function CookbookPage() {
                       key={cat.id}
                       onClick={() => { setActiveCategory(cat.id); setShowFavoritesOnly(false) }}
                       className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition ${isActive ? "bg-orange-500 text-white" : "bg-gray-50 border border-gray-100 text-gray-600"}`}>
-                      {cat.emoji} {cat.name}
+                      {cat.emoji === "📋" ? <ListIcon size={13} /> : cat.emoji} {cat.name}
                       <span className={`text-xs ${isActive ? "text-orange-100" : "text-gray-400"}`}>{count}</span>
                     </button>
                   )
@@ -1110,7 +1110,7 @@ export default function CookbookPage() {
                       key={cat.id}
                       onClick={() => { setActiveCategory(cat.id); setShowFavoritesOnly(false); setSelectedRecipe(null) }}
                       className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm transition ${isActive ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-600 hover:bg-gray-50"}`}>
-                      <span className="text-base leading-none flex-shrink-0">{cat.emoji}</span>
+                      <span className="text-base leading-none flex-shrink-0">{cat.emoji === "📋" ? <ListIcon size={15} className="text-gray-400" /> : cat.emoji}</span>
                       <span className="flex-1 text-left truncate">{cat.name}</span>
                       <span className="text-xs text-gray-400 tabular-nums">{count}</span>
                     </button>
@@ -1176,7 +1176,7 @@ export default function CookbookPage() {
             <button onClick={() => withUnsavedCheck(() => setMobileView("list"))} className="p-1.5 -ml-1 rounded-lg text-orange-500 flex-shrink-0">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
             </button>
-            <span className="flex-1 font-medium text-gray-900 truncate text-sm">{recipe?.title || cookbookInfo?.title}</span>
+            <span onClick={() => withUnsavedCheck(() => setMobileView("list"))} className="flex-1 font-medium text-gray-900 truncate text-sm cursor-pointer active:text-orange-500">{recipe?.title || cookbookInfo?.title}</span>
             {editMode ? (
               <>
                 <button onClick={cancelEdit} className="text-sm text-gray-400 px-2 py-1">Cancel</button>
@@ -1265,7 +1265,7 @@ export default function CookbookPage() {
                     </div>
                     {recipe.description && <p className="text-sm text-gray-500 mb-5 leading-relaxed">{recipe.description}</p>}
                     <div className="rounded-xl mb-6 overflow-hidden">
-                      {recipe.image_url ? <img src={recipe.image_url} className="w-full object-contain rounded-xl"/> : (
+                      {recipe.image_url ? <img src={recipe.image_url} className="w-full max-h-[400px] object-contain rounded-xl bg-gray-50"/> : (
                         <div className="border-2 border-dashed border-gray-100 rounded-xl h-48 flex items-center justify-center">
                           <span className="text-xs text-gray-400 flex items-center gap-1.5"><CameraIcon size={13} />No photo yet</span>
                         </div>
@@ -1314,12 +1314,12 @@ export default function CookbookPage() {
                           navigator.clipboard.writeText(`${window.location.origin}/share/recipe/${recipe.id}`)
                           toast.success("Recipe link copied to clipboard!")
                         }}
-                        className="px-3 py-1.5 border border-orange-200 text-orange-500 rounded-lg text-xs hover:bg-orange-50 transition">
-                        Share recipe ↗
+                        className="px-3 py-1.5 border border-orange-200 text-orange-500 rounded-lg text-xs hover:bg-orange-50 transition inline-flex items-center gap-1.5">
+                        <ShareIcon size={11} />Share recipe
                       </button>
                       <RecipePDFButton recipe={recipe} />
                       {recipe.source_url && (
-                        <a href={recipe.source_url} target="_blank" className="text-xs text-orange-500">View original source ↗</a>
+                        <a href={recipe.source_url} target="_blank" className="text-xs text-orange-500 inline-flex items-center gap-1"><LinkIcon size={11} />View original source</a>
                       )}
                     </div>
                   </>
@@ -1374,7 +1374,7 @@ export default function CookbookPage() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-xs font-medium text-gray-400 uppercase tracking-wide flex items-center gap-2">
                           Description
-                          {isTypedByOther("description") && <span className="normal-case font-normal text-amber-500">🔒 {getLockedLabel("description", edited?.description)}</span>}
+                          {isTypedByOther("description") && <span className="normal-case font-normal text-amber-500"><LockIcon size={11} className="inline -mt-0.5 mr-0.5" />{getLockedLabel("description", edited?.description)}</span>}
                         </div>
                         <button onClick={() => aiAssist("description")} disabled={!planStatus?.canUseAI || aiLoading === "description"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
                           {aiLoading === "description" ? "Writing..." : <><SparkleIcon size={13} /> AI write</>}
@@ -1386,7 +1386,7 @@ export default function CookbookPage() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-xs font-medium text-gray-400 uppercase tracking-wide flex items-center gap-2">
                           Ingredients
-                          {isTypedByOther("ingredients") && <span className="normal-case font-normal text-amber-500">🔒 {getTyperName("ingredients")} is editing</span>}
+                          {isTypedByOther("ingredients") && <span className="normal-case font-normal text-amber-500"><LockIcon size={11} className="inline -mt-0.5 mr-0.5" />{getTyperName("ingredients")} is editing</span>}
                         </div>
                         <button onClick={() => aiAssist("ingredients")} disabled={!planStatus?.canUseAI || aiLoading === "ingredients"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
                           {aiLoading === "ingredients" ? "Suggesting..." : <><SparkleIcon size={13} /> AI suggest</>}
@@ -1458,20 +1458,82 @@ export default function CookbookPage() {
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-xs font-medium text-gray-400 uppercase tracking-wide flex items-center gap-2">
-                          <span>Instructions <span className="text-gray-300 font-normal normal-case">(one step per line)</span></span>
-                          {isTypedByOther("instructions") && <span className="normal-case font-normal text-amber-500">🔒 {getLockedLabel("instructions", edited?.instructions)}</span>}
+                          <span>Instructions</span>
+                          {isTypedByOther("instructions") && <span className="normal-case font-normal text-amber-500"><LockIcon size={11} className="inline -mt-0.5 mr-0.5" />{getLockedLabel("instructions", edited?.instructions)}</span>}
                         </div>
                         <button onClick={() => aiAssist("instructions")} disabled={!planStatus?.canUseAI || aiLoading === "instructions"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
                           {aiLoading === "instructions" ? "Improving..." : <><SparkleIcon size={13} /> AI improve</>}
                         </button>
                       </div>
-                      <textarea value={edited.instructions || ""} onChange={e => { if (!isTypedByOther("instructions")) updateEdited("instructions", e.target.value) }} onFocus={() => handleFieldFocus("instructions")} onBlur={handleFieldBlur} onSelect={e => emitCursor("instructions", (e.target as HTMLTextAreaElement).selectionStart)} readOnly={isTypedByOther("instructions")} placeholder="Boil water&#10;Add pasta&#10;Drain and serve" className={`w-full bg-white border rounded-xl px-3 py-2 text-sm resize-none outline-none transition ${isTypedByOther("instructions") ? "ring-2 ring-amber-200 border-amber-300 bg-amber-50/30 cursor-not-allowed" : "border-gray-200"}`} rows={8}/>
+                      <div className={`border rounded-xl overflow-hidden ${isTypedByOther("instructions") ? "ring-2 ring-amber-200 border-amber-300" : "border-gray-200"}`}>
+                        {(edited.instructions || "").split("\n").concat(edited.instructions ? [] : [""]).map((step: string, i: number, arr: string[]) => (
+                          <div key={i} className="flex items-start gap-2.5 px-3 border-b border-gray-100 last:border-0 group">
+                            <div className="w-5 h-5 rounded-full bg-orange-50 text-orange-600 text-[10px] font-semibold flex items-center justify-center flex-shrink-0 mt-2.5">{i + 1}</div>
+                            <textarea
+                              data-step={i}
+                              value={step}
+                              rows={1}
+                              readOnly={isTypedByOther("instructions")}
+                              ref={el => { if (el) { el.style.height = "auto"; el.style.height = el.scrollHeight + "px" } }}
+                              onChange={e => {
+                                if (isTypedByOther("instructions")) return
+                                const lines = (edited.instructions || "").split("\n")
+                                lines[i] = e.target.value.replace(/\n/g, " ")
+                                updateEdited("instructions", lines.join("\n"))
+                              }}
+                              onKeyDown={e => {
+                                if (isTypedByOther("instructions")) return
+                                const lines = (edited.instructions || "").split("\n")
+                                if (e.key === "Enter") {
+                                  e.preventDefault()
+                                  const arr2 = [...lines]
+                                  arr2.splice(i + 1, 0, "")
+                                  updateEdited("instructions", arr2.join("\n"))
+                                  setTimeout(() => { const els = document.querySelectorAll<HTMLTextAreaElement>("[data-step]"); els[i + 1]?.focus() }, 0)
+                                } else if (e.key === "Backspace" && step === "" && lines.length > 1) {
+                                  e.preventDefault()
+                                  const arr2 = [...lines]
+                                  arr2.splice(i, 1)
+                                  updateEdited("instructions", arr2.join("\n"))
+                                  setTimeout(() => { const els = document.querySelectorAll<HTMLTextAreaElement>("[data-step]"); els[Math.max(0, i - 1)]?.focus() }, 0)
+                                }
+                              }}
+                              onFocus={() => handleFieldFocus("instructions")}
+                              onBlur={handleFieldBlur}
+                              placeholder={i === 0 ? "e.g. Boil a large pot of salted water" : "Add step..."}
+                              className={`flex-1 text-sm outline-none bg-transparent py-2.5 min-w-0 resize-none overflow-hidden ${isTypedByOther("instructions") ? "cursor-not-allowed" : ""}`}
+                            />
+                            {arr.length > 1 && (
+                              <button
+                                onClick={() => {
+                                  if (isTypedByOther("instructions")) return
+                                  const lines = (edited.instructions || "").split("\n")
+                                  lines.splice(i, 1)
+                                  updateEdited("instructions", lines.join("\n"))
+                                }}
+                                className={`text-gray-200 text-xs flex-shrink-0 transition opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 mt-2 ${isTypedByOther("instructions") ? "cursor-not-allowed" : "hover:text-red-400"}`}
+                              >✕</button>
+                            )}
+                          </div>
+                        ))}
+                        <button
+                          onClick={() => {
+                            if (isTypedByOther("instructions")) return
+                            const current = edited.instructions || ""
+                            updateEdited("instructions", current ? current + "\n" : "")
+                            setTimeout(() => { const els = document.querySelectorAll<HTMLTextAreaElement>("[data-step]"); els[els.length - 1]?.focus() }, 0)
+                          }}
+                          className={`w-full py-2 text-xs transition flex items-center justify-center gap-1 ${isTypedByOther("instructions") ? "text-gray-300 cursor-not-allowed" : "text-gray-400 hover:text-orange-500 hover:bg-orange-50"}`}
+                        >
+                          <span className="text-base leading-none">+</span> Add step
+                        </button>
+                      </div>
                     </div>
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-xs font-medium text-gray-400 uppercase tracking-wide flex items-center gap-2">
                           Notes
-                          {isTypedByOther("notes") && <span className="normal-case font-normal text-amber-500">🔒 {getLockedLabel("notes", edited?.notes)}</span>}
+                          {isTypedByOther("notes") && <span className="normal-case font-normal text-amber-500"><LockIcon size={11} className="inline -mt-0.5 mr-0.5" />{getLockedLabel("notes", edited?.notes)}</span>}
                         </div>
                         <button onClick={() => aiAssist("notes")} disabled={!planStatus?.canUseAI || aiLoading === "notes"} className="text-xs text-orange-500 hover:text-orange-600 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
                           {aiLoading === "notes" ? "Generating..." : <><SparkleIcon size={13} /> AI generate</>}
@@ -1703,7 +1765,7 @@ export default function CookbookPage() {
           <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl p-5">
             {copyDone ? (
               <div className="text-center py-4">
-                <div className="text-3xl mb-3">✅</div>
+                <div className="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center mx-auto mb-3"><CheckIcon size={24} /></div>
                 <p className="font-medium text-gray-900">Saved to &ldquo;{copyDone}&rdquo;</p>
                 <p className="text-sm text-gray-400 mt-1">Recipe copied to your cookbook</p>
                 <button

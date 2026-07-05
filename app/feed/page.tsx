@@ -600,7 +600,7 @@ function PostCard({ post, currentUserId, isAdmin, isTimedOut, onDelete, onUpdate
           <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl p-5" onClick={e => e.stopPropagation()}>
             {copyDone ? (
               <div className="text-center py-4">
-                <div className="text-3xl mb-3">✅</div>
+                <div className="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center mx-auto mb-3"><CheckIcon size={24} /></div>
                 <p className="font-medium text-gray-900">Saved to &ldquo;{copyDone}&rdquo;</p>
                 <p className="text-sm text-gray-400 mt-1">Recipe copied to your cookbook</p>
                 <button onClick={() => setShowCopyModal(false)} className="mt-5 w-full bg-orange-500 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-orange-600 transition">Done</button>
@@ -658,6 +658,7 @@ export default function FeedPage() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [newPostsAvailable, setNewPostsAvailable] = useState(false)
   const [liveConnected, setLiveConnected] = useState(false)
+  const suppressNextFeedPulse = useRef(false)
 
   const isTimedOut = Boolean(postTimeoutUntil && new Date(postTimeoutUntil) > new Date())
 
@@ -671,7 +672,14 @@ export default function FeedPage() {
   }, [status])
 
   useEffect(() => {
-    return subscribe("/updates/feed", () => setNewPostsAvailable(true))
+    return subscribe("/updates/feed", () => {
+      // Our own post already refreshed the feed — don't show the popup for it
+      if (suppressNextFeedPulse.current) {
+        suppressNextFeedPulse.current = false
+        return
+      }
+      setNewPostsAvailable(true)
+    })
   }, [])
 
   useEffect(() => {
@@ -761,10 +769,12 @@ export default function FeedPage() {
         cookbook_id: postCookbookId || null, visibility: postVisibility,
       }),
     })
+    suppressNextFeedPulse.current = true
     pulse("/updates/feed")
     resetModal()
     setSubmitting(false)
-    fetchPosts()
+    await fetchPosts()
+    window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
   async function deletePost(id: number) {
@@ -954,7 +964,7 @@ export default function FeedPage() {
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none mb-2">
                   <option value="">Select a cookbook...</option>
                   {(postType === "cookbook" ? myCookbooks.filter((b: any) => b.is_public === 1) : myCookbooks).map((b: any) => (
-                    <option key={b.id} value={b.id}>{b.cover_emoji} {b.title}{postType === "recipe" && b.is_public !== 1 ? " 🔒" : ""}</option>
+                    <option key={b.id} value={b.id}>{b.cover_emoji} {b.title}{postType === "recipe" && b.is_public !== 1 ? " (private)" : ""}</option>
                   ))}
                 </select>
                 {postType === "recipe" && postCookbookId && (

@@ -1,5 +1,6 @@
 "use client"
 import { useState, useEffect } from "react"
+import { ClockIcon } from "@/app/components/Icons"
 
 export default function MealPlanSyncModal({ onClose, onSyncChange }: { onClose: () => void, onSyncChange: () => void }) {
   const [syncs, setSyncs] = useState<any[]>([])
@@ -132,7 +133,7 @@ export default function MealPlanSyncModal({ onClose, onSyncChange }: { onClose: 
                       <div>
                         <div className="text-sm font-medium">{s.partner.name}</div>
                         <div className="text-xs text-gray-400">
-                          @{s.partner.username} · {s.status === "pending" ? "⏳ Pending" : s.status === "accepted" ? "✓ Synced" : "✗ Declined"}
+                          @{s.partner.username} · {s.status === "pending" ? <><ClockIcon size={10} className="inline -mt-0.5" /> Pending</> : s.status === "accepted" ? "✓ Synced" : "✗ Declined"}
                         </div>
                       </div>
                     </div>

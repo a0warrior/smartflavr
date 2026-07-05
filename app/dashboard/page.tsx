@@ -206,6 +206,21 @@ export default function Dashboard() {
     if (fresh) setActiveGroceryList(fresh)
   }
 
+  // Live-sync grocery lists between collaborators: refetch when any list we can see gets pulsed
+  useEffect(() => {
+    const unsubs = groceryLists.map((l: any) =>
+      subscribe(`/updates/grocery/${l.id}`, async () => {
+        const res = await fetch("/api/grocery-lists")
+        const data = await res.json()
+        const lists = data.lists || []
+        setGroceryLists(lists)
+        setActiveGroceryList((prev: any) => prev ? (lists.find((fl: any) => fl.id === prev.id) || prev) : prev)
+      })
+    )
+    return () => unsubs.forEach((u: any) => u())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groceryLists.map((l: any) => l.id).join(",")])
+
   async function toggleGroceryItem(itemId: number, checked: boolean) {
     await fetch("/api/grocery-lists/check", {
       method: "PUT",
@@ -214,6 +229,7 @@ export default function Dashboard() {
     })
     setActiveGroceryList((prev: any) => ({ ...prev, items: prev.items.map((item: any) => item.id === itemId ? { ...item, checked: checked ? 1 : 0 } : item) }))
     setGroceryLists(prev => prev.map((list: any) => list.id === activeGroceryList?.id ? { ...list, items: list.items.map((item: any) => item.id === itemId ? { ...item, checked: checked ? 1 : 0 } : item) } : list))
+    if (activeGroceryList) pulse(`/updates/grocery/${activeGroceryList.id}`)
   }
 
   async function deleteGroceryItem(itemId: number) {
@@ -221,12 +237,14 @@ export default function Dashboard() {
     const updated = { ...activeGroceryList, items: activeGroceryList.items.filter((i: any) => i.id !== itemId) }
     setActiveGroceryList(updated)
     setGroceryLists(prev => prev.map((l: any) => l.id === updated.id ? updated : l))
+    pulse(`/updates/grocery/${updated.id}`)
   }
 
   async function addItemToList(value: string) {
     if (!value.trim()) return
     await fetch("/api/grocery-lists", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: activeGroceryList.id, addItems: [value.trim()] }) })
     await refreshActiveList(activeGroceryList.id)
+    pulse(`/updates/grocery/${activeGroceryList.id}`)
   }
 
   async function handleGroceryDragEnd(event: any) {
@@ -240,6 +258,7 @@ export default function Dashboard() {
     setActiveGroceryList(updated)
     setGroceryLists(prev => prev.map((l: any) => l.id === updated.id ? updated : l))
     await fetch("/api/grocery-lists", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: activeGroceryList.id, reorderItems: newOrder.map((item: any, index: number) => ({ id: item.id, sort_order: index })) }) })
+    pulse(`/updates/grocery/${updated.id}`)
   }
 
   async function deleteGroceryList(id: number) { setGroceryListToDelete(id); setShowDeleteGroceryModal(true) }
@@ -404,28 +423,53 @@ export default function Dashboard() {
     setImportCookbooks(prev => { const current = prev[recipeIndex] || []; return { ...prev, [recipeIndex]: current.includes(cookbookId) ? current.filter(id => id !== cookbookId) : [...current, cookbookId] } })
   }
 
+  // Users with no cookbooks yet get one created automatically so saving always works
+  async function ensureDefaultCookbook(): Promise<string | null> {
+    const res = await fetch("/api/cookbooks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "My Recipes", cover_emoji: "📖", cover_color: "#F97316" }),
+    })
+    const data = await res.json()
+    await fetchCookbooks()
+    return data.id ? String(data.id) : null
+  }
+
   async function saveImportedRecipes() {
     if (importedRecipes.length === 0) return
+    let fallbackId: string | null = null
+    if (cookbooks.length === 0) {
+      fallbackId = await ensureDefaultCookbook()
+      if (!fallbackId) return toast.error("Could not create a cookbook. Try again.")
+    }
     let saved = 0
     for (let i = 0; i < importedRecipes.length; i++) {
-      for (const cookbookId of (importCookbooks[i] || [])) {
+      const targets = fallbackId ? [fallbackId] : (importCookbooks[i] || [])
+      for (const cookbookId of targets) {
         const { nutrition: _n, ...recipeData } = importedRecipes[i]
         await fetch("/api/recipes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...recipeData, cookbook_id: cookbookId }) })
         saved++
       }
     }
     setShowImportModal(false); setImportedRecipes([]); setImportCookbooks({})
-    toast.success(`Saved ${saved} recipe${saved !== 1 ? "s" : ""}!`)
+    toast.success(fallbackId ? `Saved ${saved} recipe${saved !== 1 ? "s" : ""} to your new "My Recipes" cookbook!` : `Saved ${saved} recipe${saved !== 1 ? "s" : ""}!`)
   }
 
   async function saveRecipe() {
-    if (selectedCookbooks.length === 0 || !extractedRecipe) return
-    for (const cookbookId of selectedCookbooks) {
+    if (!extractedRecipe) return
+    let targets = selectedCookbooks
+    if (targets.length === 0) {
+      if (cookbooks.length > 0) return
+      const fallbackId = await ensureDefaultCookbook()
+      if (!fallbackId) return toast.error("Could not create a cookbook. Try again.")
+      targets = [fallbackId]
+    }
+    for (const cookbookId of targets) {
       const { nutrition: _n, ...recipeData } = extractedRecipe
       await fetch("/api/recipes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...recipeData, cookbook_id: cookbookId }) })
     }
     setExtractedRecipe(null); setSelectedCookbooks([])
-    toast.success(`Recipe saved to ${selectedCookbooks.length} cookbook${selectedCookbooks.length > 1 ? "s" : ""}!`)
+    toast.success(`Recipe saved to ${targets.length} cookbook${targets.length > 1 ? "s" : ""}!`)
   }
 
   function toggleCookbook(id: string) {
@@ -673,6 +717,7 @@ export default function Dashboard() {
                   onBlur={async () => {
                     if (listNameInput.trim() && listNameInput !== activeGroceryList.name) {
                       await fetch("/api/grocery-lists", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: activeGroceryList.id, name: listNameInput.trim() }) })
+                      pulse(`/updates/grocery/${activeGroceryList.id}`)
                       setActiveGroceryList((prev: any) => ({ ...prev, name: listNameInput.trim() }))
                       setGroceryLists(prev => prev.map((l: any) => l.id === activeGroceryList.id ? { ...l, name: listNameInput.trim() } : l))
                     }
@@ -921,8 +966,8 @@ export default function Dashboard() {
             </div>
             <div className="flex gap-3">
               <button onClick={() => { setExtractedRecipe(null); setSelectedCookbooks([]) }} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Discard</button>
-              <button onClick={saveRecipe} disabled={selectedCookbooks.length === 0} className="flex-1 bg-orange-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-orange-600 disabled:opacity-50">
-                Save to {selectedCookbooks.length > 0 ? `${selectedCookbooks.length} cookbook${selectedCookbooks.length > 1 ? "s" : ""}` : "cookbook"}
+              <button onClick={saveRecipe} disabled={selectedCookbooks.length === 0 && cookbooks.length > 0} className="flex-1 bg-orange-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-orange-600 disabled:opacity-50">
+                {cookbooks.length === 0 ? "Save to a new cookbook" : `Save to ${selectedCookbooks.length > 0 ? `${selectedCookbooks.length} cookbook${selectedCookbooks.length > 1 ? "s" : ""}` : "cookbook"}`}
               </button>
             </div>
           </div>
@@ -971,8 +1016,8 @@ export default function Dashboard() {
                 </div>
                 <div className="flex gap-3">
                   <button onClick={() => { setShowImportModal(false); setImportedRecipes([]); setImportCookbooks({}) }} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Cancel</button>
-                  <button onClick={saveImportedRecipes} disabled={Object.values(importCookbooks).every(v => v.length === 0)} className="flex-1 bg-orange-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-orange-600 disabled:opacity-50">
-                    Save {Object.values(importCookbooks).flat().length} to cookbook{Object.values(importCookbooks).flat().length !== 1 ? "s" : ""}
+                  <button onClick={saveImportedRecipes} disabled={cookbooks.length > 0 && Object.values(importCookbooks).every(v => v.length === 0)} className="flex-1 bg-orange-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-orange-600 disabled:opacity-50">
+                    {cookbooks.length === 0 ? `Save ${importedRecipes.length} to a new cookbook` : `Save ${Object.values(importCookbooks).flat().length} to cookbook${Object.values(importCookbooks).flat().length !== 1 ? "s" : ""}`}
                   </button>
                 </div>
               </>

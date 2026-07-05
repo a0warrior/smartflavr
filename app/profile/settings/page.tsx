@@ -328,7 +328,7 @@ function selectProfilePhoto(e: React.ChangeEvent<HTMLInputElement>) {
                 <div className="mt-4 p-3 bg-gray-50 rounded-xl flex items-center justify-between">
                   <div>
                     <p className="text-xs text-gray-400 mb-1">Your public profile</p>
-                    <a href={`/u/${username}`} target="_blank" className="text-sm text-orange-500">smartflavr.com/u/{username} ↗</a>
+                    <a href={`/u/${username}`} target="_blank" className="text-sm text-orange-500 inline-flex items-center gap-1">smartflavr.com/u/{username}<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></a>
                   </div>
                   <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/u/${username}`); setSuccess("Link copied!") }} className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-500 hover:bg-gray-50">
                     Copy link

@@ -44,6 +44,13 @@ export async function PUT(req: Request) {
       "SELECT id FROM users WHERE email = ?",
       [email]
     )
+    // Every new account starts with a cookbook so saving recipes always works
+    try {
+      await pool.query(
+        "INSERT INTO cookbooks (user_id, title, description, cover_emoji, cover_color) VALUES (?, ?, ?, ?, ?)",
+        [users[0].id, "My Recipes", "Your first cookbook — recipes you save land here.", "📖", "#F97316"]
+      )
+    } catch {}
   }
 
   await pool.query(

@@ -144,6 +144,21 @@ export default function MealPlannerPage() {
     return subscribe(`/updates/users/${userId}/mealplan`, fetchMeals)
   }, [userId])
 
+  // Live-sync with meal plan partners: refetch when an accepted partner changes their plan
+  const [partnerIds, setPartnerIds] = useState<number[]>([])
+  useEffect(() => {
+    if (status !== "authenticated") return
+    fetch("/api/meal-plan-collaborators")
+      .then(r => r.json())
+      .then(d => setPartnerIds((d.syncs || []).filter((s: any) => s.status === "accepted").map((s: any) => s.partner.id)))
+      .catch(() => {})
+  }, [status, showSyncModal])
+  useEffect(() => {
+    const unsubs = partnerIds.map(pid => subscribe(`/updates/users/${pid}/mealplan`, fetchMeals))
+    return () => unsubs.forEach(u => u())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [partnerIds.join(",")])
+
   async function fetchMeals() {
     const start = formatDate(weekDates[0])
     const end = formatDate(weekDates[6])

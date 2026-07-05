@@ -41,6 +41,14 @@ body {
 @keyframes burst-5 { to { transform: translate(calc(-50% + 14px), calc(-50% + 18px)) scale(0); opacity: 0; } }
 @keyframes burst-6 { to { transform: translate(calc(-50% + 26px), calc(-50% + 2px)) scale(0); opacity: 0; } }
 
+/* iOS zooms the page when a focused input's font is under 16px.
+   Force 16px on all form fields on mobile so focusing never zooms. */
+@media (max-width: 767px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
 /* Pad page bottom on mobile when the bottom tab bar is present */
 @media (max-width: 767px) {
   body:has(#bottom-nav) {
