@@ -44,7 +44,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const { title, description, cover_emoji, cover_color, cover_image } = await req.json()
+  const { title, description, cover_emoji, cover_color, cover_image, is_public } = await req.json()
 
   let [users] = await pool.query(
     "SELECT id FROM users WHERE email = ?",
@@ -63,8 +63,8 @@ export async function POST(req: Request) {
   }
 
   const [result] = await pool.query(
-    "INSERT INTO cookbooks (user_id, title, description, cover_emoji, cover_color, cover_image) VALUES (?, ?, ?, ?, ?, ?)",
-    [users[0].id, title, description, cover_emoji || "📖", cover_color || "#F97316", cover_image || null]
+    "INSERT INTO cookbooks (user_id, title, description, cover_emoji, cover_color, cover_image, is_public) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    [users[0].id, title, description, cover_emoji || "📖", cover_color || "#F97316", cover_image || null, is_public ? 1 : 0]
   ) as any[]
 
   return NextResponse.json({ success: true, id: result.insertId })
