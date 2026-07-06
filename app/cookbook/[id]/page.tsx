@@ -9,6 +9,8 @@ import NutritionPanel from "@/app/components/NutritionPanel"
 import { toast } from "@/app/components/Toast"
 import { PageSkeleton } from "@/app/components/Skeletons"
 import CookingMode from "@/app/components/CookingMode"
+import ServingsScaler from "@/app/components/ServingsScaler"
+import { scaleIngredientLine } from "@/lib/scale"
 import { RecipePDFButton, CookbookPDFButton } from "@/app/components/PDFButtons"
 import { db } from "@/lib/firebase"
 import { ref, onValue, set, off } from "firebase/database"
@@ -122,6 +124,7 @@ export default function CookbookPage() {
   const [categories, setCategories] = useState<any[]>([])
   const [selectedRecipe, setSelectedRecipe] = useState<any>(null)
   const [cookingMode, setCookingMode] = useState(false)
+  const [scaleFactor, setScaleFactor] = useState(1)
   const [activeCategory, setActiveCategory] = useState("all")
   const [editMode, setEditMode] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -289,6 +292,9 @@ export default function CookbookPage() {
       setSelectedRecipe(filteredRecipes[0])
     }
   }, [activeCategory])
+
+  // Scaling is per-recipe — snap back to 1× when switching
+  useEffect(() => { setScaleFactor(1) }, [selectedRecipe?.id])
 
   async function fetchRecipes() {
     const res = await fetch(`/api/recipes?cookbook_id=${params.id}`)
@@ -732,7 +738,8 @@ export default function CookbookPage() {
         source_url: recipe.source_url,
         notes: recipe.notes,
         image_url: recipe.image_url,
-        nutrition: recipe.nutrition ? JSON.parse(recipe.nutrition) : null,
+        nutrition: recipe.nutrition ? (typeof recipe.nutrition === "string" ? JSON.parse(recipe.nutrition) : recipe.nutrition) : null,
+        copy_nutrition: true,
         sort_order: 0,
       }),
     })
@@ -1298,13 +1305,22 @@ export default function CookbookPage() {
                     )}
                     {recipe.ingredients && (
                       <div id="ingredients" className="mb-6">
-                        <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Ingredients</div>
+                        <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+                          <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+                            Ingredients
+                            {scaleFactor !== 1 && <span className="ml-2 normal-case font-normal text-orange-500">scaled ×{Math.round(scaleFactor * 100) / 100}</span>}
+                          </div>
+                          <ServingsScaler servings={recipe.servings} factor={scaleFactor} onChange={setScaleFactor} />
+                        </div>
                         {recipe.ingredients.split("\n").filter(Boolean).map((ing: string, i: number) => (
                           <div key={i} className="flex items-center gap-3 py-2 border-b border-gray-50">
                             <input type="checkbox" className="w-3.5 h-3.5 accent-orange-500 flex-shrink-0"/>
-                            <span className="text-sm">{ing}</span>
+                            <span className="text-sm">{scaleIngredientLine(ing, scaleFactor)}</span>
                           </div>
                         ))}
+                        {scaleFactor !== 1 && (
+                          <p className="text-[11px] text-gray-300 mt-2">Cooking times aren't scaled — adjust those by eye.</p>
+                        )}
                       </div>
                     )}
                     {recipe.instructions && (
@@ -1834,7 +1850,7 @@ export default function CookbookPage() {
       )}
 
       {cookingMode && recipe && (
-        <CookingMode recipe={recipe} onClose={() => setCookingMode(false)} />
+        <CookingMode recipe={recipe} initialScale={scaleFactor} onClose={() => setCookingMode(false)} />
       )}
     </div>
   )

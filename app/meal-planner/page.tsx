@@ -7,6 +7,8 @@ import MealPlanSyncModal from "@/app/components/MealPlanSyncModal"
 import { toast } from "@/app/components/Toast"
 import { PageSkeleton } from "@/app/components/Skeletons"
 import CookingMode from "@/app/components/CookingMode"
+import ServingsScaler from "@/app/components/ServingsScaler"
+import { scaleIngredientLine } from "@/lib/scale"
 import { SparkleIcon, PlateIcon, ClockIcon, UserIcon, FlameIcon } from "@/app/components/Icons"
 import { pulse, subscribe } from "@/lib/firebase"
 import { DndContext, PointerSensor, useSensor, useSensors, useDraggable, useDroppable, DragEndEvent } from "@dnd-kit/core"
@@ -104,6 +106,7 @@ export default function MealPlannerPage() {
   const [viewingRecipe, setViewingRecipe] = useState<any>(null)
   const [loadingRecipe, setLoadingRecipe] = useState(false)
   const [cookingRecipe, setCookingRecipe] = useState(false)
+  const [viewScale, setViewScale] = useState(1)
   const [goals, setGoals] = useState<any>(null)
   const [showGoalsModal, setShowGoalsModal] = useState(false)
   const [goalInputs, setGoalInputs] = useState({ calories: "", protein: "", carbs: "", fat: "" })
@@ -221,6 +224,7 @@ export default function MealPlannerPage() {
           title: meal.title,
           ingredients: meal.ingredients,
           servings: parseInt(meal.servings) || 1,
+          manual: true,
         }),
       })
     }
@@ -324,6 +328,7 @@ export default function MealPlannerPage() {
     const data = await res.json()
     setLoadingRecipe(false)
     if (data.error) return toast.error("Couldn't open this recipe.")
+    setViewScale(1)
     setViewingRecipe({ ...data.recipe, partner_name: meal.partner_name || null })
   }
 
@@ -1176,10 +1181,13 @@ export default function MealPlannerPage() {
               {viewingRecipe.description && <p className="text-sm text-gray-500 mb-4 leading-relaxed">{viewingRecipe.description}</p>}
               {viewingRecipe.ingredients && (
                 <div className="mb-5">
-                  <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Ingredients</div>
+                  <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+                    <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Ingredients</div>
+                    <ServingsScaler servings={viewingRecipe.servings} factor={viewScale} onChange={setViewScale} />
+                  </div>
                   {viewingRecipe.ingredients.split("\n").filter(Boolean).map((ing: string, i: number) => (
                     <div key={i} className="flex items-center gap-2.5 py-1.5 border-b border-gray-50 text-sm">
-                      <span className="w-1.5 h-1.5 rounded-full bg-orange-300 flex-shrink-0" />{ing}
+                      <span className="w-1.5 h-1.5 rounded-full bg-orange-300 flex-shrink-0" />{scaleIngredientLine(ing, viewScale)}
                     </div>
                   ))}
                 </div>
@@ -1214,7 +1222,7 @@ export default function MealPlannerPage() {
       )}
 
       {viewingRecipe && cookingRecipe && (
-        <CookingMode recipe={viewingRecipe} onClose={() => setCookingRecipe(false)} />
+        <CookingMode recipe={viewingRecipe} initialScale={viewScale} onClose={() => setCookingRecipe(false)} />
       )}
 
       {showGoalsModal && (

@@ -15,7 +15,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "limit_reached", plan: status.plan, limit: status.weeklyLimit }, { status: 402 })
   }
 
-  const { recipe_id, title, ingredients, servings } = await req.json()
+  const { recipe_id, title, ingredients, servings, manual } = await req.json()
+
+  // Kill-switch for stale cached clients from the old auto-generate era:
+  // only explicit button presses (which send manual: true) may generate.
+  if (manual !== true) {
+    return NextResponse.json({ error: "auto_generation_disabled" }, { status: 400 })
+  }
 
   // Only the cookbook owner or an editor collaborator may write nutrition to a recipe
   const [users]: any = await pool.query("SELECT id FROM users WHERE email = ?", [session.user.email])

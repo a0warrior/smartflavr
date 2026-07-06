@@ -58,6 +58,14 @@ module.exports = {
           '0%':   { strokeDashoffset: '24' },
           '100%': { strokeDashoffset: '0' },
         },
+        marquee: {
+          '0%':   { transform: 'translateX(0)' },
+          '100%': { transform: 'translateX(-50%)' },
+        },
+        'glow-pulse': {
+          '0%, 100%': { boxShadow: '0 4px 20px rgba(249,115,22,0.35)' },
+          '50%':      { boxShadow: '0 6px 36px rgba(249,115,22,0.6)' },
+        },
       },
       animation: {
         float: 'float 8s ease-in-out infinite',
@@ -69,6 +77,8 @@ module.exports = {
         'bubble-pop': 'bubble-pop 0.3s ease-out',
         'pop-in': 'pop-in 0.45s cubic-bezier(.34,1.4,.64,1) forwards',
         'check-draw': 'check-draw 0.4s ease-out 0.2s forwards',
+        marquee: 'marquee 28s linear infinite',
+        'glow-pulse': 'glow-pulse 2.6s ease-in-out infinite',
       },
     },
   },

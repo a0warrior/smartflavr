@@ -8,7 +8,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const { title, description, ingredients, instructions, source_url, prep_time, servings, cookbook_id, notes, difficulty, category_id, sort_order, image_url, nutrition } = await req.json()
+  const { title, description, ingredients, instructions, source_url, prep_time, servings, cookbook_id, notes, difficulty, category_id, sort_order, image_url, nutrition, copy_nutrition } = await req.json()
+
+  // Nutrition only rides along on explicit recipe copies — never on imports/extracts
+  const allowedNutrition = copy_nutrition === true ? nutrition : null
 
   const [users]: any = await pool.query(
     "SELECT id FROM users WHERE email = ?",
@@ -21,7 +24,7 @@ export async function POST(req: Request) {
 
   const [result]: any = await pool.query(
     "INSERT INTO recipes (cookbook_id, user_id, title, description, ingredients, instructions, source_url, prep_time, servings, notes, difficulty, category_id, sort_order, image_url, nutrition) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    [cookbook_id, users[0].id, title, description, ingredients, instructions, source_url, prep_time, servings, notes || null, difficulty || null, category_id || null, sort_order || 0, image_url || null, nutrition ? JSON.stringify(nutrition) : null]
+    [cookbook_id, users[0].id, title, description, ingredients, instructions, source_url, prep_time, servings, notes || null, difficulty || null, category_id || null, sort_order || 0, image_url || null, allowedNutrition ? JSON.stringify(allowedNutrition) : null]
   )
 
   return NextResponse.json({ success: true, id: result.insertId })

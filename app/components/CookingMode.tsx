@@ -1,5 +1,7 @@
 "use client"
 import { useEffect, useRef, useState } from "react"
+import ServingsScaler from "@/app/components/ServingsScaler"
+import { scaleIngredientLine } from "@/lib/scale"
 
 type Timer = {
   id: number
@@ -31,9 +33,10 @@ function formatCountdown(ms: number) {
 
 let timerId = 1
 
-export default function CookingMode({ recipe, onClose }: { recipe: any, onClose: () => void }) {
+export default function CookingMode({ recipe, onClose, initialScale = 1 }: { recipe: any, onClose: () => void, initialScale?: number }) {
   const steps: string[] = (recipe.instructions || "").split("\n").filter(Boolean)
-  const ingredients: string[] = (recipe.ingredients || "").split("\n").filter(Boolean)
+  const [scale, setScale] = useState(initialScale)
+  const ingredients: string[] = (recipe.ingredients || "").split("\n").filter(Boolean).map((l: string) => scaleIngredientLine(l, scale))
   const [stepIndex, setStepIndex] = useState(0)
   const [showIngredients, setShowIngredients] = useState(false)
   const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(new Set())
@@ -183,7 +186,10 @@ export default function CookingMode({ recipe, onClose }: { recipe: any, onClose:
         {/* Desktop sidebar — ingredients + step overview */}
         <div className="hidden md:flex md:flex-col w-80 lg:w-96 border-r border-gray-100 bg-gray-50/60 flex-shrink-0 overflow-y-auto">
           <div className="px-5 pt-5 pb-3">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Ingredients</p>
+            <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Ingredients</p>
+              <ServingsScaler servings={recipe.servings} factor={scale} onChange={setScale} />
+            </div>
             <div className="bg-white border border-gray-100 rounded-2xl px-4 py-1">
               {ingredients.length === 0 && <p className="text-sm text-gray-300 py-3">No ingredients listed.</p>}
               {ingredients.map((ing, i) => (
@@ -312,8 +318,9 @@ export default function CookingMode({ recipe, onClose }: { recipe: any, onClose:
         <div className="absolute inset-0 z-10 flex flex-col justify-end" onClick={() => setShowIngredients(false)}>
           <div className="absolute inset-0 bg-black/40" />
           <div className="relative bg-white rounded-t-3xl max-h-[75vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
-              <p className="text-sm font-semibold">Ingredients</p>
+            <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-gray-100 flex-shrink-0">
+              <p className="text-sm font-semibold flex-shrink-0">Ingredients</p>
+              <ServingsScaler servings={recipe.servings} factor={scale} onChange={setScale} />
               <button onClick={() => setShowIngredients(false)} className="text-gray-400 p-1">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>

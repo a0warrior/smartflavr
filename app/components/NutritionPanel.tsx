@@ -20,6 +20,7 @@ export default function NutritionPanel({ recipe, onNutritionGenerated, readOnly 
           title: recipe.title,
           ingredients: recipe.ingredients,
           servings: parseInt(recipe.servings) || 1,
+          manual: true,
         }),
       })
       const data = await res.json()
