@@ -18,7 +18,7 @@ export async function GET(req: Request) {
   }
 
   const [friends] = await pool.query(
-    `SELECT users.id, users.name, users.username, users.profile_image
+    `SELECT users.id, users.name, users.username, users.profile_image, users.bio
      FROM follows f1
      JOIN follows f2 ON f1.follower_id = f2.following_id AND f1.following_id = f2.follower_id
      JOIN users ON users.id = f1.following_id

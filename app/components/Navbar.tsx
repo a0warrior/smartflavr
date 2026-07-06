@@ -3,7 +3,7 @@ import { signOut, useSession } from "next-auth/react"
 import Link from "next/link"
 import Image from "next/image"
 import { useState, useEffect } from "react"
-import { BellIcon, HeartIcon, UserIcon, CommentIcon, BookIcon, BanIcon, WarningIcon, SparkleIcon } from "@/app/components/Icons"
+import { BellIcon, HeartIcon, UserIcon, CommentIcon, BookIcon, BanIcon, WarningIcon, SparkleIcon, PeopleIcon } from "@/app/components/Icons"
 import BottomNav from "@/app/components/BottomNav"
 import { pulse, subscribe } from "@/lib/firebase"
 
@@ -312,6 +312,9 @@ export default function Navbar() {
                     View profile
                   </Link>
                 )}
+                <Link href="/friends" onClick={() => setShowMenu(false)} className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition">
+                  Friends
+                </Link>
                 <Link href="/profile/settings" onClick={() => setShowMenu(false)} className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition">
                   Settings
                 </Link>
@@ -375,6 +378,10 @@ export default function Navbar() {
               My Profile
             </Link>
           )}
+          <Link href="/friends" onClick={() => setShowSidebar(false)} className="flex items-center gap-3 px-5 py-3 text-sm text-gray-700 hover:bg-gray-50 transition font-medium">
+            <PeopleIcon size={16} className="text-gray-400" />
+            Friends
+          </Link>
           <Link href="/favorites" onClick={() => setShowSidebar(false)} className="flex items-center gap-3 px-5 py-3 text-sm text-gray-700 hover:bg-gray-50 transition font-medium">
             <HeartIcon size={16} className="text-gray-400" />
             Favorites
