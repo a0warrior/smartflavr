@@ -1,26 +1,41 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import pool from "@/lib/db"
-import Anthropic from "@anthropic-ai/sdk"
-import { getPlanStatus, incrementAIUsage } from "@/lib/subscription"
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const NUMBER_FIELDS = ["calories", "protein", "carbs", "fat", "fiber", "sugar", "sodium"]
+const VITAMIN_FIELDS = ["vitamin_a", "vitamin_c", "vitamin_d", "vitamin_b12", "vitamin_b6", "folate"]
+const MINERAL_FIELDS = ["calcium", "iron", "potassium", "magnesium", "zinc", "phosphorus"]
 
+function sanitizeNutrition(input: any) {
+  if (!input || typeof input !== "object") return {}
+  const clean: any = {}
+  for (const f of NUMBER_FIELDS) {
+    const v = Number(input[f])
+    if (input[f] !== undefined && input[f] !== null && !isNaN(v)) clean[f] = v
+  }
+  for (const group of ["vitamins", "minerals"] as const) {
+    const fields = group === "vitamins" ? VITAMIN_FIELDS : MINERAL_FIELDS
+    const src = input[group]
+    if (!src || typeof src !== "object") continue
+    const out: any = {}
+    for (const f of fields) {
+      const v = Number(src[f])
+      if (src[f] !== undefined && src[f] !== null && !isNaN(v)) out[f] = v
+    }
+    if (Object.keys(out).length > 0) clean[group] = out
+  }
+  return clean
+}
+
+// Nutrition facts are entered manually by the recipe's owner/editors — no AI.
 export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const status = await getPlanStatus(session.user.email)
-  if (!status.canUseAI) {
-    return NextResponse.json({ error: "limit_reached", plan: status.plan, limit: status.weeklyLimit }, { status: 402 })
-  }
-
-  const { recipe_id, title, ingredients, servings, manual } = await req.json()
-
-  // Kill-switch for stale cached clients from the old auto-generate era:
-  // only explicit button presses (which send manual: true) may generate.
-  if (manual !== true) {
-    return NextResponse.json({ error: "auto_generation_disabled" }, { status: 400 })
+  const { recipe_id, nutrition } = await req.json()
+  const clean = sanitizeNutrition(nutrition)
+  if (Object.keys(clean).length === 0) {
+    return NextResponse.json({ error: "No nutrition values provided" }, { status: 400 })
   }
 
   // Only the cookbook owner or an editor collaborator may write nutrition to a recipe
@@ -49,52 +64,43 @@ export async function POST(req: Request) {
     if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
-  const prompt = `You are a registered dietitian calculating precise nutrition facts for a recipe.
-
-Recipe: ${title || ""}
-Ingredients list:
-${ingredients}
-Total servings: ${servings || 1}
-
-Instructions:
-1. Parse each ingredient line carefully — identify the food item, quantity, and unit (e.g. "2 tbsp olive oil", "1 cup all-purpose flour", "3 large eggs").
-2. Look up realistic nutritional values for each ingredient based on USDA data or well-known food composition tables.
-3. Sum all ingredients, then divide by the number of servings to get per-serving values.
-4. Do NOT use round numbers like 500 or 520 calories. Calculate precisely from the ingredient amounts.
-5. Calories must satisfy: calories ≈ (protein × 4) + (carbs × 4) + (fat × 9). Verify this before returning.
-
-Return ONLY a JSON object — no explanation, no markdown:
-{
-  "calories": 0,
-  "protein": 0,
-  "carbs": 0,
-  "fat": 0,
-  "fiber": 0,
-  "sugar": 0,
-  "sodium": 0,
-  "vitamins": { "vitamin_a": 0, "vitamin_c": 0, "vitamin_d": 0, "vitamin_b12": 0, "vitamin_b6": 0, "folate": 0 },
-  "minerals": { "calcium": 0, "iron": 0, "potassium": 0, "magnesium": 0, "zinc": 0, "phosphorus": 0 },
-  "daily_values": {
-    "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "fiber": 0, "sugar": 0, "sodium": 0,
-    "vitamin_a": 0, "vitamin_c": 0, "vitamin_d": 0, "vitamin_b12": 0, "vitamin_b6": 0, "folate": 0,
-    "calcium": 0, "iron": 0, "potassium": 0, "magnesium": 0, "zinc": 0, "phosphorus": 0
-  }
+  await pool.query("UPDATE recipes SET nutrition = ? WHERE id = ?", [JSON.stringify(clean), recipe_id])
+  return NextResponse.json({ success: true, nutrition: clean })
 }
-All values are numbers. Vitamins/minerals in standard units (mg or mcg). Daily values as whole-number percentages (0–100).`
 
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-5",
-    max_tokens: 1000,
-    messages: [{ role: "user", content: prompt }],
-  })
+export async function DELETE(req: Request) {
+  const session = await auth()
+  if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const content = response.content[0].type === "text" ? response.content[0].text : ""
-  const clean = content.replace(/```json|```/g, "").trim()
-  const nutrition = JSON.parse(clean)
+  const { recipe_id } = await req.json()
 
-  await pool.query("UPDATE recipes SET nutrition = ? WHERE id = ?", [JSON.stringify(nutrition), recipe_id])
-  await incrementAIUsage(session.user.email)
-  return NextResponse.json({ success: true, nutrition })
+  const [users]: any = await pool.query("SELECT id FROM users WHERE email = ?", [session.user.email])
+  const userId = users[0]?.id
+  const [rows]: any = await pool.query(
+    "SELECT c.id as cookbook_id, c.user_id FROM recipes r JOIN cookbooks c ON r.cookbook_id = c.id WHERE r.id = ?",
+    [recipe_id]
+  )
+  if (!rows[0]) return NextResponse.json({ error: "Recipe not found" }, { status: 404 })
+  if (rows[0].user_id !== userId) {
+    let allowed = false
+    try {
+      const [collabs]: any = await pool.query(
+        "SELECT role FROM cookbook_collaborators WHERE cookbook_id = ? AND user_id = ? AND status = 'accepted'",
+        [rows[0].cookbook_id, userId]
+      )
+      allowed = !!collabs[0] && collabs[0].role !== "viewer"
+    } catch {
+      const [collabs]: any = await pool.query(
+        "SELECT id FROM cookbook_collaborators WHERE cookbook_id = ? AND user_id = ? AND status = 'accepted'",
+        [rows[0].cookbook_id, userId]
+      )
+      allowed = !!collabs[0]
+    }
+    if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
+
+  await pool.query("UPDATE recipes SET nutrition = NULL WHERE id = ?", [recipe_id])
+  return NextResponse.json({ success: true })
 }
 
 export async function GET(req: Request) {

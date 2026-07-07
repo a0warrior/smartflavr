@@ -9,7 +9,7 @@ import { PageSkeleton } from "@/app/components/Skeletons"
 import CookingMode from "@/app/components/CookingMode"
 import ServingsScaler from "@/app/components/ServingsScaler"
 import { scaleIngredientLine } from "@/lib/scale"
-import { SparkleIcon, PlateIcon, ClockIcon, UserIcon, FlameIcon } from "@/app/components/Icons"
+import { PlateIcon, ClockIcon, UserIcon, FlameIcon } from "@/app/components/Icons"
 import { pulse, subscribe } from "@/lib/firebase"
 import { DndContext, PointerSensor, useSensor, useSensors, useDraggable, useDroppable, DragEndEvent } from "@dnd-kit/core"
 import { CSS } from "@dnd-kit/utilities"
@@ -88,7 +88,6 @@ export default function MealPlannerPage() {
   const [newCategoryName, setNewCategoryName] = useState("")
   const [groceryList, setGroceryList] = useState<any>({})
   const [generatingGrocery, setGeneratingGrocery] = useState(false)
-  const [generatingNutrition, setGeneratingNutrition] = useState(false)
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set())
   const [liveSync, setLiveSync] = useState(false)
   const [syncing, setSyncing] = useState(false)
@@ -207,29 +206,6 @@ export default function MealPlannerPage() {
     const res = await fetch(`/api/recipes?cookbook_id=${cookbookId}`)
     const data = await res.json()
     setAllRecipes(data.recipes || [])
-  }
-
-
-  async function generateMissingNutrition() {
-    if (!planStatus?.canUseAI) return
-    const missingNutrition = meals.filter((m: any) => !m.nutrition && m.ingredients)
-    if (missingNutrition.length === 0) return
-    setGeneratingNutrition(true)
-    for (const meal of missingNutrition) {
-      await fetch("/api/nutrition", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          recipe_id: meal.recipe_id,
-          title: meal.title,
-          ingredients: meal.ingredients,
-          servings: parseInt(meal.servings) || 1,
-          manual: true,
-        }),
-      })
-    }
-    await fetchMeals()
-    setGeneratingNutrition(false)
   }
 
   async function syncMealsToCalendar(mealsToSync: any[]) {
@@ -570,7 +546,6 @@ export default function MealPlannerPage() {
 
   const weekAvg = getWeekAverages()
   const totalMealsPlanned = meals.length
-  const hasMissingNutrition = meals.some((m: any) => !m.nutrition && m.ingredients)
 
   // Partner meals whose category names don't exist in this user's planner still
   // need somewhere to render — give them their own read-only rows
@@ -616,11 +591,6 @@ export default function MealPlannerPage() {
             <button onClick={copyLastWeek} disabled={copyingWeek} title="Copy last week's meals into this week" className="border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 bg-white disabled:opacity-50">{copyingWeek ? "Copying..." : "Copy last week"}</button>
             <button onClick={openGoalsModal} title="Set daily calorie and macro targets" className="border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 bg-white">Goals</button>
             <button onClick={() => setShowSyncModal(true)} title="Invite a friend to see each other's meal plans" className="border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 bg-white">Collaborate</button>
-            {hasMissingNutrition && (
-              <button onClick={generateMissingNutrition} disabled={!planStatus?.canUseAI || generatingNutrition} title={!planStatus?.canUseAI ? "AI limit reached for this week" : undefined} className="flex items-center gap-1.5 border border-orange-200 text-orange-500 px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-50 disabled:opacity-50 transition bg-white">
-                <SparkleIcon size={13} />{generatingNutrition ? "Generating..." : "Generate nutrition"}
-              </button>
-            )}
             <button onClick={generateGroceryList} disabled={!planStatus?.canUseAI || generatingGrocery || meals.length === 0} title={!planStatus?.canUseAI ? "AI limit reached for this week" : undefined} className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-600 disabled:opacity-50 transition">
               {generatingGrocery ? "Generating..." : "Grocery list"}
             </button>
