@@ -43,6 +43,65 @@ export default function CookingMode({ recipe, onClose, initialScale = 1 }: { rec
   const [timers, setTimers] = useState<Timer[]>([])
   const [, setTick] = useState(0)
   const audioCtx = useRef<AudioContext | null>(null)
+  const [showCustomTimer, setShowCustomTimer] = useState(false)
+  const [customMinutes, setCustomMinutes] = useState("")
+  const [customLabel, setCustomLabel] = useState("")
+
+  // Mobile ingredients sheet: draggable between a partial and a near-full snap point
+  const [sheetExpanded, setSheetExpanded] = useState(false)
+  const sheetRef = useRef<HTMLDivElement>(null)
+  const dragRef = useRef<{ startY: number; moved: boolean } | null>(null)
+  const SHEET_PARTIAL = 0.75
+  const SHEET_FULL = 0.94
+
+  function sheetHeightPx(expanded: boolean) {
+    return (expanded ? SHEET_FULL : SHEET_PARTIAL) * window.innerHeight
+  }
+
+  function settleSheet(expanded: boolean) {
+    setSheetExpanded(expanded)
+    requestAnimationFrame(() => {
+      if (!sheetRef.current) return
+      sheetRef.current.style.transition = "height 0.25s ease-out"
+      sheetRef.current.style.height = `${sheetHeightPx(expanded)}px`
+    })
+  }
+
+  // Snap to the partial height, instantly, whenever the sheet is (re)opened
+  useEffect(() => {
+    if (!showIngredients) return
+    setSheetExpanded(false)
+    requestAnimationFrame(() => {
+      if (!sheetRef.current) return
+      sheetRef.current.style.transition = "none"
+      sheetRef.current.style.height = `${sheetHeightPx(false)}px`
+    })
+  }, [showIngredients])
+
+  function onHandleTouchStart(e: React.TouchEvent) {
+    dragRef.current = { startY: e.touches[0].clientY, moved: false }
+    if (sheetRef.current) sheetRef.current.style.transition = "none"
+  }
+
+  function onHandleTouchMove(e: React.TouchEvent) {
+    if (!dragRef.current || !sheetRef.current) return
+    const dy = e.touches[0].clientY - dragRef.current.startY
+    if (Math.abs(dy) > 4) dragRef.current.moved = true
+    const startPx = sheetHeightPx(sheetExpanded)
+    const next = Math.min(sheetHeightPx(true), Math.max(60, startPx - dy))
+    sheetRef.current.style.height = `${next}px`
+  }
+
+  function onHandleTouchEnd() {
+    if (!dragRef.current || !sheetRef.current) return
+    const { moved } = dragRef.current
+    dragRef.current = null
+    if (!moved) { settleSheet(!sheetExpanded); return } // tap toggles
+    const currentPx = sheetRef.current.getBoundingClientRect().height
+    if (currentPx < sheetHeightPx(false) * 0.5) { setShowIngredients(false); return }
+    const midpoint = (sheetHeightPx(false) + sheetHeightPx(true)) / 2
+    settleSheet(currentPx > midpoint)
+  }
 
   // Keep the screen awake while cooking
   useEffect(() => {
@@ -165,6 +224,12 @@ export default function CookingMode({ recipe, onClose, initialScale = 1 }: { rec
           <p className="text-xs text-gray-400">Step {stepIndex + 1} of {steps.length}</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={() => setShowCustomTimer(true)}
+            className="px-3 py-1.5 border border-gray-200 rounded-xl text-xs font-medium text-gray-500 hover:bg-gray-50 transition flex items-center gap-1.5">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="13" r="8"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="10" y1="2" x2="14" y2="2"/></svg>
+            Timer
+          </button>
           <button
             onClick={() => setShowIngredients(true)}
             className="md:hidden px-3 py-1.5 border border-gray-200 rounded-xl text-xs font-medium text-gray-500 hover:bg-gray-50 transition">
@@ -313,12 +378,19 @@ export default function CookingMode({ recipe, onClose, initialScale = 1 }: { rec
         </div>
       </div>
 
-      {/* Ingredients sheet */}
+      {/* Ingredients sheet — drag the handle up for a near-full view, down to shrink or dismiss */}
       {showIngredients && (
         <div className="absolute inset-0 z-10 flex flex-col justify-end" onClick={() => setShowIngredients(false)}>
           <div className="absolute inset-0 bg-black/40" />
-          <div className="relative bg-white rounded-t-3xl max-h-[75vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-gray-100 flex-shrink-0">
+          <div ref={sheetRef} className="relative bg-white rounded-t-3xl h-[75vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div
+              onTouchStart={onHandleTouchStart}
+              onTouchMove={onHandleTouchMove}
+              onTouchEnd={onHandleTouchEnd}
+              className="pt-2.5 pb-1 flex-shrink-0 cursor-grab active:cursor-grabbing touch-none">
+              <div className="w-10 h-1.5 bg-gray-300 rounded-full mx-auto" />
+            </div>
+            <div className="flex items-center justify-between gap-2 px-5 pb-4 border-b border-gray-100 flex-shrink-0">
               <p className="text-sm font-semibold flex-shrink-0">Ingredients</p>
               <ServingsScaler servings={recipe.servings} factor={scale} onChange={setScale} />
               <button onClick={() => setShowIngredients(false)} className="text-gray-400 p-1">
@@ -341,6 +413,62 @@ export default function CookingMode({ recipe, onClose, initialScale = 1 }: { rec
                   <span className={`text-sm ${checkedIngredients.has(i) ? "text-gray-300 line-through" : "text-gray-700"}`}>{ing}</span>
                 </label>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom timer */}
+      {showCustomTimer && (
+        <div className="fixed inset-0 z-[95] bg-black/40 flex items-center justify-center px-4" onClick={() => setShowCustomTimer(false)}>
+          <div className="bg-white rounded-2xl p-5 w-full max-w-xs" onClick={e => e.stopPropagation()}>
+            <p className="text-sm font-semibold text-gray-900 mb-4">Set a timer</p>
+            <div className="flex flex-wrap gap-2 mb-4">
+              {[1, 5, 10, 15, 20, 30].map(m => (
+                <button
+                  key={m}
+                  onClick={() => setCustomMinutes(String(m))}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${customMinutes === String(m) ? "bg-orange-500 text-white border-orange-500" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
+                  {m}m
+                </button>
+              ))}
+            </div>
+            <label className="text-xs text-gray-500 mb-1 block">Minutes</label>
+            <input
+              type="number"
+              inputMode="decimal"
+              value={customMinutes}
+              onChange={e => setCustomMinutes(e.target.value)}
+              placeholder="e.g. 12"
+              autoFocus
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none mb-3"
+            />
+            <label className="text-xs text-gray-500 mb-1 block">Label <span className="text-gray-300">(optional)</span></label>
+            <input
+              value={customLabel}
+              onChange={e => setCustomLabel(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && customMinutes && parseFloat(customMinutes) > 0 && (() => {
+                startTimer(customLabel.trim() || `${customMinutes} min`, parseFloat(customMinutes) * 60000)
+                setShowCustomTimer(false); setCustomMinutes(""); setCustomLabel("")
+              })()}
+              placeholder="e.g. resting dough"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none mb-4"
+            />
+            <div className="flex gap-3">
+              <button onClick={() => setShowCustomTimer(false)} className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm text-gray-500 hover:bg-gray-50 transition">Cancel</button>
+              <button
+                onClick={() => {
+                  const mins = parseFloat(customMinutes)
+                  if (!mins || mins <= 0) return
+                  startTimer(customLabel.trim() || `${mins} min`, mins * 60000)
+                  setShowCustomTimer(false)
+                  setCustomMinutes("")
+                  setCustomLabel("")
+                }}
+                disabled={!customMinutes || parseFloat(customMinutes) <= 0}
+                className="flex-1 bg-orange-500 text-white rounded-xl py-2.5 text-sm font-medium hover:bg-orange-600 disabled:opacity-50 transition">
+                Start
+              </button>
             </div>
           </div>
         </div>
