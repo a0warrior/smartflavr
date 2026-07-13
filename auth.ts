@@ -13,7 +13,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       name: "next-auth.session-token",
       options: {
         httpOnly: true,
-        sameSite: "none",
+        sameSite: "lax",
         path: "/",
         secure: true,
       },
@@ -22,7 +22,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       name: "next-auth.pkce.code_verifier",
       options: {
         httpOnly: true,
-        sameSite: "none",
+        sameSite: "lax",
         path: "/",
         secure: true,
       },
