@@ -39,8 +39,8 @@ export async function POST(req: Request) {
     payment_method_types: ["card"],
     mode: "subscription",
     line_items: [{ price: priceIds[plan], quantity: 1 }],
-    success_url: `${origin}/settings?plan_success=1`,
-    cancel_url: `${origin}/settings`,
+    success_url: `${origin}/profile/settings?plan_success=1`,
+    cancel_url: `${origin}/profile/settings?tab=plan`,
     metadata: { plan },
   })
 
