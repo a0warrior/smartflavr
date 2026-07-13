@@ -45,18 +45,35 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
   const { id } = await params
 
-  // Cascade: clean up everything inside the cookbook before deleting it
-  const [recipes]: any = await pool.query("SELECT id FROM recipes WHERE cookbook_id = ?", [id])
-  if (recipes.length > 0) {
-    const recipeIds = recipes.map((r: any) => r.id)
-    await pool.query("DELETE FROM favorites WHERE recipe_id IN (?)", [recipeIds])
-    await pool.query("DELETE FROM meal_plans WHERE recipe_id IN (?)", [recipeIds])
-    await pool.query("UPDATE posts SET recipe_id = NULL WHERE recipe_id IN (?)", [recipeIds])
+  const [users]: any = await pool.query("SELECT id FROM users WHERE email = ?", [session.user.email])
+  const userId = users[0]?.id
+
+  const [cookbooks]: any = await pool.query("SELECT user_id FROM cookbooks WHERE id = ?", [id])
+  if (!cookbooks[0]) {
+    return NextResponse.json({ error: "Cookbook not found" }, { status: 404 })
   }
-  await pool.query("DELETE FROM recipes WHERE cookbook_id = ?", [id])
-  await pool.query("DELETE FROM cookbook_collaborators WHERE cookbook_id = ?", [id])
-  await pool.query("UPDATE posts SET cookbook_id = NULL WHERE cookbook_id = ?", [id])
-  await pool.query("DELETE FROM cookbooks WHERE id = ?", [id])
+  if (cookbooks[0].user_id !== userId) {
+    return NextResponse.json({ error: "Only the owner can delete this cookbook" }, { status: 403 })
+  }
+
+  try {
+    // Cascade: clean up everything inside the cookbook before deleting it
+    const [recipes]: any = await pool.query("SELECT id FROM recipes WHERE cookbook_id = ?", [id])
+    if (recipes.length > 0) {
+      const recipeIds = recipes.map((r: any) => r.id)
+      await pool.query("DELETE FROM favorites WHERE recipe_id IN (?)", [recipeIds])
+      await pool.query("DELETE FROM meal_plans WHERE recipe_id IN (?)", [recipeIds])
+      await pool.query("UPDATE posts SET recipe_id = NULL WHERE recipe_id IN (?)", [recipeIds])
+      await pool.query("DELETE FROM recipe_versions WHERE recipe_id IN (?)", [recipeIds]).catch(() => {})
+    }
+    await pool.query("DELETE FROM recipes WHERE cookbook_id = ?", [id])
+    await pool.query("DELETE FROM cookbook_collaborators WHERE cookbook_id = ?", [id])
+    await pool.query("UPDATE posts SET cookbook_id = NULL WHERE cookbook_id = ?", [id])
+    await pool.query("DELETE FROM cookbooks WHERE id = ?", [id])
+  } catch (err: any) {
+    console.error("[cookbook delete]", err)
+    return NextResponse.json({ error: err?.sqlMessage || err?.message || "Delete failed" }, { status: 500 })
+  }
 
   return NextResponse.json({ success: true })
 }

@@ -423,12 +423,18 @@ export default function Dashboard() {
 
   async function confirmDeleteCookbook() {
     if (!cookbookToDelete) return
-    await fetch(`/api/cookbooks/${cookbookToDelete}`, { method: "DELETE" })
+    const res = await fetch(`/api/cookbooks/${cookbookToDelete}`, { method: "DELETE" })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      toast.error(data.error || "Could not delete this cookbook.")
+      return
+    }
     // Kick collaborators who are viewing this cookbook right now
     pulse(`cookbooks/${cookbookToDelete}/lastUpdate`)
     setShowDeleteCookbookModal(false); setCookbookToDelete(null); setShowEditModal(false); setEditingCookbook(null)
     fetchCookbooks()
     if (userId) pulse(`/updates/users/${userId}/cookbooks`)
+    toast.success("Cookbook deleted.")
   }
 
   async function extractRecipe() {
