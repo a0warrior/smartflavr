@@ -42,6 +42,11 @@ export async function POST(req: Request) {
     if (!await isAdmin(session.user.email)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     const { user_id, plan } = body
     if (!["free", "pro", "premium"].includes(plan)) return NextResponse.json({ error: "Invalid plan" }, { status: 400 })
+    // The founder's account can't be modified by other admins
+    const [targetRows]: any = await pool.query("SELECT email FROM users WHERE id = ?", [user_id])
+    if (process.env.OWNER_EMAIL && targetRows[0]?.email === process.env.OWNER_EMAIL && session.user.email !== process.env.OWNER_EMAIL) {
+      return NextResponse.json({ error: "The founder account cannot be modified." }, { status: 403 })
+    }
     await runMigrations()
     // Granting free also resets trial so admins can refresh a user's trial access
     const resetTrial = plan === "free" ? ", trial_used = 0, plan_cancelled_at = NULL" : ", plan_cancelled_at = NULL"
