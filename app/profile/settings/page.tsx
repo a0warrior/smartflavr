@@ -7,6 +7,7 @@ import Navbar from "@/app/components/Navbar"
 import ImageCropper from "@/app/components/ImageCropper"
 import { WarningIcon } from "@/app/components/Icons"
 import { PageSkeleton } from "@/app/components/Skeletons"
+import { toast } from "@/app/components/Toast"
 
 function ProfileSettingsContent() {
   const { data: session, status } = useSession()
@@ -97,6 +98,19 @@ function ProfileSettingsContent() {
     } catch {}
   }
 
+  async function openBillingPortal() {
+    setPlanLoading(true)
+    try {
+      const res = await fetch("/api/stripe/portal", { method: "POST" })
+      const data = await res.json()
+      if (data.url) { window.location.href = data.url; return }
+      toast.error(data.error || "Could not open the billing portal")
+    } catch {
+      toast.error("Could not open the billing portal")
+    }
+    setPlanLoading(false)
+  }
+
   async function startCheckout(plan: "pro" | "premium") {
     setPlanLoading(true)
     try {
@@ -107,9 +121,9 @@ function ProfileSettingsContent() {
       })
       const data = await res.json()
       if (data.url) { window.location.href = data.url; return }
-      setError(data.error || "Could not start checkout")
+      toast.error(data.error || "Could not start checkout")
     } catch {
-      setError("Could not start checkout")
+      toast.error("Could not start checkout")
     }
     setPlanLoading(false)
   }
@@ -539,6 +553,19 @@ function selectProfilePhoto(e: React.ChangeEvent<HTMLInputElement>) {
                   <div className="mt-2 bg-red-50 border border-red-100 rounded-xl p-3 text-xs text-red-500">
                     Your plan is cancelled and will end on <span className="font-semibold">{endsDateStr}</span>. You&apos;ll keep full access until then.
                   </div>
+                )}
+
+                {/* Manage subscription — paid subscribers only (trials have no billing to manage) */}
+                {!ps.isAdminOrOwner && (ps.plan === "pro" || ps.plan === "premium") && !ps.isTrial && (
+                  <button
+                    onClick={openBillingPortal}
+                    disabled={planLoading}
+                    className="mt-4 w-full border border-gray-200 rounded-xl py-2.5 text-sm text-gray-600 hover:bg-gray-50 transition disabled:opacity-50">
+                    {planLoading ? "Opening..." : "Manage subscription"}
+                  </button>
+                )}
+                {!ps.isAdminOrOwner && (ps.plan === "pro" || ps.plan === "premium") && !ps.isTrial && (
+                  <p className="text-[11px] text-gray-300 mt-1.5 text-center">Cancel, change your card, or view invoices — handled securely by Stripe.</p>
                 )}
               </div>
             </div>
