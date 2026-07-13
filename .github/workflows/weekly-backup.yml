@@ -1,0 +1,22 @@
+name: Weekly database backup
+
+on:
+  schedule:
+    # GitHub cron runs in UTC. 09:00 UTC Sunday ≈ 3–4am US Central.
+    - cron: "0 9 * * 0"
+  # Allows a manual run from the GitHub Actions tab to test it
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger backup endpoint
+        run: |
+          status=$(curl -s -o response.json -w "%{http_code}" \
+            "https://smartflavr.com/api/backup?key=${{ secrets.BACKUP_SECRET }}")
+          cat response.json
+          if [ "$status" != "200" ]; then
+            echo "Backup failed with HTTP $status"
+            exit 1
+          fi
