@@ -33,6 +33,11 @@ export function Toaster() {
     return () => window.removeEventListener("smartflavr:toast", onToast)
   }, [])
 
+  function dismiss(id: number) {
+    setToasts(prev => prev.map(t => t.id === id ? { ...t, leaving: true } : t))
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 300)
+  }
+
   if (toasts.length === 0) return null
 
   return (
@@ -59,11 +64,11 @@ export function Toaster() {
             {t.href && <span className="text-white/60 text-xs flex-shrink-0">View →</span>}
           </>
         )
-        const className = `flex items-center gap-2.5 bg-gray-900/95 text-white text-sm font-medium rounded-full pl-3 pr-4 py-2.5 shadow-lg backdrop-blur-sm transition-all duration-300 ${t.leaving ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0 animate-toast-in"} ${t.href ? "pointer-events-auto cursor-pointer hover:bg-gray-800" : ""}`
+        const className = `flex items-center gap-2.5 bg-gray-900/95 text-white text-sm font-medium rounded-full pl-3 pr-4 py-2.5 shadow-lg backdrop-blur-sm transition-all duration-300 pointer-events-auto cursor-pointer ${t.leaving ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0 animate-toast-in"} ${t.href ? "hover:bg-gray-800" : ""}`
         return t.href ? (
-          <Link key={t.id} href={t.href} className={className}>{icon}</Link>
+          <Link key={t.id} href={t.href} className={className} onClick={() => dismiss(t.id)}>{icon}</Link>
         ) : (
-          <div key={t.id} className={className}>{icon}</div>
+          <div key={t.id} className={className} onClick={() => dismiss(t.id)}>{icon}</div>
         )
       })}
     </div>
