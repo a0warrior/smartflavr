@@ -139,7 +139,7 @@ export async function DELETE(req: Request) {
   } catch (err) {
     await conn.rollback()
     console.error("Delete user error:", err)
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+    return NextResponse.json({ error: "Could not delete this user. Check the server logs for details." }, { status: 500 })
   } finally {
     conn.release()
   }

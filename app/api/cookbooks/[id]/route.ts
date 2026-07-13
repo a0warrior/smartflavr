@@ -72,8 +72,9 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     await pool.query("UPDATE posts SET cookbook_id = NULL WHERE cookbook_id = ?", [id])
     await pool.query("DELETE FROM cookbooks WHERE id = ?", [id])
   } catch (err: any) {
+    // Full details go to the server log only — never expose raw SQL errors to clients
     console.error("[cookbook delete]", err)
-    return NextResponse.json({ error: err?.sqlMessage || err?.message || "Delete failed" }, { status: 500 })
+    return NextResponse.json({ error: "Something went wrong deleting this cookbook. Please try again." }, { status: 500 })
   }
 
   return NextResponse.json({ success: true })

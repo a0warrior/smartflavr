@@ -53,6 +53,6 @@ Based on the URL and your knowledge, generate a complete recipe for what this UR
     return NextResponse.json({ success: true, recipe })
   } catch (error) {
     console.error("Extraction error:", error)
-    return NextResponse.json({ success: false, error: String(error) })
+    return NextResponse.json({ success: false, error: "Could not extract a recipe from that URL." })
   }
 }

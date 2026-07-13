@@ -20,6 +20,7 @@ export async function POST(req: Request) {
     })
     return NextResponse.json({ success: true, url: result.secure_url })
   } catch (error) {
-    return NextResponse.json({ success: false, error: String(error) })
+    console.error("Video upload error:", error)
+    return NextResponse.json({ success: false, error: "Upload failed. Try a smaller video." })
   }
 }

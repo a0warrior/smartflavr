@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { v2 as cloudinary } from "cloudinary"
+import { auth } from "@/auth"
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -8,6 +9,9 @@ cloudinary.config({
 })
 
 export async function POST(req: Request) {
+  const session = await auth()
+  if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
   try {
     const { image } = await req.json()
     const result = await cloudinary.uploader.upload(image, {
@@ -15,6 +19,7 @@ export async function POST(req: Request) {
     })
     return NextResponse.json({ success: true, url: result.secure_url })
   } catch (error) {
-    return NextResponse.json({ success: false, error: String(error) })
+    console.error("Upload error:", error)
+    return NextResponse.json({ success: false, error: "Upload failed. Try a smaller image." })
   }
 }
