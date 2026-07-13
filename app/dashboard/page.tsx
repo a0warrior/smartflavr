@@ -6,6 +6,7 @@ import Navbar from "../components/Navbar"
 import GroceryCollaboratorModal from "../components/GroceryCollaboratorModal"
 import { toast } from "../components/Toast"
 import { PageSkeleton } from "../components/Skeletons"
+import { useExtraction } from "../components/ExtractionProvider"
 import ImageCropper from "../components/ImageCropper"
 import Link from "next/link"
 import {
@@ -114,14 +115,13 @@ export default function Dashboard() {
   const [coverImage, setCoverImage] = useState("")
   const [loading, setLoading] = useState(false)
   const [url, setUrl] = useState("")
-  const [extracting, setExtracting] = useState(false)
-  const [extractedRecipe, setExtractedRecipe] = useState<any>(null)
+  const {
+    extracting, extractedRecipe, clearExtractedRecipe, startUrlExtraction,
+    importing, showImportModal, importedRecipes, setImportedRecipes, closeImportModal, startFileImport,
+  } = useExtraction()
   const [selectedCookbooks, setSelectedCookbooks] = useState<string[]>([])
   const [cropImage, setCropImage] = useState("")
   const [cropTarget, setCropTarget] = useState<"new" | "edit">("new")
-  const [showImportModal, setShowImportModal] = useState(false)
-  const [importing, setImporting] = useState(false)
-  const [importedRecipes, setImportedRecipes] = useState<any[]>([])
   const [importCookbooks, setImportCookbooks] = useState<{[key: number]: string[]}>({})
   const [expandedImports, setExpandedImports] = useState<Set<number>>(new Set())
   const [savingRecipes, setSavingRecipes] = useState(false)
@@ -437,50 +437,19 @@ export default function Dashboard() {
     toast.success("Cookbook deleted.")
   }
 
-  async function extractRecipe() {
+  function extractRecipe() {
     if (!url || !planStatus?.canUseAI) return
-    setExtracting(true)
-    const res = await fetch("/api/extract", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) })
-    const data = await res.json()
-    if (data.success) { setExtractedRecipe(data.recipe); setUrl("") } else { toast.error("Could not extract recipe. Try a different URL.") }
-    setExtracting(false)
+    // Fire-and-forget: lives in ExtractionProvider so it survives navigating away
+    startUrlExtraction(url)
+    setUrl("")
   }
 
-  async function handleFileImport(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFileImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file || !planStatus?.canUseAI) return
-    setImporting(true); setShowImportModal(true); setImportedRecipes([]); setImportCookbooks({})
-    if (file.type.startsWith("image/")) {
-      const reader = new FileReader()
-      reader.onloadend = async () => {
-        try {
-          const res = await fetch("/api/extract-file", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: reader.result, type: "image" }) })
-          const data = await res.json()
-          if (data.success) setImportedRecipes(data.recipes); else toast.error("Could not extract recipe.")
-        } catch { toast.error("Could not extract recipe.") }
-        setImporting(false)
-      }
-      reader.readAsDataURL(file)
-    } else if (file.type === "application/pdf") {
-      const reader = new FileReader()
-      reader.onloadend = async () => {
-        try {
-          const res = await fetch("/api/extract-file", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: reader.result, type: "pdf" }) })
-          const data = await res.json()
-          if (data.success) setImportedRecipes(data.recipes); else toast.error("Could not extract recipe.")
-        } catch { toast.error("Could not extract recipe.") }
-        setImporting(false)
-      }
-      reader.readAsDataURL(file)
-    } else {
-      try {
-        const text = await file.text()
-        const res = await fetch("/api/extract-file", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, type: "text" }) })
-        const data = await res.json()
-        if (data.success) setImportedRecipes(data.recipes); else toast.error("Could not extract recipe.")
-      } catch { toast.error("Could not extract recipe.") }
-      setImporting(false)
-    }
+    setImportCookbooks({})
+    // Fire-and-forget: lives in ExtractionProvider so it survives navigating away
+    startFileImport(file)
   }
 
   function toggleImportCookbook(recipeIndex: number, cookbookId: string) {
@@ -547,7 +516,7 @@ export default function Dashboard() {
         saved++
       }
     }
-    setShowImportModal(false); setImportedRecipes([]); setImportCookbooks({}); setExpandedImports(new Set())
+    closeImportModal(); setImportedRecipes([]); setImportCookbooks({}); setExpandedImports(new Set())
     setSavingRecipes(false)
     toast.success(fallbackId ? `Saved ${saved} recipe${saved !== 1 ? "s" : ""} to your new "My Recipes" cookbook!` : `Saved ${saved} recipe${saved !== 1 ? "s" : ""}!`)
   }
@@ -566,7 +535,7 @@ export default function Dashboard() {
       const { nutrition: _n, ...recipeData } = extractedRecipe
       await fetch("/api/recipes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...recipeData, cookbook_id: cookbookId }) })
     }
-    setExtractedRecipe(null); setSelectedCookbooks([])
+    clearExtractedRecipe(); setSelectedCookbooks([])
     setSavingRecipes(false)
     toast.success(`Recipe saved to ${targets.length} cookbook${targets.length > 1 ? "s" : ""}!`)
   }
@@ -1126,7 +1095,7 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="flex gap-3">
-              <button onClick={() => { setExtractedRecipe(null); setSelectedCookbooks([]) }} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Discard</button>
+              <button onClick={() => { clearExtractedRecipe(); setSelectedCookbooks([]) }} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Discard</button>
               <button onClick={saveRecipe} disabled={savingRecipes || (selectedCookbooks.length === 0 && cookbooks.length > 0)} className="flex-1 bg-orange-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-orange-600 disabled:opacity-50">
                 {savingRecipes ? "Saving..." : cookbooks.length === 0 ? "Save to a new cookbook" : `Save to ${selectedCookbooks.length > 0 ? `${selectedCookbooks.length} cookbook${selectedCookbooks.length > 1 ? "s" : ""}` : "cookbook"}`}
               </button>
@@ -1148,7 +1117,7 @@ export default function Dashboard() {
             ) : importedRecipes.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-sm text-gray-500">No recipes found</p>
-                <button onClick={() => setShowImportModal(false)} className="mt-4 border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-500 hover:bg-gray-50">Close</button>
+                <button onClick={() => closeImportModal()} className="mt-4 border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-500 hover:bg-gray-50">Close</button>
               </div>
             ) : (
               <>
@@ -1221,7 +1190,7 @@ export default function Dashboard() {
                   </button>
                 )}
                 <div className="flex gap-3">
-                  <button onClick={() => { setShowImportModal(false); setImportedRecipes([]); setImportCookbooks({}) }} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Cancel</button>
+                  <button onClick={() => { closeImportModal(); setImportedRecipes([]); setImportCookbooks({}) }} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Cancel</button>
                   <button onClick={saveImportedRecipes} disabled={savingRecipes || (cookbooks.length > 0 && Object.values(importCookbooks).every(v => v.length === 0))} className="flex-1 bg-orange-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-orange-600 disabled:opacity-50">
                     {savingRecipes ? "Saving..." : cookbooks.length === 0 ? `Save ${importedRecipes.length} to a new cookbook` : `Save ${Object.values(importCookbooks).flat().length} to cookbook${Object.values(importCookbooks).flat().length !== 1 ? "s" : ""}`}
                   </button>
