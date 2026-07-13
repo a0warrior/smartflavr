@@ -755,13 +755,13 @@ export default function CookbookPage() {
   const recipe = editMode ? edited : selectedRecipe
 
   return (
-    <div className="flex flex-col overflow-hidden" style={{ height: "100svh" }}>
+    <div className="flex flex-col md:overflow-hidden md:h-[100svh]">
       <Navbar />
-      <div className="flex flex-1 overflow-hidden min-h-0">
+      <div className="flex flex-1 md:overflow-hidden md:min-h-0">
 
         {/* ── MOBILE COOKBOOK LIST (full-screen, replaces sidebar on mobile) ── */}
         {mobileView === "list" && (
-          <div className="md:hidden flex flex-col w-full min-h-0 flex-1">
+          <div className="md:hidden flex flex-col w-full">
 
             {/* Pinned header */}
             <div className="flex-shrink-0 bg-white">
@@ -911,7 +911,7 @@ export default function CookbookPage() {
                 )}
               </div>
             ) : (
-              <div className="flex-1 overflow-y-auto min-h-0 bg-gray-50 px-4 pt-2 pb-4">
+              <div className="bg-gray-50 px-4 pt-2 pb-4">
                 <div className="space-y-2">
                   {filteredRecipes.map((r: any) => (
                     <button
@@ -1189,7 +1189,7 @@ export default function CookbookPage() {
           )}
         </div>
 
-        <div className={`flex-col overflow-hidden bg-gray-50 ${mobileView === "detail" ? "flex flex-1" : "hidden"} md:flex md:flex-1`}>
+        <div className={`flex-col bg-gray-50 md:overflow-hidden ${mobileView === "detail" ? "flex" : "hidden"} md:flex md:flex-1`}>
           {/* Mobile header — back + title + primary action + overflow */}
           <div className="md:hidden flex items-center gap-2 px-3 py-3 bg-white border-b border-gray-100 flex-shrink-0">
             <button onClick={() => withUnsavedCheck(() => setMobileView("list"))} className="p-1.5 -ml-1 rounded-lg text-orange-500 flex-shrink-0">
@@ -1271,7 +1271,7 @@ export default function CookbookPage() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4 py-4 md:px-8 md:py-6" id="recipe-content">
+          <div className="px-4 py-4 md:px-8 md:py-6 md:flex-1 md:overflow-y-auto" id="recipe-content">
             {recipe ? (
               <>
                 {!editMode ? (
@@ -1595,8 +1595,13 @@ export default function CookbookPage() {
             <div className="bg-white border-t border-gray-100 px-4 py-2 flex gap-2 overflow-x-auto flex-shrink-0">
               {["Top", "Ingredients", "Instructions", "Notes"].map(section => (
                 <button key={section} onClick={() => {
-                  if (section === "Top") document.getElementById("recipe-content")?.scrollTo({ top: 0, behavior: "smooth" })
-                  else document.getElementById(section.toLowerCase())?.scrollIntoView({ behavior: "smooth" })
+                  if (section === "Top") {
+                    // Desktop: #recipe-content is its own scroll region. Mobile: the page itself scrolls.
+                    document.getElementById("recipe-content")?.scrollTo({ top: 0, behavior: "smooth" })
+                    window.scrollTo({ top: 0, behavior: "smooth" })
+                  } else {
+                    document.getElementById(section.toLowerCase())?.scrollIntoView({ behavior: "smooth" })
+                  }
                 }} className="px-3 py-2 md:py-1 rounded-full text-sm md:text-xs border border-gray-200 text-gray-500 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 transition whitespace-nowrap flex-shrink-0">
                   {section}
                 </button>
