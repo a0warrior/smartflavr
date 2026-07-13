@@ -14,6 +14,36 @@ function getPriceIds(): Record<string, string> {
   }
 }
 
+// Report live pricing so the plan tab never hardcodes amounts. Returns
+// configured:false (instead of erroring) when Stripe env vars aren't set,
+// letting the UI hide the upgrade cards gracefully.
+export async function GET() {
+  const session = await auth()
+  if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const { STRIPE_SECRET_KEY, STRIPE_PRO_PRICE_ID, STRIPE_PREMIUM_PRICE_ID } = process.env
+  if (!STRIPE_SECRET_KEY || !STRIPE_PRO_PRICE_ID || !STRIPE_PREMIUM_PRICE_ID) {
+    return NextResponse.json({ configured: false })
+  }
+
+  try {
+    const stripe = getStripe()
+    const [pro, premium] = await Promise.all([
+      stripe.prices.retrieve(STRIPE_PRO_PRICE_ID),
+      stripe.prices.retrieve(STRIPE_PREMIUM_PRICE_ID),
+    ])
+    const fmt = (p: Stripe.Price) => ({
+      amount: (p.unit_amount ?? 0) / 100,
+      currency: p.currency.toUpperCase(),
+      interval: p.recurring?.interval || "month",
+    })
+    return NextResponse.json({ configured: true, pro: fmt(pro), premium: fmt(premium) })
+  } catch (err) {
+    console.error("Stripe price fetch error:", err)
+    return NextResponse.json({ configured: false })
+  }
+}
+
 export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

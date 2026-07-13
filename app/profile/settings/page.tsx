@@ -31,6 +31,7 @@ function ProfileSettingsContent() {
   // Plan state
   const [planStatus, setPlanStatus] = useState<any>(null)
   const [planLoading, setPlanLoading] = useState(false)
+  const [prices, setPrices] = useState<any>(null)
 
   // Privacy state
   const [profileVisibility, setProfileVisibility] = useState("everyone")
@@ -90,6 +91,27 @@ function ProfileSettingsContent() {
       const res = await fetch("/api/subscription")
       if (res.ok) setPlanStatus(await res.json())
     } catch {}
+    try {
+      const res = await fetch("/api/stripe")
+      if (res.ok) setPrices(await res.json())
+    } catch {}
+  }
+
+  async function startCheckout(plan: "pro" | "premium") {
+    setPlanLoading(true)
+    try {
+      const res = await fetch("/api/stripe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
+      })
+      const data = await res.json()
+      if (data.url) { window.location.href = data.url; return }
+      setError(data.error || "Could not start checkout")
+    } catch {
+      setError("Could not start checkout")
+    }
+    setPlanLoading(false)
   }
 
   async function startTrial() {
@@ -468,7 +490,47 @@ function selectProfilePhoto(e: React.ChangeEvent<HTMLInputElement>) {
                     </button>
                   </div>
                 )}
-                {!ps.isAdminOrOwner && ps.plan === "free" && ps.trialUsed && (
+                {/* Upgrade cards — shown to free users, trial users (keep it going), and paid Pro (premium upsell) */}
+                {!ps.isAdminOrOwner && prices?.configured && ps.plan !== "premium" && (
+                  <div className="mt-4">
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">
+                      {ps.isTrial ? "Keep it after your trial" : ps.plan === "pro" ? "Go further" : "Upgrade"}
+                    </p>
+                    <div className={`grid gap-3 ${ps.plan === "pro" && !ps.isTrial ? "grid-cols-1" : "sm:grid-cols-2"}`}>
+                      {(ps.plan === "free" || ps.isTrial) && (
+                        <div className="border border-orange-200 rounded-xl p-4 flex flex-col">
+                          <div className="flex items-baseline justify-between mb-1">
+                            <span className="text-sm font-bold text-gray-900">Pro</span>
+                            <span className="text-sm text-gray-500"><span className="text-lg font-bold text-gray-900">${prices.pro.amount}</span>/{prices.pro.interval}</span>
+                          </div>
+                          <p className="text-xs text-gray-400 mb-3 flex-1">25 AI uses every week — imports, grocery lists, and more.</p>
+                          <button
+                            onClick={() => startCheckout("pro")}
+                            disabled={planLoading}
+                            className="w-full bg-orange-500 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-orange-600 transition disabled:opacity-50">
+                            {planLoading ? "Opening checkout..." : "Get Pro"}
+                          </button>
+                        </div>
+                      )}
+                      <div className="border border-purple-200 rounded-xl p-4 flex flex-col">
+                        <div className="flex items-baseline justify-between mb-1">
+                          <span className="text-sm font-bold text-gray-900">Premium</span>
+                          <span className="text-sm text-gray-500"><span className="text-lg font-bold text-gray-900">${prices.premium.amount}</span>/{prices.premium.interval}</span>
+                        </div>
+                        <p className="text-xs text-gray-400 mb-3 flex-1">Unlimited AI uses. Never think about limits again.</p>
+                        <button
+                          onClick={() => startCheckout("premium")}
+                          disabled={planLoading}
+                          className="w-full text-white rounded-xl py-2.5 text-sm font-semibold transition disabled:opacity-50 hover:opacity-90"
+                          style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)" }}>
+                          {planLoading ? "Opening checkout..." : "Get Premium"}
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-gray-300 mt-2">Secure checkout by Stripe. Cancel anytime.</p>
+                  </div>
+                )}
+                {!ps.isAdminOrOwner && ps.plan === "free" && ps.trialUsed && !prices?.configured && (
                   <p className="text-xs text-gray-400">Your 7-day trial has ended. Paid plans coming soon.</p>
                 )}
 
