@@ -183,6 +183,7 @@ function PostCard({ post, currentUserId, isAdmin, isTimedOut, onDelete, onUpdate
   }
 
   async function deleteComment(id: number) {
+    if (!confirm("Delete this comment?")) return
     await fetch("/api/posts/comment", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -793,6 +794,11 @@ export default function FeedPage() {
     setPostType("text"); setPostVisibility("everyone")
   }
 
+  function cancelPostModal() {
+    if ((postContent.trim() || postImage || postVideo) && !confirm("Discard this post?")) return
+    resetModal()
+  }
+
   if (status === "loading") {
     return <PageSkeleton />
   }
@@ -1007,7 +1013,7 @@ export default function FeedPage() {
             </div>
 
             <div className="flex gap-3">
-              <button onClick={resetModal} className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm text-gray-500 hover:bg-gray-50">Cancel</button>
+              <button onClick={cancelPostModal} className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm text-gray-500 hover:bg-gray-50">Cancel</button>
               <button
                 onClick={submitPost}
                 disabled={submitting || (!postContent && !postImage && !postVideo && !postRecipeId && !postCookbookId)}

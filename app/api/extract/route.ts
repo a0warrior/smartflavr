@@ -16,6 +16,21 @@ export async function POST(req: Request) {
 
   const { url } = await req.json()
 
+  // Strict input validation before anything touches the AI (or burns a
+  // usage credit): exactly one http(s) URL, no whitespace (which also rules
+  // out multiple pasted links and prompt-injection text), sane length.
+  const cleanUrl = typeof url === "string" ? url.trim() : ""
+  if (!/^https?:\/\/[^\s]+$/i.test(cleanUrl) || cleanUrl.length > 2048) {
+    return NextResponse.json({ success: false, error: "Please paste a single valid recipe link (starting with http:// or https://)." })
+  }
+  try {
+    // Must parse as a real URL with a plausible hostname
+    const parsed = new URL(cleanUrl)
+    if (!parsed.hostname.includes(".")) throw new Error("bad host")
+  } catch {
+    return NextResponse.json({ success: false, error: "That doesn't look like a valid link. Check the URL and try again." })
+  }
+
   try {
     const message = await client.messages.create({
       model: "claude-opus-4-6",
@@ -23,7 +38,7 @@ export async function POST(req: Request) {
       messages: [
         {
           role: "user",
-          content: `I have a recipe from this URL: ${url}
+          content: `I have a recipe from this URL: ${cleanUrl}
 
 Based on the URL and your knowledge, generate a complete recipe for what this URL likely contains. Return ONLY a valid JSON object with no extra text:
 
@@ -47,7 +62,7 @@ Based on the URL and your knowledge, generate a complete recipe for what this UR
     if (!jsonMatch) throw new Error("No JSON found")
 
     const recipe = JSON.parse(jsonMatch[0])
-    recipe.source_url = url
+    recipe.source_url = cleanUrl
 
     await incrementAIUsage(session.user.email)
     return NextResponse.json({ success: true, recipe })

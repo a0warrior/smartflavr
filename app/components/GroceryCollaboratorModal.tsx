@@ -55,6 +55,7 @@ export default function GroceryCollaboratorModal({
   }
 
   async function removeCollaborator(userId: number) {
+    if (!confirm("Remove this person from the list?")) return
     await fetch("/api/grocery-list-collaborators", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },

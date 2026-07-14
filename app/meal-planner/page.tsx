@@ -285,6 +285,7 @@ export default function MealPlannerPage() {
   }
 
   async function removeMeal(meal: any) {
+    if (!confirm("Remove this meal from your plan?")) return
     if (liveSync && meal.gcal_event_id) {
       await deleteMealFromCalendar(meal)
     }

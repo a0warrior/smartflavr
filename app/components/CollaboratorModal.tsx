@@ -61,6 +61,7 @@ export default function CollaboratorModal({
   }
 
   async function removeCollaborator(userId: string) {
+    if (!confirm("Remove this collaborator from the cookbook?")) return
     await fetch("/api/collaborators", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },

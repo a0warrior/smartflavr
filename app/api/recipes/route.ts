@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import pool from "@/lib/db"
 import { auth } from "@/auth"
+import { safeHttpUrl } from "@/lib/sanitize"
 
 export async function POST(req: Request) {
   const session = await auth()
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
 
   const [result]: any = await pool.query(
     "INSERT INTO recipes (cookbook_id, user_id, title, description, ingredients, instructions, source_url, prep_time, servings, notes, difficulty, category_id, sort_order, image_url, nutrition) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    [cookbook_id, users[0].id, title, description, ingredients, instructions, source_url, prep_time, servings, notes || null, difficulty || null, category_id || null, sort_order || 0, image_url || null, allowedNutrition ? JSON.stringify(allowedNutrition) : null]
+    [cookbook_id, users[0].id, title, description, ingredients, instructions, safeHttpUrl(source_url) || null, prep_time, servings, notes || null, difficulty || null, category_id || null, sort_order || 0, image_url || null, allowedNutrition ? JSON.stringify(allowedNutrition) : null]
   )
 
   return NextResponse.json({ success: true, id: result.insertId })

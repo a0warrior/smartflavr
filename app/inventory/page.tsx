@@ -98,6 +98,7 @@ export default function InventoryPage() {
   }
 
   async function deleteCustomCategory(cat: any) {
+    if (!confirm(`Delete the "${cat.name}" category?`)) return
     await fetch("/api/inventory-categories", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -171,6 +172,13 @@ export default function InventoryPage() {
     setEditCat(item.category || "Pantry")
   }
 
+  function closeEditItem() {
+    if (!editItem) return
+    const dirty = editName !== (editItem.name || "") || editQty !== (editItem.quantity || "") || editCat !== (editItem.category || "Pantry")
+    if (dirty && !confirm("Discard your changes to this item?")) return
+    setEditItem(null)
+  }
+
   async function saveItemEdit() {
     if (!editItem || !editName.trim()) return
     const patch = { name: editName.trim(), quantity: editQty.trim(), category: editCat }
@@ -203,6 +211,7 @@ export default function InventoryPage() {
   }
 
   async function deleteItem(id: number) {
+    if (!confirm("Delete this item from your kitchen?")) return
     await fetch("/api/inventory", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -649,7 +658,7 @@ export default function InventoryPage() {
       )}
 
       {editItem && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50" onClick={() => setEditItem(null)}>
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50" onClick={() => closeEditItem()}>
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
             <h2 className="text-lg font-medium mb-4">Edit item</h2>
             <label className="text-xs text-gray-500 mb-1 block">Name</label>
@@ -680,7 +689,7 @@ export default function InventoryPage() {
               ))}
             </div>
             <div className="flex gap-3">
-              <button onClick={() => setEditItem(null)} className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm text-gray-500 hover:bg-gray-50">Cancel</button>
+              <button onClick={() => closeEditItem()} className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm text-gray-500 hover:bg-gray-50">Cancel</button>
               <button onClick={saveItemEdit} disabled={!editName.trim()} className="flex-1 bg-orange-500 text-white rounded-xl py-2.5 text-sm font-medium hover:bg-orange-600 disabled:opacity-50">Save</button>
             </div>
           </div>

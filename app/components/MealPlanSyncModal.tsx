@@ -52,6 +52,7 @@ export default function MealPlanSyncModal({ onClose, onSyncChange }: { onClose: 
   }
 
   async function removeSync(syncId: number) {
+    if (!confirm("Stop syncing meal plans with this person?")) return
     await fetch("/api/meal-plan-collaborators", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },

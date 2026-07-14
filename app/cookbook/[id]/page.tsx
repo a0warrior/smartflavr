@@ -11,6 +11,7 @@ import { PageSkeleton } from "@/app/components/Skeletons"
 import CookingMode from "@/app/components/CookingMode"
 import ServingsScaler from "@/app/components/ServingsScaler"
 import { scaleIngredientLine } from "@/lib/scale"
+import { safeHttpUrl } from "@/lib/sanitize"
 import { RecipePDFButton, CookbookPDFButton } from "@/app/components/PDFButtons"
 import { db } from "@/lib/firebase"
 import { ref, onValue, set, off } from "firebase/database"
@@ -1351,8 +1352,8 @@ export default function CookbookPage() {
                         <ShareIcon size={11} />Share recipe
                       </button>
                       <RecipePDFButton recipe={recipe} />
-                      {recipe.source_url && (
-                        <a href={recipe.source_url} target="_blank" className="text-xs text-orange-500 inline-flex items-center gap-1"><LinkIcon size={11} />View original source</a>
+                      {safeHttpUrl(recipe.source_url) && (
+                        <a href={safeHttpUrl(recipe.source_url)} target="_blank" rel="noopener noreferrer" className="text-xs text-orange-500 inline-flex items-center gap-1"><LinkIcon size={11} />View original source</a>
                       )}
                     </div>
                   </>

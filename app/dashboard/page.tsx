@@ -7,6 +7,7 @@ import GroceryCollaboratorModal from "../components/GroceryCollaboratorModal"
 import { toast } from "../components/Toast"
 import { PageSkeleton } from "../components/Skeletons"
 import { useExtraction } from "../components/ExtractionProvider"
+import { escapeHtml } from "@/lib/sanitize"
 import ImageCropper from "../components/ImageCropper"
 import Link from "next/link"
 import {
@@ -277,6 +278,7 @@ export default function Dashboard() {
   }
 
   async function deleteGroceryItem(itemId: number) {
+    if (!confirm("Remove this item from the list?")) return
     await fetch("/api/grocery-lists", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: activeGroceryList.id, deleteItemIds: [itemId] }) })
     const updated = { ...activeGroceryList, items: activeGroceryList.items.filter((i: any) => i.id !== itemId) }
     setActiveGroceryList(updated)
@@ -330,8 +332,8 @@ export default function Dashboard() {
     const household = list.items?.filter((i: any) => !i.checked && i.is_household) || []
     const checked = list.items?.filter((i: any) => i.checked) || []
     const rows = (items: any[], done: boolean) =>
-      items.map((i: any) => `<div class="item ${done ? "done" : ""}"><span class="box">${done ? "✓" : ""}</span><span>${i.ingredient}</span></div>`).join("")
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${list.name}</title><style>
+      items.map((i: any) => `<div class="item ${done ? "done" : ""}"><span class="box">${done ? "✓" : ""}</span><span>${escapeHtml(i.ingredient)}</span></div>`).join("")
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escapeHtml(list.name)}</title><style>
       body{font-family:-apple-system,sans-serif;max-width:600px;margin:40px auto;padding:0 24px;color:#1f2937}
       .header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f3f4f6;padding-bottom:12px;margin-bottom:20px}
       .brand{color:#f97316;font-weight:700;font-size:13px}.date{color:#d1d5db;font-size:11px}
@@ -345,12 +347,12 @@ export default function Dashboard() {
       @media print{@page{margin:16mm}body{padding:0}}
     </style></head><body>
       <div class="header"><span class="brand">SmartFlavr</span><span class="date">${new Date().toLocaleDateString()}</span></div>
-      <h1>${list.name}</h1>
+      <h1>${escapeHtml(list.name)}</h1>
       <div class="progress">${checked.length} of ${list.items?.length || 0} items checked</div>
       ${unchecked.length ? rows(unchecked, false) : ""}
       ${household.length ? `<div class="section">Household</div>${rows(household, false)}` : ""}
       ${checked.length ? `<div class="section">Checked</div>${rows(checked, true)}` : ""}
-      <div class="footer"><span>SmartFlavr</span><span>${list.name}</span></div>
+      <div class="footer"><span>SmartFlavr</span><span>${escapeHtml(list.name)}</span></div>
     </body></html>`
     const win = window.open("", "_blank")
     if (!win) return
@@ -744,6 +746,7 @@ export default function Dashboard() {
                     {list.shared_by ? (
                       <button
                         onClick={async () => {
+                          if (!confirm("Leave this shared list? You'll need a new invite to rejoin.")) return
                           await fetch("/api/grocery-list-collaborators", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ list_id: list.id, user_id: "self" }) })
                           fetchGroceryLists()
                         }}
@@ -807,6 +810,7 @@ export default function Dashboard() {
               {activeGroceryList.shared_by ? (
                 <button
                   onClick={async () => {
+                    if (!confirm("Leave this shared list? You'll need a new invite to rejoin.")) return
                     await fetch("/api/grocery-list-collaborators", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ list_id: activeGroceryList.id, user_id: "self" }) })
                     setShowGroceryListModal(false)
                     setActiveGroceryList(null)
@@ -1044,7 +1048,12 @@ export default function Dashboard() {
             </div>
             <div className="flex gap-3">
               <button onClick={() => deleteCookbook(editingCookbook.id)} className="px-4 py-2 border border-red-200 text-red-400 rounded-xl text-sm hover:bg-red-50">Delete</button>
-              <button onClick={() => setShowEditModal(false)} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Cancel</button>
+              <button onClick={() => {
+                const orig = cookbooks.find((b: any) => b.id === editingCookbook.id)
+                const dirty = orig && (orig.title !== editingCookbook.title || (orig.cover_image || "") !== (editingCookbook.cover_image || "") || (orig.cover_emoji || "") !== (editingCookbook.cover_emoji || "") || (orig.cover_color || "") !== (editingCookbook.cover_color || "") || (orig.is_public || 0) !== (editingCookbook.is_public || 0))
+                if (dirty && !confirm("Discard your changes to this cookbook?")) return
+                setShowEditModal(false); setEditingCookbook(null)
+              }} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Cancel</button>
               <button onClick={updateCookbook} disabled={loading} className="flex-1 bg-orange-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-orange-600">{loading ? "Saving..." : "Save"}</button>
             </div>
           </div>
@@ -1095,7 +1104,7 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="flex gap-3">
-              <button onClick={() => { clearExtractedRecipe(); setSelectedCookbooks([]) }} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Discard</button>
+              <button onClick={() => { if (!confirm("Discard this extracted recipe? You'll need to extract it again to get it back.")) return; clearExtractedRecipe(); setSelectedCookbooks([]) }} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Discard</button>
               <button onClick={saveRecipe} disabled={savingRecipes || (selectedCookbooks.length === 0 && cookbooks.length > 0)} className="flex-1 bg-orange-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-orange-600 disabled:opacity-50">
                 {savingRecipes ? "Saving..." : cookbooks.length === 0 ? "Save to a new cookbook" : `Save to ${selectedCookbooks.length > 0 ? `${selectedCookbooks.length} cookbook${selectedCookbooks.length > 1 ? "s" : ""}` : "cookbook"}`}
               </button>

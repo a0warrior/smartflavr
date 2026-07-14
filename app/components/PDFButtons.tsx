@@ -1,5 +1,8 @@
 "use client"
 import type { ReactNode } from "react"
+import { escapeHtml } from "@/lib/sanitize"
+
+const esc = escapeHtml
 
 const CSS = `
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -38,37 +41,37 @@ function recipeHtml(recipe: any, today: string) {
   const ingredients = recipe.ingredients ? recipe.ingredients.split("\n").filter(Boolean) : []
   const instructions = recipe.instructions ? recipe.instructions.split("\n").filter(Boolean) : []
   return `
-    <div class="header"><span class="brand">SmartFlavr</span><span class="date">${today}</span></div>
-    <h1>${recipe.title}</h1>
-    ${recipe.description ? `<p class="desc">${recipe.description}</p>` : ""}
+    <div class="header"><span class="brand">SmartFlavr</span><span class="date">${esc(today)}</span></div>
+    <h1>${esc(recipe.title)}</h1>
+    ${recipe.description ? `<p class="desc">${esc(recipe.description)}</p>` : ""}
     <div class="chips">
-      ${recipe.prep_time ? `<span class="chip">Time: ${recipe.prep_time}</span>` : ""}
-      ${recipe.servings ? `<span class="chip">Serves: ${recipe.servings}</span>` : ""}
-      ${recipe.difficulty ? `<span class="chip">Difficulty: ${recipe.difficulty}</span>` : ""}
+      ${recipe.prep_time ? `<span class="chip">Time: ${esc(recipe.prep_time)}</span>` : ""}
+      ${recipe.servings ? `<span class="chip">Serves: ${esc(recipe.servings)}</span>` : ""}
+      ${recipe.difficulty ? `<span class="chip">Difficulty: ${esc(recipe.difficulty)}</span>` : ""}
     </div>
     ${ingredients.length ? `
       <div class="section-label">Ingredients</div>
-      ${ingredients.map((ing: string) => `<div class="ingredient"><span class="bullet">•</span><span>${ing}</span></div>`).join("")}
+      ${ingredients.map((ing: string) => `<div class="ingredient"><span class="bullet">•</span><span>${esc(ing)}</span></div>`).join("")}
     ` : ""}
     ${instructions.length ? `
       <div class="section-label">Instructions</div>
       ${instructions.map((step: string, i: number) => `
         <div class="step">
           <div class="step-num">${i + 1}</div>
-          <div class="step-text">${step}</div>
+          <div class="step-text">${esc(step)}</div>
         </div>
       `).join("")}
     ` : ""}
-    ${recipe.notes ? `<div class="notes">Note: ${recipe.notes}</div>` : ""}
-    ${recipe.source_url ? `<div class="source">Source: ${recipe.source_url}</div>` : ""}
-    <div class="footer"><span>SmartFlavr</span><span>${recipe.title}</span></div>
+    ${recipe.notes ? `<div class="notes">Note: ${esc(recipe.notes)}</div>` : ""}
+    ${recipe.source_url ? `<div class="source">Source: ${esc(recipe.source_url)}</div>` : ""}
+    <div class="footer"><span>SmartFlavr</span><span>${esc(recipe.title)}</span></div>
   `
 }
 
 function printHtml(body: string, title: string) {
   const win = window.open("", "_blank")
   if (!win) return
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title><style>${CSS}</style></head><body>${body}</body></html>`)
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>${CSS}</style></head><body>${body}</body></html>`)
   win.document.close()
   win.focus()
   setTimeout(() => { win.print() }, 400)
@@ -93,9 +96,9 @@ export function CookbookPDFButton({ cookbook, recipes, authorName, className, ch
     const today = new Date().toLocaleDateString()
     const cover = `
       <div class="cover">
-        <div class="cover-emoji">${cookbook.cover_emoji || "📖"}</div>
-        <div class="cover-title">${cookbook.title}</div>
-        <div class="cover-author">by ${authorName}</div>
+        <div class="cover-emoji">${esc(cookbook.cover_emoji || "📖")}</div>
+        <div class="cover-title">${esc(cookbook.title)}</div>
+        <div class="cover-author">by ${esc(authorName)}</div>
         <div class="cover-count">${recipes.length} recipe${recipes.length !== 1 ? "s" : ""}</div>
         <div class="cover-brand">SmartFlavr</div>
       </div>
@@ -103,7 +106,7 @@ export function CookbookPDFButton({ cookbook, recipes, authorName, className, ch
     const toc = recipes.length > 1 ? `
       <div class="page-break">
         <div class="toc-title">Contents</div>
-        ${recipes.map((r, i) => `<div class="toc-row"><span>${r.title}</span><span class="toc-num">${i + 1}</span></div>`).join("")}
+        ${recipes.map((r, i) => `<div class="toc-row"><span>${esc(r.title)}</span><span class="toc-num">${i + 1}</span></div>`).join("")}
       </div>
     ` : ""
     const pages = recipes.map(r => `<div class="page-break">${recipeHtml(r, today)}</div>`).join("")
