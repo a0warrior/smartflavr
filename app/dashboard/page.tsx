@@ -514,7 +514,11 @@ export default function Dashboard() {
       const targets = fallbackId ? [fallbackId] : (importCookbooks[i] || [])
       for (const cookbookId of targets) {
         const { nutrition: _n, ...recipeData } = importedRecipes[i]
-        await fetch("/api/recipes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...recipeData, cookbook_id: cookbookId }) })
+        const res = await fetch("/api/recipes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...recipeData, cookbook_id: cookbookId }) })
+        if (res.status === 409) {
+          if (!confirm(`You already have "${importedRecipes[i].title}" in that cookbook. Save it again anyway?`)) continue
+          await fetch("/api/recipes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...recipeData, cookbook_id: cookbookId, allow_duplicate: true }) })
+        }
         saved++
       }
     }
@@ -535,7 +539,13 @@ export default function Dashboard() {
     }
     for (const cookbookId of targets) {
       const { nutrition: _n, ...recipeData } = extractedRecipe
-      await fetch("/api/recipes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...recipeData, cookbook_id: cookbookId }) })
+      const res = await fetch("/api/recipes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...recipeData, cookbook_id: cookbookId }) })
+      if (res.status === 409) {
+        const cbName = cookbooks.find((c: any) => c.id === cookbookId)?.title || "that cookbook"
+        if (confirm(`You already have "${extractedRecipe.title}" in ${cbName}. Save it again anyway?`)) {
+          await fetch("/api/recipes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...recipeData, cookbook_id: cookbookId, allow_duplicate: true }) })
+        }
+      }
     }
     clearExtractedRecipe(); setSelectedCookbooks([])
     setSavingRecipes(false)

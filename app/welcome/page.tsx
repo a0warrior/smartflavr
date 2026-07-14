@@ -158,7 +158,7 @@ export default function WelcomePage() {
         if (cbId) setCookbook({ id: cbId, title: cbTitle || "My Recipes" })
       }
       if (cbId) {
-        await fetch("/api/recipes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...recipeData, cookbook_id: cbId }) })
+        await fetch("/api/recipes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...recipeData, cookbook_id: cbId, allow_duplicate: true }) })
         setSavedRecipe(data.recipe)
       }
     } else if (data.error === "limit_reached") {

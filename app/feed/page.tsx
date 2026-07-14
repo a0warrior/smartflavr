@@ -93,9 +93,9 @@ function PostCard({ post, currentUserId, isAdmin, isTimedOut, onDelete, onUpdate
     }
   }
 
-  async function copyRecipe(targetCookbookId: string) {
+  async function copyRecipe(targetCookbookId: string, allowDuplicate = false) {
     setCopyLoading(true)
-    await fetch("/api/recipes", {
+    const res = await fetch("/api/recipes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -109,9 +109,17 @@ function PostCard({ post, currentUserId, isAdmin, isTimedOut, onDelete, onUpdate
         difficulty: post.recipe_difficulty,
         notes: post.recipe_notes,
         image_url: post.recipe_image || post.image_url,
+        allow_duplicate: allowDuplicate,
         sort_order: 0,
       }),
     })
+    if (res.status === 409) {
+      setCopyLoading(false)
+      if (confirm(`You already have "${post.recipe_title}" in that cookbook. Copy it again anyway?`)) {
+        return copyRecipe(targetCookbookId, true)
+      }
+      return
+    }
     const picked = userCookbooks.find((c: any) => c.id === targetCookbookId)
     setCopyDone(picked?.title || "your cookbook")
     setCopyLoading(false)

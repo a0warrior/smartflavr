@@ -721,10 +721,10 @@ export default function CookbookPage() {
     }
   }
 
-  async function copyRecipeToBook(targetCookbookId: string) {
+  async function copyRecipeToBook(targetCookbookId: string, allowDuplicate = false) {
     if (!recipe) return
     setCopyLoading(true)
-    await fetch("/api/recipes", {
+    const res = await fetch("/api/recipes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -741,9 +741,17 @@ export default function CookbookPage() {
         image_url: recipe.image_url,
         nutrition: recipe.nutrition ? (typeof recipe.nutrition === "string" ? JSON.parse(recipe.nutrition) : recipe.nutrition) : null,
         copy_nutrition: true,
+        allow_duplicate: allowDuplicate,
         sort_order: 0,
       }),
     })
+    if (res.status === 409) {
+      setCopyLoading(false)
+      if (confirm(`You already have "${recipe.title}" in that cookbook. Copy it again anyway?`)) {
+        return copyRecipeToBook(targetCookbookId, true)
+      }
+      return
+    }
     const picked = userCookbooks.find((c: any) => c.id === targetCookbookId)
     setCopyDone(picked?.title || "your cookbook")
     setCopyLoading(false)

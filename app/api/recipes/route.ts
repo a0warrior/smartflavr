@@ -9,7 +9,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const { title, description, ingredients, instructions, source_url, prep_time, servings, cookbook_id, notes, difficulty, category_id, sort_order, image_url, nutrition, copy_nutrition } = await req.json()
+  const { title, description, ingredients, instructions, source_url, prep_time, servings, cookbook_id, notes, difficulty, category_id, sort_order, image_url, nutrition, copy_nutrition, allow_duplicate } = await req.json()
 
   // Nutrition only rides along on explicit recipe copies — never on imports/extracts
   const allowedNutrition = copy_nutrition === true ? nutrition : null
@@ -21,6 +21,19 @@ export async function POST(req: Request) {
 
   if (users.length === 0) {
     return NextResponse.json({ error: "User not found" }, { status: 404 })
+  }
+
+  // Duplicate guard: same title already in the target cookbook. Blank titles
+  // are exempt (the editor creates recipes with title "" before the user types).
+  // Callers retry with allow_duplicate:true after the user confirms.
+  if (typeof title === "string" && title.trim() && allow_duplicate !== true) {
+    const [dupes]: any = await pool.query(
+      "SELECT id FROM recipes WHERE cookbook_id = ? AND LOWER(TRIM(title)) = LOWER(?) LIMIT 1",
+      [cookbook_id, title.trim()]
+    )
+    if (dupes.length > 0) {
+      return NextResponse.json({ duplicate: true, error: "duplicate" }, { status: 409 })
+    }
   }
 
   const [result]: any = await pool.query(

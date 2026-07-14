@@ -4,6 +4,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { auth } from "@/auth"
 import NutritionPanel from "@/app/components/NutritionPanel"
+import ShareCookButton from "@/app/components/ShareCookButton"
 import { ClockIcon, UserIcon, StarIcon, LightBulbIcon } from "@/app/components/Icons"
 
 export default async function ShareRecipePage({
@@ -93,6 +94,8 @@ export default async function ShareRecipePage({
           {recipe.description && (
             <p className="text-sm text-gray-500 leading-relaxed mb-6">{recipe.description}</p>
           )}
+
+          <ShareCookButton recipe={{ title: recipe.title, ingredients: recipe.ingredients, instructions: recipe.instructions, servings: recipe.servings, prep_time: recipe.prep_time }} />
 
           {recipe.ingredients && (
             <div className="mb-6">
