@@ -11,6 +11,8 @@ export type Privacy = {
   notify_collab_invite: boolean
   notify_new_recipe: boolean
   notify_collab_removed: boolean
+  notify_post_like: boolean
+  notify_post_comment: boolean
   show_recent_recipes: boolean
   show_favorites: boolean
   appear_in_suggestions: boolean
@@ -30,6 +32,8 @@ const DEFAULTS: Privacy = {
   notify_collab_invite: true,
   notify_new_recipe: false,
   notify_collab_removed: true,
+  notify_post_like: true,
+  notify_post_comment: true,
   show_recent_recipes: true,
   show_favorites: false,
   appear_in_suggestions: true,
@@ -50,6 +54,8 @@ export async function getPrivacy(userId: number): Promise<Privacy> {
     notify_collab_invite: row.notify_collab_invite === undefined || row.notify_collab_invite === null ? DEFAULTS.notify_collab_invite : !!row.notify_collab_invite,
     notify_new_recipe: row.notify_new_recipe === undefined || row.notify_new_recipe === null ? DEFAULTS.notify_new_recipe : !!row.notify_new_recipe,
     notify_collab_removed: row.notify_collab_removed === undefined || row.notify_collab_removed === null ? DEFAULTS.notify_collab_removed : !!row.notify_collab_removed,
+    notify_post_like: row.notify_post_like === undefined || row.notify_post_like === null ? DEFAULTS.notify_post_like : !!row.notify_post_like,
+    notify_post_comment: row.notify_post_comment === undefined || row.notify_post_comment === null ? DEFAULTS.notify_post_comment : !!row.notify_post_comment,
     show_recent_recipes: row.show_recent_recipes === undefined || row.show_recent_recipes === null ? DEFAULTS.show_recent_recipes : !!row.show_recent_recipes,
     show_favorites: row.show_favorites === undefined || row.show_favorites === null ? DEFAULTS.show_favorites : !!row.show_favorites,
     appear_in_suggestions: row.appear_in_suggestions === undefined || row.appear_in_suggestions === null ? DEFAULTS.appear_in_suggestions : !!row.appear_in_suggestions,

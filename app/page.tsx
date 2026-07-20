@@ -5,6 +5,7 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { BookIcon, LinkIcon, PlateIcon, SparkleIcon, PencilIcon, SearchIcon, ClockIcon, PeopleIcon, ListIcon, FlameIcon, CheckIcon } from "@/app/components/Icons"
 import InstallAppButton from "@/app/components/InstallAppButton"
+import { useTheme } from "@/app/components/ThemeProvider"
 
 // Fades content up as it scrolls into view
 function Reveal({ children, delay = 0, className = "" }: { children: React.ReactNode, delay?: number, className?: string }) {
@@ -28,6 +29,8 @@ function Reveal({ children, delay = 0, className = "" }: { children: React.React
 
 export default function HomePage() {
   const router = useRouter()
+  const { theme } = useTheme()
+  const dark = theme === "dark"
   const [code, setCode] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
@@ -95,12 +98,12 @@ export default function HomePage() {
   ]
 
   return (
-    <div className="sf-landing min-h-screen bg-white overflow-x-hidden">
+    <div className="min-h-screen bg-white dark:bg-gray-950 overflow-x-hidden transition-colors">
       {/* Nav */}
-      <nav className="flex items-center justify-between px-8 py-4 border-b border-orange-100/60 relative z-20 bg-white/80 backdrop-blur-sm">
+      <nav className="flex items-center justify-between px-8 py-4 border-b border-orange-100/60 dark:border-gray-800 relative z-20 bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm">
         <div className="flex items-center gap-2">
           <Image src="/logo.svg" alt="SmartFlavr" width={32} height={32} />
-          <span className="text-lg font-semibold">
+          <span className="text-lg font-semibold text-gray-900 dark:text-white">
             Smart<span className="text-orange-500">Flavr</span>
           </span>
         </div>
@@ -109,7 +112,7 @@ export default function HomePage() {
             const redirect = new URLSearchParams(window.location.search).get("redirect") || ""
             router.push(`/login?code=returning${redirect ? `&redirect=${redirect}` : ""}`)
           }}
-          className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition">
+          className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
           Sign in
         </button>
       </nav>
@@ -117,11 +120,14 @@ export default function HomePage() {
       {/* Hero */}
       <div className="relative px-6 pt-16 pb-28 text-center overflow-hidden">
 
-        {/* Animated shifting gradient base */}
+        {/* Animated shifting gradient base — inline style since it needs to
+            actually swap definitions per theme, not just recolor a utility */}
         <div
           className="absolute inset-0 pointer-events-none animate-gradient-shift"
           style={{
-            background: "linear-gradient(135deg, #ffffff 0%, #fff7ed 25%, #ffedd5 50%, #fff7ed 75%, #ffffff 100%)",
+            background: dark
+              ? "linear-gradient(135deg, #0a0a0b 0%, #1c1410 25%, #2a1a0f 50%, #1c1410 75%, #0a0a0b 100%)"
+              : "linear-gradient(135deg, #ffffff 0%, #fff7ed 25%, #ffedd5 50%, #fff7ed 75%, #ffffff 100%)",
             backgroundSize: "300% 300%",
           }}
         />
@@ -156,24 +162,24 @@ export default function HomePage() {
 
         {/* Floating product cards (desktop only) */}
         <div className="hidden lg:block absolute left-[4%] top-24 w-52 animate-float pointer-events-none" style={{ animationDuration: "9s" }}>
-          <div className="bg-white/90 backdrop-blur rounded-2xl shadow-xl border border-orange-100 p-4 -rotate-6">
-            <div className="h-20 rounded-xl bg-gradient-to-br from-orange-200 to-amber-100 mb-3 flex items-center justify-center text-orange-400"><PlateIcon size={28} /></div>
-            <div className="h-2.5 w-3/4 bg-gray-200 rounded-full mb-2" />
-            <div className="h-2 w-1/2 bg-gray-100 rounded-full mb-3" />
-            <div className="flex items-center gap-1.5 text-[10px] text-orange-500 font-semibold">
+          <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur rounded-2xl shadow-xl border border-orange-100 dark:border-gray-700 p-4 -rotate-6">
+            <div className="h-20 rounded-xl bg-gradient-to-br from-orange-200 to-amber-100 dark:from-orange-500/30 dark:to-amber-500/20 mb-3 flex items-center justify-center text-orange-400"><PlateIcon size={28} /></div>
+            <div className="h-2.5 w-3/4 bg-gray-200 dark:bg-gray-600 rounded-full mb-2" />
+            <div className="h-2 w-1/2 bg-gray-100 dark:bg-gray-700 rounded-full mb-3" />
+            <div className="flex items-center gap-1.5 text-[10px] text-orange-500 dark:text-orange-400 font-semibold">
               <SparkleIcon size={10} /> Imported from a link
             </div>
           </div>
         </div>
         <div className="hidden lg:block absolute right-[4%] top-36 w-48 animate-float-slow pointer-events-none" style={{ animationDuration: "11s" }}>
-          <div className="bg-white/90 backdrop-blur rounded-2xl shadow-xl border border-orange-100 p-4 rotate-6">
-            <div className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-3"><ListIcon size={11} /> Grocery list</div>
+          <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur rounded-2xl shadow-xl border border-orange-100 dark:border-gray-700 p-4 rotate-6">
+            <div className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3"><ListIcon size={11} /> Grocery list</div>
             {["Chicken breast", "Basil", "Parmesan"].map((item, i) => (
-              <div key={item} className="flex items-center gap-2 py-1.5 border-b border-gray-50 last:border-0">
-                <span className={`w-3.5 h-3.5 rounded flex items-center justify-center ${i < 2 ? "bg-orange-500 text-white" : "border border-gray-200"}`}>
+              <div key={item} className="flex items-center gap-2 py-1.5 border-b border-gray-50 dark:border-gray-700 last:border-0">
+                <span className={`w-3.5 h-3.5 rounded flex items-center justify-center ${i < 2 ? "bg-orange-500 text-white" : "border border-gray-200 dark:border-gray-600"}`}>
                   {i < 2 && <CheckIcon size={9} />}
                 </span>
-                <span className={`text-[11px] ${i < 2 ? "text-gray-300 line-through" : "text-gray-600"}`}>{item}</span>
+                <span className={`text-[11px] ${i < 2 ? "text-gray-300 dark:text-gray-600 line-through" : "text-gray-600 dark:text-gray-300"}`}>{item}</span>
               </div>
             ))}
           </div>
@@ -186,21 +192,21 @@ export default function HomePage() {
           </div>
         </div>
         <div className="hidden lg:block absolute left-[12%] bottom-24 animate-float-slow pointer-events-none" style={{ animationDelay: "1s" }}>
-          <div className="bg-white/90 backdrop-blur rounded-full shadow-lg border border-blue-100 pl-2 pr-4 py-1.5 flex items-center gap-2 -rotate-3">
+          <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur rounded-full shadow-lg border border-blue-100 dark:border-blue-900/40 pl-2 pr-4 py-1.5 flex items-center gap-2 -rotate-3">
             <span className="w-6 h-6 rounded-full bg-blue-400 flex items-center justify-center text-white"><PeopleIcon size={12} /></span>
-            <span className="text-[11px] text-gray-600 font-medium">Alex is editing…</span>
+            <span className="text-[11px] text-gray-600 dark:text-gray-300 font-medium">Alex is editing…</span>
           </div>
         </div>
 
         <div className="relative max-w-3xl mx-auto z-10">
           <div
-            className="inline-block bg-orange-100 text-orange-600 text-xs font-semibold px-4 py-1.5 rounded-full mb-8 animate-fade-up"
+            className="inline-block bg-orange-100 dark:bg-orange-500/15 text-orange-600 dark:text-orange-400 text-xs font-semibold px-4 py-1.5 rounded-full mb-8 animate-fade-up"
             style={{ animationDelay: "0s" }}>
             Private beta — invite only
           </div>
 
           <h1
-            className="text-5xl sm:text-6xl font-bold leading-[1.1] mb-6 text-gray-900 animate-fade-up"
+            className="text-5xl sm:text-6xl font-bold leading-[1.1] mb-6 text-gray-900 dark:text-white animate-fade-up"
             style={{ animationDelay: "0.1s", opacity: 0 }}>
             Stop losing<br />recipes you love.<br />
             <span
@@ -211,7 +217,7 @@ export default function HomePage() {
           </h1>
 
           <p
-            className="text-gray-500 text-lg mb-10 max-w-lg mx-auto leading-relaxed animate-fade-up"
+            className="text-gray-500 dark:text-gray-400 text-lg mb-10 max-w-lg mx-auto leading-relaxed animate-fade-up"
             style={{ animationDelay: "0.2s", opacity: 0 }}>
             Paste any recipe link and SmartFlavr pulls it in clean — no ads, no noise. Build beautiful cookbooks, cook step by step, and share with the people you feed.
           </p>
@@ -232,15 +238,15 @@ export default function HomePage() {
                     const redirect = new URLSearchParams(window.location.search).get("redirect") || ""
                     router.push(`/login?code=returning${redirect ? `&redirect=${redirect}` : ""}`)
                   }}
-                  className="px-7 py-3 border border-gray-200 bg-white text-gray-600 rounded-xl font-medium hover:bg-gray-50 active:scale-95 transition-all text-sm">
+                  className="px-7 py-3 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all text-sm">
                   Sign in
                 </button>
-                <InstallAppButton className="px-7 py-3 border border-orange-200 bg-white text-orange-500 rounded-xl font-medium hover:bg-orange-50 active:scale-95 transition-all text-sm inline-flex items-center gap-2" />
+                <InstallAppButton className="px-7 py-3 border border-orange-200 dark:border-orange-500/30 bg-white dark:bg-gray-800 text-orange-500 dark:text-orange-400 rounded-xl font-medium hover:bg-orange-50 dark:hover:bg-orange-500/10 active:scale-95 transition-all text-sm inline-flex items-center gap-2" />
               </div>
             ) : (
-              <div className="bg-white border border-gray-200 rounded-2xl p-5 w-full max-w-xs text-left shadow-md">
-                <p className="text-sm font-semibold mb-1 text-gray-900">Enter your invite code</p>
-                <p className="text-xs text-gray-400 mb-3">Get one from a friend who's already on SmartFlavr.</p>
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 w-full max-w-xs text-left shadow-md">
+                <p className="text-sm font-semibold mb-1 text-gray-900 dark:text-white">Enter your invite code</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">Get one from a friend who's already on SmartFlavr.</p>
                 <div className="flex gap-2 mb-2">
                   <input
                     autoFocus
@@ -249,7 +255,7 @@ export default function HomePage() {
                     onKeyDown={e => e.key === "Enter" && handleCreateAccount()}
                     placeholder="XXXX-XXXX"
                     maxLength={9}
-                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm tracking-widest outline-none focus:border-orange-400 transition"
+                    className="flex-1 border border-gray-200 dark:border-gray-600 bg-transparent text-gray-900 dark:text-white rounded-lg px-3 py-2 text-sm tracking-widest outline-none focus:border-orange-400 transition"
                   />
                   <button
                     onClick={handleCreateAccount}
@@ -261,7 +267,7 @@ export default function HomePage() {
                 {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
                 <button
                   onClick={() => { setShowInvite(false); setError(""); setCode("") }}
-                  className="text-xs text-gray-400 hover:text-gray-600 mt-2 transition">
+                  className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 mt-2 transition">
                   ← Back
                 </button>
               </div>
@@ -286,23 +292,23 @@ export default function HomePage() {
       </div>
 
       {/* Features */}
-      <div className="bg-gray-50 py-20 px-6">
+      <div className="bg-gray-50 dark:bg-gray-900 py-20 px-6">
         <div className="max-w-4xl mx-auto">
           <Reveal>
-            <h2 className="text-3xl font-bold text-center mb-2 text-gray-900">
+            <h2 className="text-3xl font-bold text-center mb-2 text-gray-900 dark:text-white">
               Everything you need to cook smarter.
             </h2>
-            <p className="text-center text-gray-400 mb-12 text-base">No fluff. Just the tools that actually matter.</p>
+            <p className="text-center text-gray-400 dark:text-gray-500 mb-12 text-base">No fluff. Just the tools that actually matter.</p>
           </Reveal>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {features.map((f, i) => (
               <Reveal key={i} delay={i * 0.08}>
-                <div className="bg-white border border-gray-100 rounded-2xl p-6 h-full hover:-translate-y-1.5 hover:shadow-lg hover:border-orange-200 transition-all duration-300 cursor-default group">
-                  <div className="w-11 h-11 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-3 group-hover:bg-orange-500 group-hover:text-white transition-all duration-300">
+                <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-6 h-full hover:-translate-y-1.5 hover:shadow-lg hover:border-orange-200 dark:hover:border-orange-500/40 transition-all duration-300 cursor-default group">
+                  <div className="w-11 h-11 rounded-xl bg-orange-50 dark:bg-orange-500/15 text-orange-500 dark:text-orange-400 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-3 group-hover:bg-orange-500 group-hover:text-white transition-all duration-300">
                     {f.icon}
                   </div>
-                  <div className="text-sm font-semibold mb-2 text-gray-900">{f.title}</div>
-                  <div className="text-sm text-gray-500 leading-relaxed">{f.desc}</div>
+                  <div className="text-sm font-semibold mb-2 text-gray-900 dark:text-white">{f.title}</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{f.desc}</div>
                 </div>
               </Reveal>
             ))}
@@ -314,10 +320,10 @@ export default function HomePage() {
       <div className="py-20 px-6">
         <div className="max-w-3xl mx-auto">
           <Reveal>
-            <h2 className="text-3xl font-bold text-center mb-2 text-gray-900">
+            <h2 className="text-3xl font-bold text-center mb-2 text-gray-900 dark:text-white">
               Up and running in under 2 minutes.
             </h2>
-            <p className="text-center text-gray-400 mb-12 text-base">Seriously, that's all it takes.</p>
+            <p className="text-center text-gray-400 dark:text-gray-500 mb-12 text-base">Seriously, that's all it takes.</p>
           </Reveal>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
             {[
@@ -328,11 +334,11 @@ export default function HomePage() {
             ].map((s, i) => (
               <Reveal key={i} delay={i * 0.12}>
                 <div className="text-center">
-                  <div className="w-10 h-10 rounded-full bg-orange-500 text-white text-sm font-bold flex items-center justify-center mx-auto mb-3 shadow-sm shadow-orange-200">
+                  <div className="w-10 h-10 rounded-full bg-orange-500 text-white text-sm font-bold flex items-center justify-center mx-auto mb-3 shadow-sm shadow-orange-200 dark:shadow-orange-500/20">
                     {s.n}
                   </div>
-                  <div className="text-sm font-semibold mb-1 text-gray-900">{s.title}</div>
-                  <div className="text-xs text-gray-500 leading-relaxed">{s.desc}</div>
+                  <div className="text-sm font-semibold mb-1 text-gray-900 dark:text-white">{s.title}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{s.desc}</div>
                 </div>
               </Reveal>
             ))}
@@ -368,7 +374,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="border-t border-gray-100 py-6 px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-400">
+      <div className="border-t border-gray-100 dark:border-gray-800 py-6 px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-400 dark:text-gray-500">
         <span>© 2026 SmartFlavr · Private beta · <a href="https://aarynwarrior.com" target="_blank" rel="noopener noreferrer" className="hover:text-orange-500 transition">aarynwarrior.com</a></span>
         <div className="flex gap-4">
           <button onClick={() => { window.scrollTo({ top: 0, behavior: "smooth" }); setTimeout(() => setShowInvite(true), 400) }} className="hover:text-orange-500 transition">Create account</button>

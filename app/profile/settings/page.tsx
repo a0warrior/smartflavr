@@ -48,6 +48,8 @@ function ProfileSettingsContent() {
   const [notifyCollabInvite, setNotifyCollabInvite] = useState(true)
   const [notifyNewRecipe, setNotifyNewRecipe] = useState(false)
   const [notifyCollabRemoved, setNotifyCollabRemoved] = useState(true)
+  const [notifyPostLike, setNotifyPostLike] = useState(true)
+  const [notifyPostComment, setNotifyPostComment] = useState(true)
   const [showRecentRecipes, setShowRecentRecipes] = useState(true)
   const [showFavorites, setShowFavorites] = useState(false)
   const [appearInSuggestions, setAppearInSuggestions] = useState(true)
@@ -90,6 +92,8 @@ function ProfileSettingsContent() {
       setNotifyCollabInvite(p.notify_collab_invite ?? true)
       setNotifyNewRecipe(p.notify_new_recipe ?? false)
       setNotifyCollabRemoved(p.notify_collab_removed ?? true)
+      setNotifyPostLike(p.notify_post_like ?? true)
+      setNotifyPostComment(p.notify_post_comment ?? true)
       setShowRecentRecipes(p.show_recent_recipes ?? true)
       setShowFavorites(p.show_favorites ?? false)
       setAppearInSuggestions(p.appear_in_suggestions ?? true)
@@ -202,6 +206,8 @@ function selectProfilePhoto(e: React.ChangeEvent<HTMLInputElement>) {
         notify_collab_invite: notifyCollabInvite,
         notify_new_recipe: notifyNewRecipe,
         notify_collab_removed: notifyCollabRemoved,
+        notify_post_like: notifyPostLike,
+        notify_post_comment: notifyPostComment,
         show_recent_recipes: showRecentRecipes,
         show_favorites: showFavorites,
         appear_in_suggestions: appearInSuggestions,
@@ -505,12 +511,14 @@ function selectProfilePhoto(e: React.ChangeEvent<HTMLInputElement>) {
             <div className="bg-white border border-gray-100 rounded-2xl px-5 py-2">
               <div className="pt-3 pb-2 border-b border-gray-50">
                 <div className="text-sm font-medium text-gray-900">Notifications</div>
-                <div className="text-xs text-gray-400 mt-0.5">Choose what you get notified about</div>
+                <div className="text-xs text-gray-400 mt-0.5">Choose what you get notified about — applies to both in-app and push notifications</div>
               </div>
               <ToggleRow label="New follower" sub="When someone starts following you" checked={notifyNewFollower} onChange={setNotifyNewFollower}/>
               <ToggleRow label="Collaboration invite" sub="When someone invites you to a cookbook" checked={notifyCollabInvite} onChange={setNotifyCollabInvite}/>
               <ToggleRow label="New recipe from someone you follow" sub="Activity from people in your network" checked={notifyNewRecipe} onChange={setNotifyNewRecipe}/>
               <ToggleRow label="Removed from collaboration" sub="When you are removed from a shared cookbook" checked={notifyCollabRemoved} onChange={setNotifyCollabRemoved}/>
+              <ToggleRow label="Post likes" sub="When someone likes your post" checked={notifyPostLike} onChange={setNotifyPostLike}/>
+              <ToggleRow label="Post comments" sub="When someone comments on your post" checked={notifyPostComment} onChange={setNotifyPostComment}/>
             </div>
 
             <div className="bg-white border border-gray-100 rounded-2xl px-5 py-2">

@@ -1125,7 +1125,7 @@ export default function CookbookPage() {
               <div className="space-y-0.5">
                 <button
                   onClick={() => { setActiveCategory("all"); setShowFavoritesOnly(false); setSelectedRecipe(recipes[0] || null) }}
-                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm border transition ${activeCategory === "all" && !showFavoritesOnly ? "border-orange-300 text-orange-600 font-medium" : "border-transparent text-gray-600 hover:bg-gray-50"}`}>
+                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm border transition text-gray-600 ${activeCategory === "all" && !showFavoritesOnly ? "border-orange-300 font-medium" : "border-transparent hover:bg-gray-50"}`}>
                   <ListIcon size={14} />
                   <span className="flex-1 text-left">All</span>
                   <span className="text-xs text-gray-400 tabular-nums">{recipes.length}</span>
@@ -1144,7 +1144,7 @@ export default function CookbookPage() {
                     <button
                       key={cat.id}
                       onClick={() => { setActiveCategory(cat.id); setShowFavoritesOnly(false); setSelectedRecipe(null) }}
-                      className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm border transition ${isActive ? "border-orange-300 text-orange-600 font-medium" : "border-transparent text-gray-600 hover:bg-gray-50"}`}>
+                      className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm border transition text-gray-600 ${isActive ? "border-orange-300 font-medium" : "border-transparent hover:bg-gray-50"}`}>
                       <span className="text-base leading-none flex-shrink-0">{cat.emoji === "📋" ? <ListIcon size={15} className="text-gray-400" /> : cat.emoji}</span>
                       <span className="flex-1 text-left truncate">{cat.name}</span>
                       <span className="text-xs text-gray-400 tabular-nums">{count}</span>

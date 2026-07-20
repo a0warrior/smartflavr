@@ -2,6 +2,11 @@ import { NextResponse } from "next/server"
 import pool from "@/lib/db"
 import { auth } from "@/auth"
 
+async function ensurePostNotifyColumns() {
+  try { await pool.query("ALTER TABLE user_privacy ADD COLUMN IF NOT EXISTS notify_post_like TINYINT(1) NOT NULL DEFAULT 1") } catch {}
+  try { await pool.query("ALTER TABLE user_privacy ADD COLUMN IF NOT EXISTS notify_post_comment TINYINT(1) NOT NULL DEFAULT 1") } catch {}
+}
+
 export async function PUT(req: Request) {
   const session = await auth()
   if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -23,18 +28,22 @@ export async function PUT(req: Request) {
     notify_collab_invite,
     notify_new_recipe,
     notify_collab_removed,
+    notify_post_like,
+    notify_post_comment,
     show_recent_recipes,
     show_favorites,
     appear_in_suggestions,
   } = body
 
+  await ensurePostNotifyColumns()
   await pool.query(`
     INSERT INTO user_privacy (
       user_id, profile_visibility, cookbook_visibility, show_on_explore,
       who_can_follow, who_can_collab, show_follower_count,
       notify_new_follower, notify_collab_invite, notify_new_recipe, notify_collab_removed,
+      notify_post_like, notify_post_comment,
       show_recent_recipes, show_favorites, appear_in_suggestions
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON DUPLICATE KEY UPDATE
       profile_visibility = VALUES(profile_visibility),
       cookbook_visibility = VALUES(cookbook_visibility),
@@ -46,6 +55,8 @@ export async function PUT(req: Request) {
       notify_collab_invite = VALUES(notify_collab_invite),
       notify_new_recipe = VALUES(notify_new_recipe),
       notify_collab_removed = VALUES(notify_collab_removed),
+      notify_post_like = VALUES(notify_post_like),
+      notify_post_comment = VALUES(notify_post_comment),
       show_recent_recipes = VALUES(show_recent_recipes),
       show_favorites = VALUES(show_favorites),
       appear_in_suggestions = VALUES(appear_in_suggestions)
@@ -55,6 +66,7 @@ export async function PUT(req: Request) {
     who_can_follow, who_can_collab, show_follower_count ? 1 : 0,
     notify_new_follower ? 1 : 0, notify_collab_invite ? 1 : 0,
     notify_new_recipe ? 1 : 0, notify_collab_removed ? 1 : 0,
+    notify_post_like ? 1 : 0, notify_post_comment ? 1 : 0,
     show_recent_recipes ? 1 : 0, show_favorites ? 1 : 0, appear_in_suggestions ? 1 : 0,
   ])
 
@@ -68,6 +80,7 @@ export async function GET(req: Request) {
   const [users]: any = await pool.query("SELECT id FROM users WHERE email = ?", [session.user.email])
   if (users.length === 0) return NextResponse.json({ error: "User not found" }, { status: 404 })
 
+  await ensurePostNotifyColumns()
   const [rows]: any = await pool.query("SELECT * FROM user_privacy WHERE user_id = ?", [users[0].id])
 
   return NextResponse.json({ privacy: rows[0] || null })

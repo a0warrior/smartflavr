@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import pool from "@/lib/db"
 import { auth } from "@/auth"
 import { sendPush } from "@/lib/push"
+import { getPrivacy } from "@/lib/privacy"
 
 export async function GET(req: Request) {
   const session = await auth()
@@ -62,15 +63,18 @@ export async function POST(req: Request) {
   ) as any[]
 
   if (postRows.length > 0 && postRows[0].user_id !== currentUser[0].id) {
-    await pool.query(
-      "INSERT INTO notifications (user_id, type, message, data) VALUES (?, 'post_comment', ?, ?)",
-      [
-        postRows[0].user_id,
-        `${currentUser[0].name} commented on your post`,
-        JSON.stringify({ commenter_username: currentUser[0].username, post_id }),
-      ]
-    )
-    sendPush(postRows[0].user_id, { title: "New comment", body: `${currentUser[0].name} commented on your post`, url: "/feed" }).catch(() => {})
+    const authorPrivacy = await getPrivacy(postRows[0].user_id)
+    if (authorPrivacy.notify_post_comment) {
+      await pool.query(
+        "INSERT INTO notifications (user_id, type, message, data) VALUES (?, 'post_comment', ?, ?)",
+        [
+          postRows[0].user_id,
+          `${currentUser[0].name} commented on your post`,
+          JSON.stringify({ commenter_username: currentUser[0].username, post_id }),
+        ]
+      )
+      sendPush(postRows[0].user_id, { title: "New comment", body: `${currentUser[0].name} commented on your post`, url: "/feed" }).catch(() => {})
+    }
   }
 
   return NextResponse.json({ success: true })

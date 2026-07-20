@@ -2,9 +2,11 @@
 import { useEffect, useRef, useState } from "react"
 import ServingsScaler from "@/app/components/ServingsScaler"
 import { scaleIngredientLine } from "@/lib/scale"
+import { toast } from "@/app/components/Toast"
 
 type Timer = {
   id: number
+  serverId?: number
   label: string
   recipeTitle: string
   stepIndex: number
@@ -12,6 +14,11 @@ type Timer = {
   totalMs: number
   done: boolean
 }
+
+// A timer keeps running server-side (and will still push-notify) past this
+// cap, but the UI stops offering to start more — a wall of 20 timer cards
+// isn't useful to anyone.
+const MAX_TIMERS = 8
 
 type Session = {
   scale: number
@@ -64,6 +71,7 @@ export default function CookingMode({
     return init
   })
   const [showAddRecipe, setShowAddRecipe] = useState(false)
+  const [addRecipeSearch, setAddRecipeSearch] = useState("")
 
   const recipe = activeRecipes.find(r => String(r.id) === String(activeId)) || activeRecipes[0]
   const session = sessions[String(recipe.id)] || { scale: initialScale, stepIndex: 0, checkedIngredients: new Set<number>() }
@@ -87,7 +95,9 @@ export default function CookingMode({
   const [, setTick] = useState(0)
   const audioCtx = useRef<AudioContext | null>(null)
   const [showCustomTimer, setShowCustomTimer] = useState(false)
+  const [customHours, setCustomHours] = useState("")
   const [customMinutes, setCustomMinutes] = useState("")
+  const [customSeconds, setCustomSeconds] = useState("")
   const [customLabel, setCustomLabel] = useState("")
 
   const addCandidates = availableRecipes.filter(
@@ -192,6 +202,34 @@ export default function CookingMode({
     return () => { document.body.style.overflow = prev }
   }, [])
 
+  // Pick up any timers that were still running server-side from a previous
+  // cooking-mode session (e.g. the user closed the app and reopened it).
+  useEffect(() => {
+    fetch("/api/cook-timers")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const rows = data?.timers
+        if (!Array.isArray(rows) || rows.length === 0) return
+        const now = Date.now()
+        const restored: Timer[] = rows.slice(0, MAX_TIMERS).map((row: any) => {
+          const endsAt = new Date(row.ends_at).getTime()
+          return {
+            id: timerId++,
+            serverId: row.id,
+            label: row.label,
+            recipeTitle: row.recipe_title || "",
+            stepIndex: 0,
+            endsAt,
+            totalMs: Number(row.duration_ms),
+            done: endsAt <= now,
+          }
+        })
+        setTimers(prev => [...prev, ...restored])
+      })
+      .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Tick every second while timers run; fire alerts on completion
   useEffect(() => {
     if (timers.length === 0) return
@@ -234,16 +272,44 @@ export default function CookingMode({
   }
 
   function startTimer(label: string, ms: number) {
+    if (timers.length >= MAX_TIMERS) {
+      toast.info(`You can have up to ${MAX_TIMERS} timers running at once — dismiss one first.`)
+      return
+    }
     // AudioContext must be created in a user gesture to be allowed to play later
     if (!audioCtx.current) {
       try { audioCtx.current = new (window.AudioContext || (window as any).webkitAudioContext)() } catch {}
     }
     audioCtx.current?.resume?.()
-    setTimers(prev => [...prev, { id: timerId++, label, recipeTitle: recipe.title, stepIndex, endsAt: Date.now() + ms, totalMs: ms, done: false }])
+    const localId = timerId++
+    setTimers(prev => [...prev, { id: localId, label, recipeTitle: recipe.title, stepIndex, endsAt: Date.now() + ms, totalMs: ms, done: false }])
+    // Persist server-side so it keeps running (and still notifies via push)
+    // even if the app gets closed or backgrounded mid-cook.
+    fetch("/api/cook-timers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label, recipe_title: recipe.title, duration_ms: ms }),
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data?.id) return
+        setTimers(prev => prev.map(t => t.id === localId ? { ...t, serverId: data.id } : t))
+      })
+      .catch(() => {})
   }
 
   function dismissTimer(id: number) {
+    const t = timers.find(x => x.id === id)
     setTimers(prev => prev.filter(t => t.id !== id))
+    // Cancel the server-side push too — otherwise a notification could
+    // still arrive after the user already handled it in-app.
+    if (t?.serverId) {
+      fetch("/api/cook-timers", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: t.serverId }),
+      }).catch(() => {})
+    }
   }
 
   // Render a step's text with durations as tappable timer buttons
@@ -304,7 +370,12 @@ export default function CookingMode({
             Ingredients
           </button>
           <button
-            onClick={() => { if (confirm("Leave cooking mode? Any running timers will stop.")) onClose() }}
+            onClick={() => {
+              const msg = activeTimers.length > 0
+                ? "Leave cooking mode? Your timers will keep running and notify you when they're done."
+                : "Leave cooking mode?"
+              if (confirm(msg)) onClose()
+            }}
             className="p-2 rounded-xl text-gray-400 hover:bg-gray-50 transition" aria-label="Exit cooking mode">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
@@ -452,20 +523,20 @@ export default function CookingMode({
             const remaining = t.endsAt - Date.now()
             const pct = Math.max(0, Math.min(100, (remaining / t.totalMs) * 100))
             return (
-              <div key={t.id} className="relative bg-gray-900 text-white rounded-2xl px-4 py-3 w-[calc(50%-0.3125rem)] sm:w-[150px] flex-shrink-0 overflow-hidden">
+              <div key={t.id} className="relative bg-white border border-gray-200 rounded-2xl px-4 py-3 w-[calc(50%-0.3125rem)] sm:w-[150px] flex-shrink-0 overflow-hidden shadow-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="text-2xl font-bold tabular-nums leading-tight">{formatCountdown(remaining)}</div>
+                    <div className="text-2xl font-bold tabular-nums leading-tight text-orange-500">{formatCountdown(remaining)}</div>
                     <div className="text-xs text-gray-400 truncate mt-0.5 max-w-36">{t.label}{isMulti ? ` · ${t.recipeTitle}` : ""}</div>
                   </div>
                   <button
                     onClick={() => dismissTimer(t.id)}
                     aria-label="Cancel timer"
-                    className="w-7 h-7 rounded-full bg-white/10 text-gray-300 text-sm flex items-center justify-center hover:bg-white/20 flex-shrink-0 -mr-1 -mt-0.5">
+                    className="w-7 h-7 rounded-full bg-gray-100 text-gray-400 text-sm flex items-center justify-center hover:bg-gray-200 hover:text-gray-600 flex-shrink-0 -mr-1 -mt-0.5 transition">
                     ✕
                   </button>
                 </div>
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10">
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-100">
                   <div className="h-1 bg-orange-500 transition-all duration-500" style={{ width: `${pct}%` }} />
                 </div>
               </div>
@@ -532,81 +603,122 @@ export default function CookingMode({
       )}
 
       {/* Custom timer */}
-      {showCustomTimer && (
-        <div className="fixed inset-0 z-[95] bg-black/40 flex items-center justify-center px-4" onClick={() => setShowCustomTimer(false)}>
-          <div className="bg-white rounded-2xl p-5 w-full max-w-xs" onClick={e => e.stopPropagation()}>
-            <p className="text-sm font-semibold text-gray-900 mb-4">Set a timer</p>
-            <div className="flex flex-wrap gap-2 mb-4">
-              {[1, 5, 10, 15, 20, 30].map(m => (
+      {showCustomTimer && (() => {
+        const h = parseFloat(customHours) || 0
+        const m = parseFloat(customMinutes) || 0
+        const s = parseFloat(customSeconds) || 0
+        const totalMs = (h * 3600 + m * 60 + s) * 1000
+        const defaultLabel = [h && `${h}h`, m && `${m}m`, s && `${s}s`].filter(Boolean).join(" ") || "Timer"
+        const submit = () => {
+          if (totalMs <= 0) return
+          startTimer(customLabel.trim() || defaultLabel, totalMs)
+          setShowCustomTimer(false); setCustomHours(""); setCustomMinutes(""); setCustomSeconds(""); setCustomLabel("")
+        }
+        return (
+          <div className="fixed inset-0 z-[95] bg-black/40 flex items-center justify-center px-4" onClick={() => setShowCustomTimer(false)}>
+            <div className="bg-white rounded-2xl p-5 w-full max-w-xs" onClick={e => e.stopPropagation()}>
+              <p className="text-sm font-semibold text-gray-900 mb-4">Set a timer</p>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {[1, 5, 10, 15, 20, 30].map(preset => (
+                  <button
+                    key={preset}
+                    onClick={() => { setCustomHours(""); setCustomMinutes(String(preset)); setCustomSeconds("") }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${customMinutes === String(preset) && !customHours && !customSeconds ? "bg-orange-500 text-white border-orange-500" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
+                    {preset}m
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2 mb-3">
+                <div className="flex-1">
+                  <label className="text-xs text-gray-500 mb-1 block">Hours</label>
+                  <input
+                    type="number" inputMode="numeric" min={0}
+                    value={customHours}
+                    onChange={e => setCustomHours(e.target.value)}
+                    placeholder="0"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="text-xs text-gray-500 mb-1 block">Minutes</label>
+                  <input
+                    type="number" inputMode="numeric" min={0}
+                    value={customMinutes}
+                    onChange={e => setCustomMinutes(e.target.value)}
+                    placeholder="0"
+                    autoFocus
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="text-xs text-gray-500 mb-1 block">Seconds</label>
+                  <input
+                    type="number" inputMode="numeric" min={0}
+                    value={customSeconds}
+                    onChange={e => setCustomSeconds(e.target.value)}
+                    placeholder="0"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none"
+                  />
+                </div>
+              </div>
+              <label className="text-xs text-gray-500 mb-1 block">Label <span className="text-gray-300">(optional)</span></label>
+              <input
+                value={customLabel}
+                onChange={e => setCustomLabel(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && submit()}
+                placeholder="e.g. resting dough"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none mb-4"
+              />
+              <div className="flex gap-3">
+                <button onClick={() => setShowCustomTimer(false)} className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm text-gray-500 hover:bg-gray-50 transition">Cancel</button>
                 <button
-                  key={m}
-                  onClick={() => setCustomMinutes(String(m))}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${customMinutes === String(m) ? "bg-orange-500 text-white border-orange-500" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
-                  {m}m
+                  onClick={submit}
+                  disabled={totalMs <= 0}
+                  className="flex-1 bg-orange-500 text-white rounded-xl py-2.5 text-sm font-medium hover:bg-orange-600 disabled:opacity-50 transition">
+                  Start
                 </button>
-              ))}
-            </div>
-            <label className="text-xs text-gray-500 mb-1 block">Minutes</label>
-            <input
-              type="number"
-              inputMode="decimal"
-              value={customMinutes}
-              onChange={e => setCustomMinutes(e.target.value)}
-              placeholder="e.g. 12"
-              autoFocus
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none mb-3"
-            />
-            <label className="text-xs text-gray-500 mb-1 block">Label <span className="text-gray-300">(optional)</span></label>
-            <input
-              value={customLabel}
-              onChange={e => setCustomLabel(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && customMinutes && parseFloat(customMinutes) > 0 && (() => {
-                startTimer(customLabel.trim() || `${customMinutes} min`, parseFloat(customMinutes) * 60000)
-                setShowCustomTimer(false); setCustomMinutes(""); setCustomLabel("")
-              })()}
-              placeholder="e.g. resting dough"
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none mb-4"
-            />
-            <div className="flex gap-3">
-              <button onClick={() => setShowCustomTimer(false)} className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm text-gray-500 hover:bg-gray-50 transition">Cancel</button>
-              <button
-                onClick={() => {
-                  const mins = parseFloat(customMinutes)
-                  if (!mins || mins <= 0) return
-                  startTimer(customLabel.trim() || `${mins} min`, mins * 60000)
-                  setShowCustomTimer(false)
-                  setCustomMinutes("")
-                  setCustomLabel("")
-                }}
-                disabled={!customMinutes || parseFloat(customMinutes) <= 0}
-                className="flex-1 bg-orange-500 text-white rounded-xl py-2.5 text-sm font-medium hover:bg-orange-600 disabled:opacity-50 transition">
-                Start
-              </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Add another recipe to this session */}
-      {showAddRecipe && (
-        <div className="fixed inset-0 z-[95] bg-black/40 flex items-center justify-center px-4" onClick={() => setShowAddRecipe(false)}>
-          <div className="bg-white rounded-2xl p-5 w-full max-w-sm max-h-[70vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <p className="text-sm font-semibold text-gray-900 mb-1">Cook another recipe too</p>
-            <p className="text-xs text-gray-400 mb-4">Keep working on {recipe.title} — its progress is saved.</p>
-            <div className="flex-1 overflow-y-auto -mx-2 px-2 space-y-1.5">
-              {addCandidates.map((r: any) => (
-                <button
-                  key={r.id}
-                  onClick={() => addRecipeToSession(r)}
-                  className="w-full text-left px-3 py-2.5 rounded-xl border border-gray-100 hover:bg-orange-50 hover:border-orange-200 transition text-sm text-gray-700">
-                  {r.title}
-                </button>
-              ))}
+      {showAddRecipe && (() => {
+        const q = addRecipeSearch.trim().toLowerCase()
+        const filtered = q ? addCandidates.filter((r: any) => r.title?.toLowerCase().includes(q)) : addCandidates
+        return (
+          <div className="fixed inset-0 z-[95] bg-black/40 flex items-center justify-center px-4" onClick={() => { setShowAddRecipe(false); setAddRecipeSearch("") }}>
+            <div className="bg-white rounded-2xl p-5 w-full max-w-sm max-h-[70vh] flex flex-col" onClick={e => e.stopPropagation()}>
+              <p className="text-sm font-semibold text-gray-900 mb-1">Cook another recipe too</p>
+              <p className="text-xs text-gray-400 mb-3">Keep working on {recipe.title} — its progress is saved.</p>
+              {addCandidates.length > 5 && (
+                <input
+                  value={addRecipeSearch}
+                  onChange={e => setAddRecipeSearch(e.target.value)}
+                  placeholder="Search recipes..."
+                  autoFocus
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none mb-3"
+                />
+              )}
+              <div className="flex-1 overflow-y-auto -mx-2 px-2 space-y-1.5">
+                {filtered.length === 0 && (
+                  <p className="text-sm text-gray-300 text-center py-6">{q ? `Nothing matches "${addRecipeSearch}"` : "No other recipes in this cookbook."}</p>
+                )}
+                {filtered.map((r: any) => (
+                  <button
+                    key={r.id}
+                    onClick={() => { addRecipeToSession(r); setAddRecipeSearch("") }}
+                    className="w-full text-left px-3 py-2.5 rounded-xl border border-gray-100 hover:bg-orange-50 hover:border-orange-200 transition text-sm text-gray-700">
+                    {r.title}
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => { setShowAddRecipe(false); setAddRecipeSearch("") }} className="mt-4 border border-gray-200 rounded-xl py-2.5 text-sm text-gray-500 hover:bg-gray-50 transition">Cancel</button>
             </div>
-            <button onClick={() => setShowAddRecipe(false)} className="mt-4 border border-gray-200 rounded-xl py-2.5 text-sm text-gray-500 hover:bg-gray-50 transition">Cancel</button>
           </div>
-        </div>
-      )}
+        )
+      })()}
     </div>
   )
 }

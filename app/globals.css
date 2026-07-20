@@ -86,6 +86,10 @@ html.dark .sf-overlay-pill.text-gray-300 { color: #d1d5db; }
 html.dark .sf-overlay-pill.text-gray-700 { color: #374151; }
 html.dark .sf-overlay-pill.hover\:text-gray-600:hover { color: #4b5563; }
 html.dark .sf-overlay-pill.hover\:text-gray-500:hover { color: #6b7280; }
+/* The background needs the same exemption — without it the earlier
+   general bg-white/90 dark override (below) turns the pill itself dark,
+   leaving the dark-gray text above blending into a dark-on-dark button. */
+html.dark .sf-overlay-pill.bg-white\/90 { background-color: rgba(255, 255, 255, 0.9); }
 
 html.dark select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
@@ -94,28 +98,6 @@ html.dark select {
 /* Scrollbar + form control chrome follow the theme on browsers that support it */
 html.dark { color-scheme: dark; }
 html:not(.dark) { color-scheme: light; }
-
-/* The marketing landing page (app/page.tsx) has its own fixed cream/orange
-   gradient branding via hardcoded inline styles, not the app's gray/white
-   utility palette — so it can't follow the dark-mode overrides above (they'd
-   flip text to near-white while the background stays cream, killing
-   contrast). It always renders light, regardless of the visitor's theme.
-   Every selector here has one more class than its html.dark counterpart
-   above, so it wins on specificity without needing !important. */
-html.dark .sf-landing { color-scheme: light; }
-html.dark .sf-landing .bg-white       { background-color: #ffffff; }
-html.dark .sf-landing .bg-gray-50     { background-color: #f9fafb; }
-html.dark .sf-landing .bg-gray-100    { background-color: #f3f4f6; }
-html.dark .sf-landing .bg-gray-200    { background-color: #e5e7eb; }
-html.dark .sf-landing .text-gray-900  { color: #111827; }
-html.dark .sf-landing .text-gray-600  { color: #4b5563; }
-html.dark .sf-landing .text-gray-500  { color: #6b7280; }
-html.dark .sf-landing .text-gray-400  { color: #9ca3af; }
-html.dark .sf-landing .text-gray-300  { color: #d1d5db; }
-html.dark .sf-landing .border-gray-50  { border-color: #f9fafb; }
-html.dark .sf-landing .border-gray-100 { border-color: #f3f4f6; }
-html.dark .sf-landing .border-gray-200 { border-color: #e5e7eb; }
-html.dark .sf-landing .hover\:bg-gray-50:hover { background-color: #f9fafb; }
 
 /* Like burst particles */
 .burst-particle {
