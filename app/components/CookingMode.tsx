@@ -22,6 +22,12 @@ type Timer = {
 // isn't useful to anyone.
 const MAX_TIMERS = 8
 
+// Matches the server-side cap in app/api/cook-timers/route.ts. Applied
+// client-side too so what's displayed always matches what actually gets
+// scheduled — otherwise a huge value would silently get truncated server
+// -side while the local countdown kept ticking toward the uncapped time.
+const MAX_TIMER_MS = 12 * 60 * 60 * 1000
+
 type Session = {
   scale: number
   stepIndex: number
@@ -447,13 +453,24 @@ export default function CookingMode({
     else onClose()
   }
 
+  function resetProgress() {
+    if (!confirm("Reset progress on this recipe? You'll go back to step 1 with no ingredients checked.")) return
+    updateSession({ stepIndex: 0, checkedIngredients: new Set() })
+    if (recipe.id) fetch("/api/cook-sessions", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ recipe_id: recipe.id }) }).catch(() => {})
+  }
+
   return (
     <div className="fixed inset-0 z-[90] bg-white flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-4 md:px-6 py-3 border-b border-gray-100 flex-shrink-0 gap-3" style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}>
         <div className="min-w-0">
           <p className="text-sm font-semibold text-gray-900 truncate">{recipe.title}</p>
-          <p className="text-xs text-gray-400">Step {stepIndex + 1} of {steps.length}</p>
+          <p className="text-xs text-gray-400">
+            Step {stepIndex + 1} of {steps.length}
+            {(stepIndex > 0 || checkedIngredients.size > 0) && (
+              <button onClick={resetProgress} className="ml-2 text-gray-300 hover:text-red-400 underline transition">Reset progress</button>
+            )}
+          </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
@@ -705,10 +722,12 @@ export default function CookingMode({
         const h = parseFloat(customHours) || 0
         const m = parseFloat(customMinutes) || 0
         const s = parseFloat(customSeconds) || 0
-        const totalMs = (h * 3600 + m * 60 + s) * 1000
+        const rawMs = (h * 3600 + m * 60 + s) * 1000
+        const totalMs = Math.min(rawMs, MAX_TIMER_MS)
         const defaultLabel = [h && `${h}h`, m && `${m}m`, s && `${s}s`].filter(Boolean).join(" ") || "Timer"
         const submit = () => {
           if (totalMs <= 0) return
+          if (rawMs > MAX_TIMER_MS) toast.info("Timers are capped at 12 hours — started at 12h instead.")
           startTimer(customLabel.trim() || defaultLabel, totalMs)
           setShowCustomTimer(false); setCustomHours(""); setCustomMinutes(""); setCustomSeconds(""); setCustomLabel("")
         }

@@ -37,6 +37,15 @@ export async function POST(req: Request) {
   // something absurd server-side.
   const cappedMs = Math.min(duration_ms, 12 * 60 * 60 * 1000)
 
+  // The UI already stops offering to start more past 8, but that's only
+  // enforced client-side — guard the API itself too, well above that (a
+  // generous ceiling, not a UX-facing limit) so a direct/scripted call
+  // can't queue up an unbounded number of rows and in-memory setTimeouts.
+  const existing = await getActiveCookTimers(userId)
+  if (existing.length >= 20) {
+    return NextResponse.json({ error: "Too many active timers" }, { status: 429 })
+  }
+
   const timer = await createCookTimer(
     userId,
     String(label).slice(0, 200),

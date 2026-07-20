@@ -22,8 +22,9 @@ async function ensureTable() {
 export async function getCookSessions(userId: number, cookbookId: number) {
   await ensureTable()
   // Abandoned sessions (never finished, never revisited) don't need to
-  // linger forever — a week is generous for "I'll get back to this."
-  await pool.query("DELETE FROM cook_sessions WHERE updated_at < NOW() - INTERVAL 7 DAY").catch(() => {})
+  // linger forever — a few days is generous for "I'll get back to this"
+  // without leaving stale progress around long enough to be confusing.
+  await pool.query("DELETE FROM cook_sessions WHERE updated_at < NOW() - INTERVAL 3 DAY").catch(() => {})
   const [rows]: any = await pool.query(
     "SELECT recipe_id, step_index, checked_ingredients FROM cook_sessions WHERE user_id = ? AND cookbook_id = ?",
     [userId, cookbookId]
