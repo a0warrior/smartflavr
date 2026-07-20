@@ -27,14 +27,20 @@ async function ensurePushTable() {
 // app" — a bit more than the client's 25s heartbeat interval so one missed
 // beat (tab backgrounded briefly, brief network hiccup) doesn't wrongly
 // suppress a push the user should actually get.
-const ACTIVE_WINDOW_MS = 45_000
-
+//
+// The freshness check itself is done entirely in SQL (comparing NOW() to
+// last_active_at on the DB server) rather than pulling the timestamp into
+// Node and comparing against Date.now() — a mismatch between the app
+// server's and DB server's clock/timezone would otherwise make
+// last_active_at look permanently "in the future" from Node's point of
+// view, which makes every push look suppressible forever.
 async function isActiveNow(userId: number): Promise<boolean> {
   try {
-    const [rows]: any = await pool.query("SELECT last_active_at FROM users WHERE id = ?", [userId])
-    const lastActive = rows[0]?.last_active_at
-    if (!lastActive) return false
-    return Date.now() - new Date(lastActive).getTime() < ACTIVE_WINDOW_MS
+    const [rows]: any = await pool.query(
+      "SELECT (last_active_at IS NOT NULL AND last_active_at > NOW() - INTERVAL 45 SECOND) AS active FROM users WHERE id = ?",
+      [userId]
+    )
+    return !!rows[0]?.active
   } catch {
     return false
   }

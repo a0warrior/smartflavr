@@ -9,12 +9,20 @@ async function ensureColumn() {
 // Lightweight heartbeat the client pings while the tab is visible/focused —
 // lets sendPush() skip notifying someone who's already looking at the app
 // (they'll see the update in-app instead) and only notify when they're
-// actually away.
-export async function POST() {
+// actually away. A request with { active: false } (sent the instant the
+// tab is hidden/closed) clears the timestamp immediately instead of
+// waiting for it to go stale, so a delayed or dropped "hidden" signal
+// can't leave push suppressed longer than necessary.
+export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
+  const body = await req.json().catch(() => null)
   await ensureColumn()
-  await pool.query("UPDATE users SET last_active_at = NOW() WHERE email = ?", [session.user.email])
+  if (body?.active === false) {
+    await pool.query("UPDATE users SET last_active_at = NULL WHERE email = ?", [session.user.email])
+  } else {
+    await pool.query("UPDATE users SET last_active_at = NOW() WHERE email = ?", [session.user.email])
+  }
   return NextResponse.json({ success: true })
 }

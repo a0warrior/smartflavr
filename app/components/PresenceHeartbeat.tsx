@@ -13,17 +13,26 @@ export default function PresenceHeartbeat() {
   useEffect(() => {
     if (status !== "authenticated") return
 
-    function ping() {
-      if (document.visibilityState !== "visible") return
-      fetch("/api/presence", { method: "POST" }).catch(() => {})
+    function markActive() {
+      fetch("/api/presence", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ active: true }) }).catch(() => {})
+    }
+    function markInactive() {
+      // keepalive so this still lands even as the tab is unloading/backgrounding
+      fetch("/api/presence", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ active: false }), keepalive: true }).catch(() => {})
+    }
+    function onVisibilityChange() {
+      if (document.visibilityState === "visible") markActive()
+      else markInactive()
     }
 
-    ping()
-    const interval = setInterval(ping, INTERVAL_MS)
-    document.addEventListener("visibilitychange", ping)
+    if (document.visibilityState === "visible") markActive()
+    const interval = setInterval(() => { if (document.visibilityState === "visible") markActive() }, INTERVAL_MS)
+    document.addEventListener("visibilitychange", onVisibilityChange)
+    window.addEventListener("pagehide", markInactive)
     return () => {
       clearInterval(interval)
-      document.removeEventListener("visibilitychange", ping)
+      document.removeEventListener("visibilitychange", onVisibilityChange)
+      window.removeEventListener("pagehide", markInactive)
     }
   }, [status])
 

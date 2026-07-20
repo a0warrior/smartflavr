@@ -4,6 +4,7 @@ import ServingsScaler from "@/app/components/ServingsScaler"
 import { scaleIngredientLine } from "@/lib/scale"
 import { toast } from "@/app/components/Toast"
 import CookingCompleteModal from "@/app/components/CookingCompleteModal"
+import { useCookingModeStatus } from "@/app/components/CookingModeStatus"
 
 type Timer = {
   id: number
@@ -110,6 +111,15 @@ export default function CookingMode({
   const [customMinutes, setCustomMinutes] = useState("")
   const [customSeconds, setCustomSeconds] = useState("")
   const [customLabel, setCustomLabel] = useState("")
+
+  // Tell the global timer indicator Cooking Mode is open so it stays quiet
+  // instead of double-ringing/vibrating alongside this component's own alarm.
+  const { setActive: setCookingModeActive } = useCookingModeStatus()
+  useEffect(() => {
+    setCookingModeActive(true)
+    return () => setCookingModeActive(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const addCandidates = availableRecipes.filter(
     (r: any) => r.instructions && !activeRecipes.some(a => String(a.id) === String(r.id))
