@@ -59,12 +59,14 @@ ${recipeList}
 
 For each recipe, compare its ingredients against the inventory. Be sensible about matching: "chicken breasts" in the pantry covers "2 lbs chicken breast", "tomatoes" covers "diced tomatoes", etc. Then pick the best matches.
 
-Return ONLY a JSON array — no explanation, no markdown. Include up to 8 recipes, best matches first. Only include recipes where the user has at least half the ingredients:
+If nothing matches well, that's fine — just return an empty array. Never refuse or respond with only an explanation; always return valid JSON, even if it's just [].
+
+Return ONLY a JSON array — no explanation, no markdown, nothing before or after it. Include up to 8 recipes, best matches first. Only include recipes where the user has at least half the ingredients:
 [
   { "id": 123, "status": "ready", "missing": [] },
   { "id": 456, "status": "almost", "missing": ["soy sauce", "sesame oil"] }
 ]
-"status" is "ready" when they have every ingredient (given the assumed basics), otherwise "almost". "missing" lists only what they lack, as short ingredient names.`
+"status" is "ready" when they have every ingredient (given the assumed basics), otherwise "almost". "missing" lists only what they lack, as short ingredient names. Respond with the JSON array and nothing else.`
 
   let content = ""
   try {
@@ -83,12 +85,15 @@ Return ONLY a JSON array — no explanation, no markdown. Include up to 8 recipe
   // markdown fences or add a stray sentence — pull out just the array
   // instead of assuming the whole response is clean JSON.
   const jsonMatch = content.match(/\[[\s\S]*\]/)
-  let matches: any[]
+  let matches: any[] = []
   try {
     matches = JSON.parse(jsonMatch ? jsonMatch[0] : content)
   } catch (err) {
+    // Degrade to an empty result rather than a hard error — the UI already
+    // shows a friendly "no good matches" state — and log the raw response
+    // so an unparseable reply is diagnosable if it keeps happening.
     console.error("[what-can-i-make] Could not parse AI response:", err, content)
-    return NextResponse.json({ error: "Could not analyze recipes. Try again." }, { status: 500 })
+    matches = []
   }
 
   const byId = new Map(recipes.map((r: any) => [r.id, r]))

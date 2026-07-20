@@ -12,6 +12,7 @@ import ImageCropper from "../components/ImageCropper"
 import Link from "next/link"
 import {
   DndContext,
+  DragOverlay,
   closestCenter,
   KeyboardSensor,
   PointerSensor,
@@ -48,36 +49,25 @@ function parseMeasurement(ingredient: string) {
   return { measurement: "", rest: ingredient }
 }
 
-function SortableGroceryItem({ item, onToggle, onDelete, onHousehold }: any) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
-  // transform/transition change every animation frame while any item in the
-  // list is dragged (dnd-kit re-renders the whole SortableContext to
-  // reposition siblings) — memoize the regex-based parse so it isn't redone
-  // on every one of those frames for every row, which is what made dragging
-  // feel laggy on longer lists.
-  const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 10 : "auto" }
+// Shared visual body for a grocery row — used both by the sortable list item
+// and the floating DragOverlay clone, so they look identical while dragging.
+function GroceryItemBody({ item, onToggle, onDelete, onHousehold, dragHandleProps, highlighted }: any) {
   const { measurement, rest } = useMemo(() => parseMeasurement(item.ingredient), [item.ingredient])
   const displayText = measurement ? <><span className="font-semibold">{measurement}</span>{rest ? ` ${rest}` : ""}</> : (rest || item.ingredient)
 
   return (
-    <div
-      ref={setNodeRef}
-      style={{ ...style, WebkitUserSelect: isDragging ? "none" : undefined, userSelect: isDragging ? "none" : undefined }}
-      className={`flex items-center gap-3 py-2.5 px-3 rounded-xl transition group ${isDragging ? "bg-white shadow-lg" : "hover:bg-gray-50"} ${item.checked && !isDragging ? "opacity-50" : ""}`}>
+    <div className={`flex items-center gap-3 py-2.5 px-3 rounded-xl transition group ${highlighted ? "bg-white shadow-lg border-b-2 border-orange-400" : "hover:bg-gray-50"} ${item.checked && !highlighted ? "opacity-50" : ""}`}>
       <span
-        {...attributes} {...listeners}
-        // Safari starts its own text-selection/callout gesture on a
-        // press-and-hold unless explicitly told not to — without this, that
-        // fights the drag's own pointer tracking and reads as jitter.
+        {...(dragHandleProps || {})}
         style={{ touchAction: "none", WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" } as any}
         className="text-gray-300 cursor-grab active:cursor-grabbing text-sm flex-shrink-0">⠿</span>
       <div
-        onClick={() => onToggle(item.id, !item.checked)}
+        onClick={() => onToggle?.(item.id, !item.checked)}
         className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition cursor-pointer ${item.checked ? "bg-orange-500 border-orange-500" : "border-gray-300"}`}>
         {item.checked ? <span className="text-white text-xs">✓</span> : null}
       </div>
       <span
-        onClick={() => onToggle(item.id, !item.checked)}
+        onClick={() => onToggle?.(item.id, !item.checked)}
         className={`text-sm flex-1 cursor-pointer ${item.checked ? "line-through text-gray-400" : "text-gray-900"}`}>
         {displayText}
       </span>
@@ -86,7 +76,28 @@ function SortableGroceryItem({ item, onToggle, onDelete, onHousehold }: any) {
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
         </button>
       )}
-      <button onClick={() => onDelete(item.id)} className="text-gray-300 hover:text-red-400 text-xs transition flex-shrink-0 p-1 -m-1">✕</button>
+      <button onClick={() => onDelete?.(item.id)} className="text-gray-300 hover:text-red-400 text-xs transition flex-shrink-0 p-1 -m-1">✕</button>
+    </div>
+  )
+}
+
+// Floating clone shown by DragOverlay while an item is being dragged — a
+// plain, non-sortable render so it can't itself interfere with dnd-kit's
+// layout calculations for the real list underneath it.
+function GroceryItemPreview({ item }: any) {
+  return <GroceryItemBody item={item} highlighted />
+}
+
+function SortableGroceryItem({ item, onToggle, onDelete, onHousehold }: any) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
+  // The dragged item is rendered by DragOverlay instead (see GroceryItemPreview)
+  // — hiding the original but keeping its layout space is what lets the rest
+  // of the list glide into place instead of jittering as it's pushed around.
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0 : 1 }
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <GroceryItemBody item={item} onToggle={onToggle} onDelete={onDelete} onHousehold={onHousehold} dragHandleProps={{ ...attributes, ...listeners }} />
     </div>
   )
 }
@@ -139,6 +150,7 @@ export default function Dashboard() {
   const [expandedImports, setExpandedImports] = useState<Set<number>>(new Set())
   const [savingRecipes, setSavingRecipes] = useState(false)
   const [groceryLists, setGroceryLists] = useState<any[]>([])
+  const [draggingGroceryItem, setDraggingGroceryItem] = useState<any>(null)
   const [showGroceryListModal, setShowGroceryListModal] = useState(false)
   const [activeGroceryList, setActiveGroceryList] = useState<any>(null)
   const [showNewGroceryModal, setShowNewGroceryModal] = useState(false)
@@ -327,7 +339,13 @@ export default function Dashboard() {
     pulse(`/updates/grocery/${activeGroceryList.id}`)
   }
 
+  function handleGroceryDragStart(event: any) {
+    const item = activeGroceryList?.items?.find((i: any) => i.id === event.active.id)
+    setDraggingGroceryItem(item || null)
+  }
+
   async function handleGroceryDragEnd(event: any) {
+    setDraggingGroceryItem(null)
     const { active, over } = event
     if (!over || active.id === over.id) return
     const items = activeGroceryList.items
@@ -929,12 +947,15 @@ export default function Dashboard() {
                 const householdItems = (activeGroceryList.items || []).filter((i: any) => i.is_household && matches(i))
                 return (
                   <>
-                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleGroceryDragEnd} modifiers={[restrictToVerticalAxis, restrictToParentElement]}>
+                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleGroceryDragStart} onDragEnd={handleGroceryDragEnd} modifiers={[restrictToVerticalAxis, restrictToParentElement]}>
                       <SortableContext items={foodItems.map((i: any) => i.id)} strategy={verticalListSortingStrategy}>
                         {foodItems.map((item: any) => (
                           <SortableGroceryItem key={item.id} item={item} onToggle={toggleGroceryItem} onDelete={deleteGroceryItem} onHousehold={toggleItemHousehold}/>
                         ))}
                       </SortableContext>
+                      <DragOverlay>
+                        {draggingGroceryItem ? <GroceryItemPreview item={draggingGroceryItem} /> : null}
+                      </DragOverlay>
                     </DndContext>
                     {householdItems.length > 0 && (
                       <>
@@ -988,6 +1009,13 @@ export default function Dashboard() {
                 </button>
               </div>
             </div>
+            </div>
+            <div className="flex-shrink-0 px-6 pb-6 pt-1">
+              <button
+                onClick={() => { setShowGroceryListModal(false); setActiveGroceryList(null); setAddItemValue(""); setGrocerySearch("") }}
+                className="w-full border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50 transition">
+                Done
+              </button>
             </div>
           </div>
         </div>

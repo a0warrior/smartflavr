@@ -46,7 +46,9 @@ Come up with:
 - Up to 3 dishes fully makeable RIGHT NOW with what's on hand (plus the assumed basics)
 - Up to 3 more dishes that are close — needing only 1-3 additional ingredients
 
-Return ONLY a JSON array, no explanation, no markdown:
+If the inventory is very short (even just one ingredient), do your best anyway — a single protein or vegetable is still enough for at least one or two simple "almost" ideas that need a few pantry staples. Never refuse or respond with only an explanation; always return the JSON array, even if it only has one item in it.
+
+Return ONLY a JSON array, no explanation, no markdown, nothing before or after it:
 [
   {
     "title": "Dish name",
@@ -58,7 +60,7 @@ Return ONLY a JSON array, no explanation, no markdown:
     "prep_time": "approx total time"
   }
 ]
-"status" is "ready" or "almost". "missing" lists only what they'd need to buy, as short ingredient names (empty array when status is "ready").`
+"status" is "ready" or "almost". "missing" lists only what they'd need to buy, as short ingredient names (empty array when status is "ready"). Respond with the JSON array and nothing else.`
 
   let content = ""
   try {
@@ -77,12 +79,16 @@ Return ONLY a JSON array, no explanation, no markdown:
   // markdown fences or add a stray sentence — pull out just the array
   // instead of assuming the whole response is clean JSON.
   const jsonMatch = content.match(/\[[\s\S]*\]/)
-  let ideas: any[]
+  let ideas: any[] = []
   try {
     ideas = JSON.parse(jsonMatch ? jsonMatch[0] : content)
   } catch (err) {
+    // The model occasionally hedges with prose instead of JSON when given a
+    // very sparse pantry — degrade to an empty result (the UI already shows
+    // a friendly "couldn't come up with anything" state) rather than a hard
+    // error, and log the raw response so this is diagnosable if it recurs.
     console.error("[inventory-suggest] Could not parse AI response:", err, content)
-    return NextResponse.json({ error: "Could not generate ideas. Try again." }, { status: 500 })
+    ideas = []
   }
 
   const results = (Array.isArray(ideas) ? ideas : []).map((idea: any, i: number) => ({
