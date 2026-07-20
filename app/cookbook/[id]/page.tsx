@@ -126,6 +126,7 @@ export default function CookbookPage() {
   const [categories, setCategories] = useState<any[]>([])
   const [selectedRecipe, setSelectedRecipe] = useState<any>(null)
   const [cookingMode, setCookingMode] = useState(false)
+  const [resumeStepIndex, setResumeStepIndex] = useState<number | undefined>(undefined)
   const [scaleFactor, setScaleFactor] = useState(1)
   const [activeCategory, setActiveCategory] = useState("all")
   const [editMode, setEditMode] = useState(false)
@@ -189,6 +190,20 @@ export default function CookbookPage() {
       fetch("/api/subscription").then(r => r.ok ? r.json() : null).then(d => d && setPlanStatus(d)).catch(() => {})
     }
   }, [status])
+
+  // Landing here from a "timer running" link (push notification or the
+  // global timer indicator) jumps straight back into cooking mode at the
+  // step the timer was started on, instead of just opening the recipe.
+  const resumeConsumedRef = useRef(false)
+  useEffect(() => {
+    if (resumeConsumedRef.current || !selectedRecipe) return
+    const urlParams = new URLSearchParams(window.location.search)
+    if (urlParams.get("resumeCooking") !== "1") return
+    resumeConsumedRef.current = true
+    const step = urlParams.get("resumeStep")
+    setResumeStepIndex(step !== null ? parseInt(step, 10) : undefined)
+    setCookingMode(true)
+  }, [selectedRecipe])
 
   useEffect(() => {
     if (!session?.user?.email || !params.id) return
@@ -1871,7 +1886,7 @@ export default function CookbookPage() {
       )}
 
       {cookingMode && recipe && (
-        <CookingMode recipes={[recipe]} availableRecipes={recipes} initialScale={scaleFactor} onClose={() => setCookingMode(false)} />
+        <CookingMode recipes={[recipe]} availableRecipes={recipes} initialScale={scaleFactor} initialStepIndex={resumeStepIndex} onClose={() => { setCookingMode(false); setResumeStepIndex(undefined) }} />
       )}
     </div>
   )

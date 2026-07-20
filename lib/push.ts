@@ -23,11 +23,30 @@ async function ensurePushTable() {
   } catch {}
 }
 
+// How stale last_active_at can be and still count as "currently using the
+// app" — a bit more than the client's 25s heartbeat interval so one missed
+// beat (tab backgrounded briefly, brief network hiccup) doesn't wrongly
+// suppress a push the user should actually get.
+const ACTIVE_WINDOW_MS = 45_000
+
+async function isActiveNow(userId: number): Promise<boolean> {
+  try {
+    const [rows]: any = await pool.query("SELECT last_active_at FROM users WHERE id = ?", [userId])
+    const lastActive = rows[0]?.last_active_at
+    if (!lastActive) return false
+    return Date.now() - new Date(lastActive).getTime() < ACTIVE_WINDOW_MS
+  } catch {
+    return false
+  }
+}
+
 // Fire-and-forget push to every device a user has subscribed on. Silently
-// no-ops if VAPID isn't configured (e.g. local dev) or the user has no
-// subscriptions — callers never need to check either condition themselves.
+// no-ops if VAPID isn't configured (e.g. local dev), the user has no
+// subscriptions, or they're actively using the app right now (they'd
+// already see the update in-app — a push on top of that is just noise).
 export async function sendPush(userId: number, payload: { title: string; body: string; url?: string }) {
   if (!publicKey || !privateKey) return
+  if (await isActiveNow(userId)) return
   await ensurePushTable()
 
   const [subs]: any = await pool.query("SELECT id, endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ?", [userId])

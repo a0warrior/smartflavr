@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react"
 import ServingsScaler from "@/app/components/ServingsScaler"
 import { scaleIngredientLine } from "@/lib/scale"
 import { toast } from "@/app/components/Toast"
+import CookingCompleteModal from "@/app/components/CookingCompleteModal"
 
 type Timer = {
   id: number
@@ -57,20 +58,30 @@ export default function CookingMode({
   availableRecipes = [],
   onClose,
   initialScale = 1,
+  initialStepIndex,
 }: {
   recipes: any[]
   availableRecipes?: any[]
   onClose: () => void
   initialScale?: number
+  initialStepIndex?: number
 }) {
   const [activeRecipes, setActiveRecipes] = useState<any[]>(initialRecipes)
   const [activeId, setActiveId] = useState<any>(initialRecipes[0]?.id ?? 0)
   const [sessions, setSessions] = useState<Record<string, Session>>(() => {
     const init: Record<string, Session> = {}
     for (const r of initialRecipes) init[String(r.id)] = { scale: initialScale, stepIndex: 0, checkedIngredients: new Set() }
+    // Arriving via a "timer running" link resumes the first recipe right
+    // where that timer was started, instead of at step 1.
+    if (typeof initialStepIndex === "number" && initialRecipes[0]) {
+      const steps = (initialRecipes[0].instructions || "").split("\n").filter(Boolean)
+      const clamped = Math.max(0, Math.min(initialStepIndex, Math.max(0, steps.length - 1)))
+      init[String(initialRecipes[0].id)].stepIndex = clamped
+    }
     return init
   })
   const [showAddRecipe, setShowAddRecipe] = useState(false)
+  const [celebrating, setCelebrating] = useState<any>(null)
   const [addRecipeSearch, setAddRecipeSearch] = useState("")
 
   const recipe = activeRecipes.find(r => String(r.id) === String(activeId)) || activeRecipes[0]
@@ -288,7 +299,14 @@ export default function CookingMode({
     fetch("/api/cook-timers", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ label, recipe_title: recipe.title, duration_ms: ms }),
+      body: JSON.stringify({
+        label,
+        recipe_title: recipe.title,
+        duration_ms: ms,
+        cookbook_id: recipe.cookbook_id ?? null,
+        recipe_id: recipe.id ?? null,
+        step_index: stepIndex,
+      }),
     })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
@@ -345,8 +363,15 @@ export default function CookingMode({
 
   function handleFinishTap() {
     if (!isLast) { setStepIndex(i => Math.min(steps.length - 1, i + 1)); return }
-    if (isMulti) { removeRecipeFromSession(recipe.id); return }
-    onClose()
+    setCelebrating(recipe)
+  }
+
+  function completeCelebration() {
+    const finished = celebrating
+    setCelebrating(null)
+    if (!finished) return
+    if (activeRecipes.length > 1) removeRecipeFromSession(finished.id)
+    else onClose()
   }
 
   return (
@@ -719,6 +744,8 @@ export default function CookingMode({
           </div>
         )
       })()}
+
+      {celebrating && <CookingCompleteModal recipe={celebrating} onDone={completeCelebration} />}
     </div>
   )
 }

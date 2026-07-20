@@ -20,40 +20,61 @@ async function ensureTable() {
       user_id INT NOT NULL,
       label VARCHAR(200) NOT NULL,
       recipe_title VARCHAR(255),
+      cookbook_id INT,
+      recipe_id INT,
+      step_index INT,
       duration_ms BIGINT NOT NULL,
       ends_at DATETIME NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       INDEX idx_cook_timers_user (user_id)
     )`)
   } catch {}
+  // Lazily add the resume-navigation columns for tables created before they existed
+  try { await pool.query("ALTER TABLE cook_timers ADD COLUMN IF NOT EXISTS cookbook_id INT") } catch {}
+  try { await pool.query("ALTER TABLE cook_timers ADD COLUMN IF NOT EXISTS recipe_id INT") } catch {}
+  try { await pool.query("ALTER TABLE cook_timers ADD COLUMN IF NOT EXISTS step_index INT") } catch {}
 }
 
-async function fireTimer(id: number, userId: number, label: string) {
+function resumeUrl(cookbookId: number | null, recipeId: number | null, stepIndex: number | null) {
+  if (!cookbookId || !recipeId) return "/dashboard"
+  const step = typeof stepIndex === "number" ? `&resumeStep=${stepIndex}` : ""
+  return `/cookbook/${cookbookId}?recipe=${recipeId}&resumeCooking=1${step}`
+}
+
+async function fireTimer(id: number, userId: number, label: string, cookbookId: number | null, recipeId: number | null, stepIndex: number | null) {
   scheduled.delete(id)
   try {
-    await sendPush(userId, { title: "Timer done!", body: label, url: "/dashboard" })
+    await sendPush(userId, { title: "Timer done!", body: label, url: resumeUrl(cookbookId, recipeId, stepIndex) })
   } catch {}
   await pool.query("DELETE FROM cook_timers WHERE id = ?", [id]).catch(() => {})
 }
 
-function arm(id: number, userId: number, label: string, endsAt: Date) {
+function arm(id: number, userId: number, label: string, endsAt: Date, cookbookId: number | null = null, recipeId: number | null = null, stepIndex: number | null = null) {
   const delay = endsAt.getTime() - Date.now()
-  if (delay <= 0) { fireTimer(id, userId, label); return }
+  if (delay <= 0) { fireTimer(id, userId, label, cookbookId, recipeId, stepIndex); return }
   // setTimeout's delay argument is a 32-bit signed int (~24.8 day max) —
   // timers are always short (minutes/hours), so this is generous headroom,
   // not a real constraint here.
-  const handle = setTimeout(() => fireTimer(id, userId, label), Math.min(delay, 2_147_483_000))
+  const handle = setTimeout(() => fireTimer(id, userId, label, cookbookId, recipeId, stepIndex), Math.min(delay, 2_147_483_000))
   scheduled.set(id, handle)
 }
 
-export async function createCookTimer(userId: number, label: string, recipeTitle: string | null, durationMs: number) {
+export async function createCookTimer(
+  userId: number,
+  label: string,
+  recipeTitle: string | null,
+  durationMs: number,
+  cookbookId: number | null = null,
+  recipeId: number | null = null,
+  stepIndex: number | null = null
+) {
   await ensureTable()
   const endsAt = new Date(Date.now() + durationMs)
   const [result]: any = await pool.query(
-    "INSERT INTO cook_timers (user_id, label, recipe_title, duration_ms, ends_at) VALUES (?, ?, ?, ?, ?)",
-    [userId, label, recipeTitle, durationMs, endsAt]
+    "INSERT INTO cook_timers (user_id, label, recipe_title, cookbook_id, recipe_id, step_index, duration_ms, ends_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    [userId, label, recipeTitle, cookbookId, recipeId, stepIndex, durationMs, endsAt]
   )
-  arm(result.insertId, userId, label, endsAt)
+  arm(result.insertId, userId, label, endsAt, cookbookId, recipeId, stepIndex)
   return { id: result.insertId, ends_at: endsAt.toISOString() }
 }
 
@@ -67,7 +88,7 @@ export async function cancelCookTimer(userId: number, id: number) {
 export async function getActiveCookTimers(userId: number) {
   await ensureTable()
   const [rows]: any = await pool.query(
-    "SELECT id, label, recipe_title, duration_ms, ends_at FROM cook_timers WHERE user_id = ? AND ends_at > NOW()",
+    "SELECT id, label, recipe_title, cookbook_id, recipe_id, step_index, duration_ms, ends_at FROM cook_timers WHERE user_id = ? AND ends_at > NOW()",
     [userId]
   )
   return rows
@@ -81,8 +102,8 @@ export async function rescheduleAllPending() {
   rehydrated = true
   await ensureTable()
   try {
-    const [rows]: any = await pool.query("SELECT id, user_id, label, ends_at FROM cook_timers WHERE ends_at > NOW()")
-    for (const row of rows) arm(row.id, row.user_id, row.label, new Date(row.ends_at))
+    const [rows]: any = await pool.query("SELECT id, user_id, label, cookbook_id, recipe_id, step_index, ends_at FROM cook_timers WHERE ends_at > NOW()")
+    for (const row of rows) arm(row.id, row.user_id, row.label, new Date(row.ends_at), row.cookbook_id, row.recipe_id, row.step_index)
     // Clean up anything that expired while the server was down — no way to
     // know if the user still wants that push, so just drop it silently.
     await pool.query("DELETE FROM cook_timers WHERE ends_at <= NOW()")

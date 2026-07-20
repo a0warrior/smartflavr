@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   const userId = await getUserId(session.user.email)
   if (!userId) return NextResponse.json({ error: "User not found" }, { status: 404 })
 
-  const { label, recipe_title, duration_ms } = await req.json()
+  const { label, recipe_title, duration_ms, cookbook_id, recipe_id, step_index } = await req.json()
   if (!label || typeof duration_ms !== "number" || duration_ms <= 0) {
     return NextResponse.json({ error: "label and duration_ms are required" }, { status: 400 })
   }
@@ -37,7 +37,15 @@ export async function POST(req: Request) {
   // something absurd server-side.
   const cappedMs = Math.min(duration_ms, 12 * 60 * 60 * 1000)
 
-  const timer = await createCookTimer(userId, String(label).slice(0, 200), recipe_title ? String(recipe_title).slice(0, 255) : null, cappedMs)
+  const timer = await createCookTimer(
+    userId,
+    String(label).slice(0, 200),
+    recipe_title ? String(recipe_title).slice(0, 255) : null,
+    cappedMs,
+    typeof cookbook_id === "number" ? cookbook_id : null,
+    typeof recipe_id === "number" ? recipe_id : null,
+    typeof step_index === "number" ? step_index : null
+  )
   return NextResponse.json({ success: true, ...timer })
 }
 

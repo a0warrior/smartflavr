@@ -187,3 +187,11 @@ select {
   100% { opacity: 0; transform: translate(-50%, -80%) scale(0.8); }
 }
 .tap-heart { animation: tap-heart 0.7s ease-out forwards; }
+
+/* Cooking-complete confetti shower — each piece falls from above the
+   viewport to well below it while spinning by its own randomized amount
+   (--spin, set inline per piece for variety) */
+@keyframes confetti-fall {
+  0%   { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(var(--spin, 540deg)); opacity: 0.85; }
+}
