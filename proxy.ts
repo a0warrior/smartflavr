@@ -20,7 +20,7 @@ const WINDOW_MS = 60_000
 const TIERS: { name: string; pattern: RegExp; limit: number }[] = [
   // AI endpoints cost real money per call (weekly plan caps exist, but this
   // stops a burst from burning a week's quota in seconds)
-  { name: "ai", pattern: /^\/api\/(extract|extract-file|grocery-list|what-can-i-make|ai-assist)(\/|$)/, limit: 10 },
+  { name: "ai", pattern: /^\/api\/(extract|extract-file|grocery-list|what-can-i-make|inventory-suggest|ai-assist)(\/|$)/, limit: 10 },
   // Brute-forceable: invite-code guessing, backup-secret guessing
   { name: "guessable", pattern: /^\/api\/(invite|backup)(\/|$)/, limit: 10 },
   // Uploads are large and consume Cloudinary quota

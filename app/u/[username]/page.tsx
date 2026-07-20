@@ -6,7 +6,8 @@ import FollowButton from "@/app/components/FollowButton"
 import FollowersModal from "../../components/FollowersModal"
 import CopyProfileLink from "@/app/components/CopyProfileLink"
 import Navbar from "@/app/components/Navbar"
-import { BookIcon } from "@/app/components/Icons"
+import { BookIcon, HeartIcon, PlateIcon } from "@/app/components/Icons"
+import { getPrivacy, isFriend, isVisible } from "@/lib/privacy"
 
 export default async function ProfilePage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params
@@ -32,15 +33,57 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const initials = user.name?.charAt(0).toUpperCase() || "?"
 
   const session = await auth()
-  const isOwnProfile = session?.user?.email && user.email === session.user.email
+  const isOwnProfile = !!(session?.user?.email && user.email === session.user.email)
 
-  const [cookbooks]: any = await pool.query(
-    "SELECT * FROM cookbooks WHERE user_id = ? AND is_public = 1 ORDER BY created_at DESC",
-    [user.id]
-  )
+  const [currentUserRows]: any = session?.user?.email
+    ? await pool.query("SELECT id FROM users WHERE email = ?", [session.user.email])
+    : [[]]
+  const viewerId = currentUserRows[0]?.id || null
+  const viewerIsFriend = viewerId ? await isFriend(viewerId, user.id) : false
+
+  const privacy = await getPrivacy(user.id)
+  const profileVisible = isVisible(privacy.profile_visibility, isOwnProfile, viewerIsFriend)
+
+  if (!profileVisible) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-20 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-300 mx-auto mb-4"><BookIcon size={26} /></div>
+          <p className="text-sm font-medium text-gray-500">This profile is private</p>
+          <p className="text-xs text-gray-400 mt-1">@{user.username} has limited who can see their profile.</p>
+        </div>
+      </div>
+    )
+  }
+
+  const cookbooksVisible = isVisible(privacy.cookbook_visibility, isOwnProfile, viewerIsFriend)
+  const [cookbooks]: any = cookbooksVisible
+    ? await pool.query("SELECT * FROM cookbooks WHERE user_id = ? AND is_public = 1 ORDER BY created_at DESC", [user.id])
+    : [[]]
   const [recipeCount]: any = await pool.query("SELECT COUNT(*) as count FROM recipes WHERE user_id = ?", [user.id])
   const [followerCount]: any = await pool.query("SELECT COUNT(*) as count FROM follows WHERE following_id = ?", [user.id])
   const [followingCount]: any = await pool.query("SELECT COUNT(*) as count FROM follows WHERE follower_id = ?", [user.id])
+  const showFollowerCounts = isOwnProfile || privacy.show_follower_count
+
+  const [recentRecipes]: any = (privacy.show_recent_recipes && cookbooksVisible)
+    ? await pool.query(
+        `SELECT r.id, r.title, r.image_url, r.cookbook_id FROM recipes r
+         JOIN cookbooks c ON r.cookbook_id = c.id
+         WHERE c.user_id = ? AND c.is_public = 1 ORDER BY r.created_at DESC LIMIT 6`,
+        [user.id]
+      )
+    : [[]]
+  const [favoriteRecipes]: any = privacy.show_favorites
+    ? await pool.query(
+        `SELECT r.id, r.title, r.image_url, c.id as cookbook_id, c.is_public FROM favorites f
+         JOIN recipes r ON f.recipe_id = r.id
+         JOIN cookbooks c ON r.cookbook_id = c.id
+         WHERE f.user_id = ? ORDER BY f.created_at DESC LIMIT 6`,
+        [user.id]
+      )
+    : [[]]
+  const visibleFavorites = (favoriteRecipes as any[]).filter(r => r.is_public || isOwnProfile)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -316,8 +359,12 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
                   <div className="text-base sm:text-lg font-medium text-gray-900">{recipeCount[0].count}</div>
                   <div className="text-xs text-gray-400">Recipes</div>
                 </div>
-                <FollowersModal username={username} type="followers" count={followerCount[0].count} />
-                <FollowersModal username={username} type="following" count={followingCount[0].count} />
+                {showFollowerCounts ? (
+                  <>
+                    <FollowersModal username={username} type="followers" count={followerCount[0].count} />
+                    <FollowersModal username={username} type="following" count={followingCount[0].count} />
+                  </>
+                ) : null}
               </div>
             </div>
           </div>
@@ -335,7 +382,12 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
         </div>
 
         <h2 className="text-lg font-medium mb-4">Public Cookbooks</h2>
-        {cookbooks.length === 0 ? (
+        {!cookbooksVisible ? (
+          <div className="text-center py-16 text-gray-400">
+            <div className="text-gray-300 mb-3 flex justify-center"><BookIcon size={40} /></div>
+            <p className="text-sm">@{user.username} only shares cookbooks with friends</p>
+          </div>
+        ) : cookbooks.length === 0 ? (
           <div className="text-center py-16 text-gray-400">
             <div className="text-gray-300 mb-3 flex justify-center"><BookIcon size={40} /></div>
             <p className="text-sm">No public cookbooks yet</p>
@@ -357,6 +409,38 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
                 </div>
               </Link>
             ))}
+          </div>
+        )}
+
+        {privacy.show_recent_recipes && cookbooksVisible && recentRecipes.length > 0 && (
+          <div className="mt-10">
+            <h2 className="text-lg font-medium mb-4">Recently Added</h2>
+            <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+              {recentRecipes.map((r: any) => (
+                <Link key={r.id} href={`/cookbook/${r.cookbook_id}?recipe=${r.id}`} className="block">
+                  <div className="aspect-square rounded-xl bg-orange-50 flex items-center justify-center overflow-hidden mb-1.5">
+                    {r.image_url ? <img src={r.image_url} className="w-full h-full object-cover" alt="" /> : <div className="text-orange-300"><PlateIcon size={22} /></div>}
+                  </div>
+                  <p className="text-xs text-gray-600 truncate">{r.title}</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {privacy.show_favorites && visibleFavorites.length > 0 && (
+          <div className="mt-10">
+            <h2 className="text-lg font-medium mb-4 flex items-center gap-1.5"><HeartIcon size={16} filled className="text-red-400" />Favorites</h2>
+            <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+              {visibleFavorites.map((r: any) => (
+                <Link key={r.id} href={`/cookbook/${r.cookbook_id}?recipe=${r.id}`} className="block">
+                  <div className="aspect-square rounded-xl bg-orange-50 flex items-center justify-center overflow-hidden mb-1.5">
+                    {r.image_url ? <img src={r.image_url} className="w-full h-full object-cover" alt="" /> : <div className="text-orange-300"><PlateIcon size={22} /></div>}
+                  </div>
+                  <p className="text-xs text-gray-600 truncate">{r.title}</p>
+                </Link>
+              ))}
+            </div>
           </div>
         )}
       </div>

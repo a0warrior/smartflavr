@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import pool from "@/lib/db"
 import { auth } from "@/auth"
+import { sendPush } from "@/lib/push"
 
 export async function GET(req: Request) {
   const session = await auth()
@@ -69,6 +70,7 @@ export async function POST(req: Request) {
         JSON.stringify({ commenter_username: currentUser[0].username, post_id }),
       ]
     )
+    sendPush(postRows[0].user_id, { title: "New comment", body: `${currentUser[0].name} commented on your post`, url: "/feed" }).catch(() => {})
   }
 
   return NextResponse.json({ success: true })

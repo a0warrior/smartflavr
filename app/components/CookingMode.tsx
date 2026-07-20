@@ -6,10 +6,17 @@ import { scaleIngredientLine } from "@/lib/scale"
 type Timer = {
   id: number
   label: string
+  recipeTitle: string
   stepIndex: number
   endsAt: number
   totalMs: number
   done: boolean
+}
+
+type Session = {
+  scale: number
+  stepIndex: number
+  checkedIngredients: Set<number>
 }
 
 // Matches durations like "25 minutes", "1 hour", "20-25 mins", "30 sec"
@@ -33,19 +40,73 @@ function formatCountdown(ms: number) {
 
 let timerId = 1
 
-export default function CookingMode({ recipe, onClose, initialScale = 1 }: { recipe: any, onClose: () => void, initialScale?: number }) {
+// `recipes` is the active cooking session — usually just one, but a second
+// (or third) dish can be added mid-session for when you're working on
+// multiple things at once. Each recipe keeps its own step position,
+// ingredient checks, and serving scale; timers are shared across the whole
+// session since that's the point of tracking several dishes together.
+export default function CookingMode({
+  recipes: initialRecipes,
+  availableRecipes = [],
+  onClose,
+  initialScale = 1,
+}: {
+  recipes: any[]
+  availableRecipes?: any[]
+  onClose: () => void
+  initialScale?: number
+}) {
+  const [activeRecipes, setActiveRecipes] = useState<any[]>(initialRecipes)
+  const [activeId, setActiveId] = useState<any>(initialRecipes[0]?.id ?? 0)
+  const [sessions, setSessions] = useState<Record<string, Session>>(() => {
+    const init: Record<string, Session> = {}
+    for (const r of initialRecipes) init[String(r.id)] = { scale: initialScale, stepIndex: 0, checkedIngredients: new Set() }
+    return init
+  })
+  const [showAddRecipe, setShowAddRecipe] = useState(false)
+
+  const recipe = activeRecipes.find(r => String(r.id) === String(activeId)) || activeRecipes[0]
+  const session = sessions[String(recipe.id)] || { scale: initialScale, stepIndex: 0, checkedIngredients: new Set<number>() }
+  const { scale, stepIndex, checkedIngredients } = session
+
+  function updateSession(patch: Partial<Session>) {
+    setSessions(prev => ({ ...prev, [String(recipe.id)]: { ...prev[String(recipe.id)], ...patch } }))
+  }
+  function setScale(v: number) { updateSession({ scale: v }) }
+  function setStepIndex(updater: number | ((prev: number) => number)) {
+    updateSession({ stepIndex: typeof updater === "function" ? (updater as (p: number) => number)(session.stepIndex) : updater })
+  }
+  function setCheckedIngredients(next: Set<number>) {
+    updateSession({ checkedIngredients: next })
+  }
+
   const steps: string[] = (recipe.instructions || "").split("\n").filter(Boolean)
-  const [scale, setScale] = useState(initialScale)
   const ingredients: string[] = (recipe.ingredients || "").split("\n").filter(Boolean).map((l: string) => scaleIngredientLine(l, scale))
-  const [stepIndex, setStepIndex] = useState(0)
   const [showIngredients, setShowIngredients] = useState(false)
-  const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(new Set())
   const [timers, setTimers] = useState<Timer[]>([])
   const [, setTick] = useState(0)
   const audioCtx = useRef<AudioContext | null>(null)
   const [showCustomTimer, setShowCustomTimer] = useState(false)
   const [customMinutes, setCustomMinutes] = useState("")
   const [customLabel, setCustomLabel] = useState("")
+
+  const addCandidates = availableRecipes.filter(
+    (r: any) => r.instructions && !activeRecipes.some(a => String(a.id) === String(r.id))
+  )
+
+  function addRecipeToSession(r: any) {
+    setActiveRecipes(prev => [...prev, r])
+    setSessions(prev => ({ ...prev, [String(r.id)]: { scale: initialScale, stepIndex: 0, checkedIngredients: new Set() } }))
+    setActiveId(r.id)
+    setShowAddRecipe(false)
+  }
+
+  function removeRecipeFromSession(id: any) {
+    if (activeRecipes.length <= 1) return
+    const remaining = activeRecipes.filter(r => r.id !== id)
+    setActiveRecipes(remaining)
+    if (String(activeId) === String(id)) setActiveId(remaining[0].id)
+  }
 
   // Mobile ingredients sheet: draggable between a partial and a near-full snap point
   const [sheetExpanded, setSheetExpanded] = useState(false)
@@ -178,7 +239,7 @@ export default function CookingMode({ recipe, onClose, initialScale = 1 }: { rec
       try { audioCtx.current = new (window.AudioContext || (window as any).webkitAudioContext)() } catch {}
     }
     audioCtx.current?.resume?.()
-    setTimers(prev => [...prev, { id: timerId++, label, stepIndex, endsAt: Date.now() + ms, totalMs: ms, done: false }])
+    setTimers(prev => [...prev, { id: timerId++, label, recipeTitle: recipe.title, stepIndex, endsAt: Date.now() + ms, totalMs: ms, done: false }])
   }
 
   function dismissTimer(id: number) {
@@ -212,13 +273,20 @@ export default function CookingMode({ recipe, onClose, initialScale = 1 }: { rec
   }
 
   const isLast = stepIndex === steps.length - 1
+  const isMulti = activeRecipes.length > 1
   const activeTimers = timers.filter(t => !t.done)
   const doneTimers = timers.filter(t => t.done)
+
+  function handleFinishTap() {
+    if (!isLast) { setStepIndex(i => Math.min(steps.length - 1, i + 1)); return }
+    if (isMulti) { removeRecipeFromSession(recipe.id); return }
+    onClose()
+  }
 
   return (
     <div className="fixed inset-0 z-[90] bg-white flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 md:px-6 py-3 border-b border-gray-100 flex-shrink-0" style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}>
+      <div className="flex items-center justify-between px-4 md:px-6 py-3 border-b border-gray-100 flex-shrink-0 gap-3" style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}>
         <div className="min-w-0">
           <p className="text-sm font-semibold text-gray-900 truncate">{recipe.title}</p>
           <p className="text-xs text-gray-400">Step {stepIndex + 1} of {steps.length}</p>
@@ -240,6 +308,41 @@ export default function CookingMode({ recipe, onClose, initialScale = 1 }: { rec
           </button>
         </div>
       </div>
+
+      {/* Recipe tabs — only shown once you're cooking more than one thing */}
+      {(isMulti || addCandidates.length > 0) && (
+        <div className="flex items-center gap-2 px-4 md:px-6 py-2 border-b border-gray-100 flex-shrink-0 overflow-x-auto">
+          {activeRecipes.map(r => {
+            const s = sessions[String(r.id)]
+            const rSteps = (r.instructions || "").split("\n").filter(Boolean).length
+            const active = String(r.id) === String(recipe.id)
+            return (
+              <button
+                key={r.id}
+                onClick={() => setActiveId(r.id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition flex-shrink-0 ${active ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}>
+                <span className="max-w-[8rem] truncate">{r.title}</span>
+                <span className={active ? "text-orange-100" : "text-gray-400"}>{(s?.stepIndex ?? 0) + 1}/{rSteps || 1}</span>
+                {isMulti && (
+                  <span
+                    role="button"
+                    onClick={e => { e.stopPropagation(); removeRecipeFromSession(r.id) }}
+                    className={active ? "text-orange-100 hover:text-white" : "text-gray-300 hover:text-red-400"}>
+                    ✕
+                  </span>
+                )}
+              </button>
+            )
+          })}
+          {addCandidates.length > 0 && (
+            <button
+              onClick={() => setShowAddRecipe(true)}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border border-dashed border-gray-300 text-gray-500 hover:bg-gray-50 transition flex-shrink-0">
+              + Cook another
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Progress bar */}
       <div className="h-1 bg-gray-100 flex-shrink-0">
@@ -322,7 +425,7 @@ export default function CookingMode({ recipe, onClose, initialScale = 1 }: { rec
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                 </span>
                 <span className="text-left min-w-0">
-                  <span className="block text-sm font-bold truncate">{t.label} — done!</span>
+                  <span className="block text-sm font-bold truncate">{t.label} — done!{isMulti ? ` (${t.recipeTitle})` : ""}</span>
                   <span className="block text-xs text-white/80">Tap to stop the alarm</span>
                 </span>
               </span>
@@ -343,7 +446,7 @@ export default function CookingMode({ recipe, onClose, initialScale = 1 }: { rec
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="text-2xl font-bold tabular-nums leading-tight">{formatCountdown(remaining)}</div>
-                    <div className="text-xs text-gray-400 truncate mt-0.5 max-w-36">{t.label}</div>
+                    <div className="text-xs text-gray-400 truncate mt-0.5 max-w-36">{t.label}{isMulti ? ` · ${t.recipeTitle}` : ""}</div>
                   </div>
                   <button
                     onClick={() => dismissTimer(t.id)}
@@ -371,9 +474,9 @@ export default function CookingMode({ recipe, onClose, initialScale = 1 }: { rec
             ← Back
           </button>
           <button
-            onClick={() => isLast ? onClose() : setStepIndex(i => Math.min(steps.length - 1, i + 1))}
+            onClick={handleFinishTap}
             className={`flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white transition ${isLast ? "bg-green-500 hover:bg-green-600" : "bg-orange-500 hover:bg-orange-600"}`}>
-            {isLast ? "✓ Finish cooking" : "Next step →"}
+            {isLast ? (isMulti ? "✓ Done with this one" : "✓ Finish cooking") : "Next step →"}
           </button>
         </div>
       </div>
@@ -470,6 +573,27 @@ export default function CookingMode({ recipe, onClose, initialScale = 1 }: { rec
                 Start
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add another recipe to this session */}
+      {showAddRecipe && (
+        <div className="fixed inset-0 z-[95] bg-black/40 flex items-center justify-center px-4" onClick={() => setShowAddRecipe(false)}>
+          <div className="bg-white rounded-2xl p-5 w-full max-w-sm max-h-[70vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <p className="text-sm font-semibold text-gray-900 mb-1">Cook another recipe too</p>
+            <p className="text-xs text-gray-400 mb-4">Keep working on {recipe.title} — its progress is saved.</p>
+            <div className="flex-1 overflow-y-auto -mx-2 px-2 space-y-1.5">
+              {addCandidates.map((r: any) => (
+                <button
+                  key={r.id}
+                  onClick={() => addRecipeToSession(r)}
+                  className="w-full text-left px-3 py-2.5 rounded-xl border border-gray-100 hover:bg-orange-50 hover:border-orange-200 transition text-sm text-gray-700">
+                  {r.title}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setShowAddRecipe(false)} className="mt-4 border border-gray-200 rounded-xl py-2.5 text-sm text-gray-500 hover:bg-gray-50 transition">Cancel</button>
           </div>
         </div>
       )}

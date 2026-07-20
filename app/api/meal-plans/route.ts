@@ -2,6 +2,11 @@ import { NextResponse } from "next/server"
 import pool from "@/lib/db"
 import { auth } from "@/auth"
 
+async function ensureCustomTitleColumn() {
+  try { await pool.query("ALTER TABLE meal_plans ADD COLUMN IF NOT EXISTS custom_title VARCHAR(200)") } catch {}
+  try { await pool.query("ALTER TABLE meal_plans MODIFY recipe_id INT NULL") } catch {}
+}
+
 export async function GET(req: Request) {
   const session = await auth()
   if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -13,8 +18,9 @@ export async function GET(req: Request) {
   const start = searchParams.get("start")
   const end = searchParams.get("end")
 
+  await ensureCustomTitleColumn()
   const [meals] = await pool.query(
-    `SELECT meal_plans.*, recipes.title as recipe_title, recipes.image_url as recipe_image,
+    `SELECT meal_plans.*, COALESCE(recipes.title, meal_plans.custom_title) as recipe_title, recipes.image_url as recipe_image,
      recipes.prep_time, recipes.servings, recipes.nutrition, recipes.ingredients,
      recipes.description as recipe_description,
      cookbooks.id as cookbook_id
@@ -44,7 +50,7 @@ export async function GET(req: Request) {
   if ((syncRows as any[]).length > 0) {
     const partnerIds = (syncRows as any[]).map((r: any) => r.partner_id)
     const [colMeals] = await pool.query(
-      `SELECT meal_plans.*, recipes.title as recipe_title, recipes.image_url as recipe_image,
+      `SELECT meal_plans.*, COALESCE(recipes.title, meal_plans.custom_title) as recipe_title, recipes.image_url as recipe_image,
        recipes.prep_time, recipes.servings, recipes.nutrition, recipes.ingredients,
        recipes.description as recipe_description,
        cookbooks.id as cookbook_id,
@@ -69,13 +75,40 @@ export async function POST(req: Request) {
   if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const [currentUser] = await pool.query("SELECT id FROM users WHERE email = ?", [session.user.email]) as any[]
+  const userId = currentUser[0]?.id
 
-  const { recipe_id, meal_date, meal_type } = await req.json()
+  const { recipe_id, custom_title, meal_date, meal_type } = await req.json()
 
-  await pool.query(
-    "INSERT INTO meal_plans (user_id, recipe_id, meal_date, meal_type) VALUES (?, ?, ?, ?)",
-    [currentUser[0].id, recipe_id, meal_date, meal_type]
-  )
+  if (!meal_date || !meal_type) {
+    return NextResponse.json({ error: "meal_date and meal_type are required" }, { status: 400 })
+  }
+
+  await ensureCustomTitleColumn()
+
+  if (recipe_id) {
+    // The recipe must be visible to this user: their own, public, or a
+    // cookbook they're an accepted collaborator on. Meal plans can point at
+    // any recipe you can legitimately see, not just ones in your own cookbooks.
+    const [rows]: any = await pool.query(
+      `SELECT c.id FROM recipes r JOIN cookbooks c ON r.cookbook_id = c.id
+       LEFT JOIN cookbook_collaborators cc ON cc.cookbook_id = c.id AND cc.user_id = ? AND cc.status = 'accepted'
+       WHERE r.id = ? AND (c.is_public = 1 OR c.user_id = ? OR cc.id IS NOT NULL)`,
+      [userId, recipe_id, userId]
+    )
+    if (!rows[0]) return NextResponse.json({ error: "Recipe not found or not accessible" }, { status: 403 })
+
+    await pool.query(
+      "INSERT INTO meal_plans (user_id, recipe_id, meal_date, meal_type) VALUES (?, ?, ?, ?)",
+      [userId, recipe_id, meal_date, meal_type]
+    )
+  } else if (typeof custom_title === "string" && custom_title.trim()) {
+    await pool.query(
+      "INSERT INTO meal_plans (user_id, custom_title, meal_date, meal_type) VALUES (?, ?, ?, ?)",
+      [userId, custom_title.trim().slice(0, 200), meal_date, meal_type]
+    )
+  } else {
+    return NextResponse.json({ error: "recipe_id or custom_title is required" }, { status: 400 })
+  }
 
   return NextResponse.json({ success: true })
 }

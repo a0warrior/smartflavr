@@ -15,7 +15,7 @@ export default function ShareCookButton({ recipe }: { recipe: any }) {
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
         Start cooking
       </button>
-      {cooking && <CookingMode recipe={recipe} onClose={() => setCooking(false)} />}
+      {cooking && <CookingMode recipes={[recipe]} onClose={() => setCooking(false)} />}
     </>
   )
 }

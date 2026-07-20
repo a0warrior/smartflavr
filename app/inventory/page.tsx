@@ -32,6 +32,17 @@ function daysSinceUsed(usedAt: string) {
   return Math.floor((now - used) / (1000 * 60 * 60 * 24))
 }
 
+function expiryInfo(expiresAt: string | null | undefined) {
+  if (!expiresAt) return null
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const expires = new Date(expiresAt); expires.setHours(0, 0, 0, 0)
+  const days = Math.round((expires.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+  if (days < 0) return { label: "Expired", days, className: "bg-red-50 text-red-600 border-red-100" }
+  if (days === 0) return { label: "Expires today", days, className: "bg-red-50 text-red-600 border-red-100" }
+  if (days <= 3) return { label: `Expires in ${days}d`, days, className: "bg-amber-50 text-amber-600 border-amber-100" }
+  return { label: `Expires in ${days}d`, days, className: "bg-gray-50 text-gray-400 border-gray-100" }
+}
+
 export default function InventoryPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -56,6 +67,12 @@ export default function InventoryPage() {
   const [showMatches, setShowMatches] = useState(false)
   const [matchListId, setMatchListId] = useState<string>("")
   const [addedMissing, setAddedMissing] = useState<Set<number>>(new Set())
+  const [generatingIdeas, setGeneratingIdeas] = useState(false)
+  const [ideas, setIdeas] = useState<any[] | null>(null)
+  const [showIdeas, setShowIdeas] = useState(false)
+  const [ideaCookbooks, setIdeaCookbooks] = useState<any[]>([])
+  const [savingIdeaFor, setSavingIdeaFor] = useState<string | null>(null)
+  const [savedIdeas, setSavedIdeas] = useState<Set<string>>(new Set())
   const [customCategories, setCustomCategories] = useState<any[]>([])
   const [showNewCatModal, setShowNewCatModal] = useState(false)
   const [newCatName, setNewCatName] = useState("")
@@ -63,6 +80,7 @@ export default function InventoryPage() {
   const [editName, setEditName] = useState("")
   const [editQty, setEditQty] = useState("")
   const [editCat, setEditCat] = useState("")
+  const [editExpiry, setEditExpiry] = useState("")
   const nameInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -124,6 +142,64 @@ export default function InventoryPage() {
     setShowMatches(true)
   }
 
+  async function generateIdeas() {
+    setGeneratingIdeas(true)
+    const res = await fetch("/api/inventory-suggest", { method: "POST" })
+    const data = await res.json()
+    setGeneratingIdeas(false)
+    if (data.error === "limit_reached") return toast.info("You've used all your AI actions for this week.")
+    if (data.error === "no_inventory") return toast.info("Add items to your inventory first.")
+    if (data.error) return toast.error("Something went wrong. Try again.")
+    setIdeas(data.results || [])
+    setSavedIdeas(new Set())
+    setShowIdeas(true)
+    if (ideaCookbooks.length === 0) {
+      const cbRes = await fetch("/api/cookbooks")
+      const cbData = await cbRes.json()
+      setIdeaCookbooks(cbData.cookbooks || [])
+    }
+  }
+
+  async function saveIdea(idea: any, allowDuplicate = false) {
+    let targetCookbookId = ideaCookbooks[0]?.id
+    if (!targetCookbookId) {
+      setSavingIdeaFor(idea.id)
+      const cbRes = await fetch("/api/cookbooks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "My Recipes", cover_emoji: "📖", cover_color: "#F97316" }),
+      })
+      const cbData = await cbRes.json()
+      if (!cbData.id) { setSavingIdeaFor(null); toast.error("Could not create a cookbook. Try again."); return }
+      targetCookbookId = cbData.id
+      setIdeaCookbooks([{ id: cbData.id, title: "My Recipes" }])
+    }
+    setSavingIdeaFor(idea.id)
+    const res = await fetch("/api/recipes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        cookbook_id: targetCookbookId,
+        title: idea.title,
+        description: idea.description,
+        ingredients: idea.ingredients,
+        instructions: idea.instructions,
+        prep_time: idea.prep_time,
+        allow_duplicate: allowDuplicate,
+        sort_order: 0,
+      }),
+    })
+    if (res.status === 409) {
+      setSavingIdeaFor(null)
+      if (confirm(`You already have "${idea.title}" saved. Save it again anyway?`)) return saveIdea(idea, true)
+      return
+    }
+    setSavingIdeaFor(null)
+    if (!res.ok) return toast.error("Could not save this recipe. Try again.")
+    setSavedIdeas(prev => new Set(prev).add(idea.id))
+    toast.success("Saved to your cookbook!")
+  }
+
   async function addMissingToList(match: any) {
     if (!matchListId || match.missing.length === 0) return
     await fetch("/api/grocery-lists", {
@@ -170,18 +246,19 @@ export default function InventoryPage() {
     setEditName(item.name || "")
     setEditQty(item.quantity || "")
     setEditCat(item.category || "Pantry")
+    setEditExpiry(item.expires_at ? String(item.expires_at).slice(0, 10) : "")
   }
 
   function closeEditItem() {
     if (!editItem) return
-    const dirty = editName !== (editItem.name || "") || editQty !== (editItem.quantity || "") || editCat !== (editItem.category || "Pantry")
+    const dirty = editName !== (editItem.name || "") || editQty !== (editItem.quantity || "") || editCat !== (editItem.category || "Pantry") || editExpiry !== (editItem.expires_at ? String(editItem.expires_at).slice(0, 10) : "")
     if (dirty && !confirm("Discard your changes to this item?")) return
     setEditItem(null)
   }
 
   async function saveItemEdit() {
     if (!editItem || !editName.trim()) return
-    const patch = { name: editName.trim(), quantity: editQty.trim(), category: editCat }
+    const patch = { name: editName.trim(), quantity: editQty.trim(), category: editCat, expires_at: editExpiry || null }
     setItems(prev => prev.map(i => i.id === editItem.id ? { ...i, ...patch } : i))
     setEditItem(null)
     await fetch("/api/inventory", {
@@ -317,6 +394,11 @@ export default function InventoryPage() {
     return acc
   }, {})
 
+  const expiringSoon = inStock
+    .map(i => ({ item: i, expiry: expiryInfo(i.expires_at) }))
+    .filter((x): x is { item: any; expiry: NonNullable<ReturnType<typeof expiryInfo>> } => !!x.expiry && x.expiry.days <= 3)
+    .sort((a, b) => a.expiry.days - b.expiry.days)
+
   if (status === "loading") return <PageSkeleton />
 
   return (
@@ -326,6 +408,22 @@ export default function InventoryPage() {
 
         <h1 className="text-2xl font-medium text-gray-900 mb-1">My Inventory</h1>
         <p className="text-sm text-gray-400 mb-6">What's in your kitchen right now.</p>
+
+        {expiringSoon.length > 0 && (
+          <div className="bg-white border border-amber-200 rounded-2xl p-4 mb-6">
+            <div className="text-sm font-medium text-gray-900 flex items-center gap-1.5 mb-2.5"><ClockIcon size={14} className="text-amber-500" />Expiring soon</div>
+            <div className="flex flex-wrap gap-2">
+              {expiringSoon.map(({ item, expiry }) => (
+                <button
+                  key={item.id}
+                  onClick={() => openEditItem(item)}
+                  className={`text-xs font-medium rounded-full px-3 py-1.5 border transition hover:opacity-80 ${expiry.className}`}>
+                  {item.name} · {expiry.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-3 mb-6">
           <div className="bg-white border border-gray-100 rounded-2xl p-4">
@@ -349,6 +447,20 @@ export default function InventoryPage() {
             title={planStatus && !planStatus.canUseAI ? "AI limit reached for this week" : undefined}
             className="bg-white text-orange-600 px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-orange-50 transition whitespace-nowrap flex-shrink-0 disabled:opacity-60">
             {finding ? "Checking..." : "Find recipes"}
+          </button>
+        </div>
+
+        <div className="bg-gradient-to-r from-violet-500 to-indigo-500 rounded-2xl p-5 flex items-center justify-between gap-4 mb-6">
+          <div className="min-w-0">
+            <div className="text-base font-semibold text-white flex items-center gap-2"><ChefIcon size={16} />Suggest something new</div>
+            <div className="text-xs text-violet-50 mt-1">AI dreams up dishes from just what's in your kitchen — no cookbooks needed</div>
+          </div>
+          <button
+            onClick={generateIdeas}
+            disabled={generatingIdeas || inStock.length === 0 || (planStatus && !planStatus.canUseAI)}
+            title={planStatus && !planStatus.canUseAI ? "AI limit reached for this week" : undefined}
+            className="bg-white text-indigo-600 px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-indigo-50 transition whitespace-nowrap flex-shrink-0 disabled:opacity-60">
+            {generatingIdeas ? "Thinking..." : "Surprise me"}
           </button>
         </div>
 
@@ -446,10 +558,13 @@ export default function InventoryPage() {
                   <span className="text-xs text-gray-300">{catItems.length} items</span>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {catItems.map((item: any) => (
+                  {catItems.map((item: any) => {
+                    const expiry = expiryInfo(item.expires_at)
+                    return (
                     <div key={item.id} className="bg-white border border-gray-100 rounded-2xl p-3 flex flex-col gap-1">
                       <div onClick={() => openEditItem(item)} className="text-sm font-medium text-gray-900 truncate cursor-pointer">{item.name}</div>
                       {item.quantity && <div className="text-xs text-gray-400">{item.quantity}</div>}
+                      {expiry && <div className={`text-[10px] font-medium rounded-full px-2 py-0.5 border w-fit mt-0.5 ${expiry.className}`}>{expiry.label}</div>}
                       <div className="flex items-center justify-between mt-2">
                         <button
                           onClick={() => openEditItem(item)}
@@ -465,7 +580,8 @@ export default function InventoryPage() {
                         </button>
                       </div>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             ))}
@@ -657,6 +773,54 @@ export default function InventoryPage() {
         </div>
       )}
 
+      {showIdeas && ideas && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl w-full max-w-md mx-4 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <div>
+                <h2 className="text-base font-medium flex items-center gap-2"><ChefIcon size={15} className="text-indigo-500" />AI dish ideas</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Dreamed up from {inStock.length} items in your kitchen</p>
+              </div>
+              <button onClick={() => setShowIdeas(false)} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {ideas.length === 0 && (
+                <p className="text-sm text-gray-400 text-center py-10">Couldn't come up with anything — try adding more to your inventory.</p>
+              )}
+              {ideas.map((idea: any) => (
+                <div key={idea.id} className="border border-gray-100 rounded-2xl p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gray-900">{idea.title}</div>
+                      {idea.description && <div className="text-xs text-gray-400 mt-0.5">{idea.description}</div>}
+                      {idea.prep_time && <div className="text-xs text-gray-400 mt-1 flex items-center gap-1"><ClockIcon size={11} />{idea.prep_time}</div>}
+                    </div>
+                    {idea.status === "ready" ? (
+                      <span className="text-[10px] font-semibold text-green-600 bg-green-50 border border-green-100 rounded-full px-2.5 py-1 flex-shrink-0">✓ Ready</span>
+                    ) : (
+                      <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-100 rounded-full px-2.5 py-1 flex-shrink-0">Missing {idea.missing.length}</span>
+                    )}
+                  </div>
+                  {idea.missing.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2.5">
+                      {idea.missing.map((ing: string, i: number) => (
+                        <span key={i} className="text-xs bg-gray-50 border border-gray-100 text-gray-500 rounded-full px-2.5 py-0.5">{ing}</span>
+                      ))}
+                    </div>
+                  )}
+                  <button
+                    onClick={() => saveIdea(idea)}
+                    disabled={savingIdeaFor === idea.id || savedIdeas.has(idea.id)}
+                    className="w-full mt-3 bg-indigo-500 text-white rounded-xl py-2 text-xs font-semibold hover:bg-indigo-600 transition disabled:opacity-60">
+                    {savedIdeas.has(idea.id) ? "✓ Saved to cookbook" : savingIdeaFor === idea.id ? "Saving..." : "Save this recipe"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {editItem && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50" onClick={() => closeEditItem()}>
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
@@ -687,6 +851,18 @@ export default function InventoryPage() {
                   {cat}
                 </button>
               ))}
+            </div>
+            <label className="text-xs text-gray-500 mb-1 block">Expires <span className="text-gray-300">(optional)</span></label>
+            <div className="flex gap-2 mb-5">
+              <input
+                type="date"
+                value={editExpiry}
+                onChange={e => setEditExpiry(e.target.value)}
+                className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none"
+              />
+              {editExpiry && (
+                <button onClick={() => setEditExpiry("")} title="Clear" className="px-3 border border-gray-200 rounded-xl text-gray-400 hover:text-red-400 hover:border-red-200 transition">✕</button>
+              )}
             </div>
             <div className="flex gap-3">
               <button onClick={() => closeEditItem()} className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm text-gray-500 hover:bg-gray-50">Cancel</button>

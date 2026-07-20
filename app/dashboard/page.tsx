@@ -1,7 +1,7 @@
 "use client"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Navbar from "../components/Navbar"
 import GroceryCollaboratorModal from "../components/GroceryCollaboratorModal"
 import { toast } from "../components/Toast"
@@ -48,17 +48,28 @@ function parseMeasurement(ingredient: string) {
 }
 
 function SortableGroceryItem({ item, onToggle, onDelete, onHousehold }: any) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id })
-  const style = { transform: CSS.Transform.toString(transform), transition }
-  const { measurement, rest } = parseMeasurement(item.ingredient)
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
+  // transform/transition change every animation frame while any item in the
+  // list is dragged (dnd-kit re-renders the whole SortableContext to
+  // reposition siblings) — memoize the regex-based parse so it isn't redone
+  // on every one of those frames for every row, which is what made dragging
+  // feel laggy on longer lists.
+  const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 10 : "auto" }
+  const { measurement, rest } = useMemo(() => parseMeasurement(item.ingredient), [item.ingredient])
   const displayText = measurement ? <><span className="font-semibold">{measurement}</span>{rest ? ` ${rest}` : ""}</> : (rest || item.ingredient)
 
   return (
     <div
       ref={setNodeRef}
-      style={style}
-      className={`flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-gray-50 transition group ${item.checked ? "opacity-50" : ""}`}>
-      <span {...attributes} {...listeners} className="text-gray-300 cursor-grab text-sm flex-shrink-0">⠿</span>
+      style={{ ...style, WebkitUserSelect: isDragging ? "none" : undefined, userSelect: isDragging ? "none" : undefined }}
+      className={`flex items-center gap-3 py-2.5 px-3 rounded-xl transition group ${isDragging ? "bg-white shadow-lg" : "hover:bg-gray-50"} ${item.checked && !isDragging ? "opacity-50" : ""}`}>
+      <span
+        {...attributes} {...listeners}
+        // Safari starts its own text-selection/callout gesture on a
+        // press-and-hold unless explicitly told not to — without this, that
+        // fights the drag's own pointer tracking and reads as jitter.
+        style={{ touchAction: "none", WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" } as any}
+        className="text-gray-300 cursor-grab active:cursor-grabbing text-sm flex-shrink-0">⠿</span>
       <div
         onClick={() => onToggle(item.id, !item.checked)}
         className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition cursor-pointer ${item.checked ? "bg-orange-500 border-orange-500" : "border-gray-300"}`}>
@@ -153,7 +164,10 @@ export default function Dashboard() {
   const [userId, setUserId] = useState<number | null>(null)
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    // Require a small move before a drag registers so a tap on the handle
+    // (or a finger settling before a scroll) doesn't immediately start
+    // dragging and fight the browser's own scroll gesture.
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 

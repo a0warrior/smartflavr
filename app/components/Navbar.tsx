@@ -6,6 +6,7 @@ import { useState, useEffect } from "react"
 import { BellIcon, HeartIcon, UserIcon, CommentIcon, BookIcon, BanIcon, WarningIcon, SparkleIcon, PeopleIcon } from "@/app/components/Icons"
 import BottomNav from "@/app/components/BottomNav"
 import { pulse, subscribe } from "@/lib/firebase"
+import { useTheme } from "@/app/components/ThemeProvider"
 
 const navLinks = [
   { href: "/feed", label: "Feed" },
@@ -17,6 +18,7 @@ const navLinks = [
 
 export default function Navbar() {
   const { data: session } = useSession()
+  const { theme, toggleTheme } = useTheme()
   const [showMenu, setShowMenu] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [showSidebar, setShowSidebar] = useState(false)
@@ -323,6 +325,10 @@ export default function Navbar() {
                     Admin Panel
                   </Link>
                 )}
+                <button onClick={toggleTheme} className="flex items-center justify-between w-full px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition">
+                  <span>{theme === "dark" ? "Dark mode" : "Light mode"}</span>
+                  <span className="text-xs">{theme === "dark" ? "🌙" : "☀️"}</span>
+                </button>
                 <div className="border-t border-gray-100 my-1" />
                 <button onClick={() => signOut({ callbackUrl: "/" })} className="block w-full text-left px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition">
                   Sign out
@@ -396,6 +402,10 @@ export default function Navbar() {
               Admin Panel
             </Link>
           )}
+          <button onClick={toggleTheme} className="flex items-center justify-between w-full px-5 py-3 text-sm text-gray-600 hover:bg-gray-50 transition">
+            <span>{theme === "dark" ? "Dark mode" : "Light mode"}</span>
+            <span>{theme === "dark" ? "🌙" : "☀️"}</span>
+          </button>
         </div>
 
         {/* Sign out pinned to bottom */}

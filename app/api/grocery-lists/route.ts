@@ -91,13 +91,15 @@ export async function PUT(req: Request) {
     await pool.query("UPDATE grocery_lists SET name = ? WHERE id = ?", [name, id])
   }
 
-  // Add new items
+  // Add new items — always after the current highest sort_order, not a
+  // count of remaining rows (which under-counts once items are deleted,
+  // handing new items a lower order than items already in the list).
   if (addItems && addItems.length > 0) {
-    const [countResult] = await pool.query(
-      "SELECT COUNT(*) as count FROM grocery_list_items WHERE grocery_list_id = ?",
+    const [maxResult] = await pool.query(
+      "SELECT COALESCE(MAX(sort_order), -1) as maxOrder FROM grocery_list_items WHERE grocery_list_id = ?",
       [id]
     ) as any[]
-    const startOrder = countResult[0].count
+    const startOrder = maxResult[0].maxOrder + 1
     await Promise.all(addItems.map((ingredient: string, index: number) =>
       pool.query(
         "INSERT INTO grocery_list_items (grocery_list_id, ingredient, sort_order, is_household) VALUES (?, ?, ?, ?)",

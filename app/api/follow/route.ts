@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import pool from "@/lib/db"
 import { auth } from "@/auth"
+import { getPrivacy } from "@/lib/privacy"
+import { sendPush } from "@/lib/push"
 
 export async function POST(req: Request) {
   const session = await auth()
@@ -28,19 +30,27 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Cannot follow yourself" }, { status: 400 })
   }
 
+  const targetPrivacy = await getPrivacy(targetUser[0].id)
+  if (targetPrivacy.who_can_follow === "no_one") {
+    return NextResponse.json({ error: "This user isn't accepting new followers" }, { status: 403 })
+  }
+
   await pool.query(
     "INSERT IGNORE INTO follows (follower_id, following_id) VALUES (?, ?)",
     [currentUser[0].id, targetUser[0].id]
   )
 
-  await pool.query(
-    "INSERT INTO notifications (user_id, type, message, data) VALUES (?, 'new_follower', ?, ?)",
-    [
-      targetUser[0].id,
-      `${currentUser[0].name} started following you`,
-      JSON.stringify({ follower_id: currentUser[0].id, follower_name: currentUser[0].name, follower_username: currentUser[0].username })
-    ]
-  )
+  if (targetPrivacy.notify_new_follower) {
+    await pool.query(
+      "INSERT INTO notifications (user_id, type, message, data) VALUES (?, 'new_follower', ?, ?)",
+      [
+        targetUser[0].id,
+        `${currentUser[0].name} started following you`,
+        JSON.stringify({ follower_id: currentUser[0].id, follower_name: currentUser[0].name, follower_username: currentUser[0].username })
+      ]
+    )
+    sendPush(targetUser[0].id, { title: "New follower", body: `${currentUser[0].name} started following you`, url: `/u/${currentUser[0].username}` }).catch(() => {})
+  }
 
   return NextResponse.json({ success: true })
 }
@@ -85,6 +95,8 @@ export async function DELETE(req: Request) {
   )
 
   if (wasFriend) {
+    const targetNotifyPrefs = await getPrivacy(targetId)
+
     // Find all cookbooks owned by currentUser where targetUser is a collaborator
     const [collabsAsOwner] = await pool.query(
       `SELECT cc.id as collab_id, cc.cookbook_id, c.title as cookbook_title
@@ -110,14 +122,17 @@ export async function DELETE(req: Request) {
         [collab.collab_id]
       )
       // Notify targetUser they were removed
-      await pool.query(
-        "INSERT INTO notifications (user_id, type, message, data) VALUES (?, 'collab_removed', ?, ?)",
-        [
-          targetId,
-          `You were removed from "${collab.cookbook_title}" because you are no longer friends with the owner`,
-          JSON.stringify({ cookbook_id: collab.cookbook_id })
-        ]
-      )
+      if (targetNotifyPrefs.notify_collab_removed) {
+        await pool.query(
+          "INSERT INTO notifications (user_id, type, message, data) VALUES (?, 'collab_removed', ?, ?)",
+          [
+            targetId,
+            `You were removed from "${collab.cookbook_title}" because you are no longer friends with the owner`,
+            JSON.stringify({ cookbook_id: collab.cookbook_id })
+          ]
+        )
+        sendPush(targetId, { title: "Removed from cookbook", body: `You were removed from "${collab.cookbook_title}"`, url: "/dashboard" }).catch(() => {})
+      }
     }
 
     // Remove currentUser from targetUser's cookbooks
@@ -127,14 +142,17 @@ export async function DELETE(req: Request) {
         [collab.collab_id]
       )
       // Notify targetUser (owner) that currentUser was removed
-      await pool.query(
-        "INSERT INTO notifications (user_id, type, message, data) VALUES (?, 'collab_removed', ?, ?)",
-        [
-          collab.owner_id,
-          `${currentUser[0].name} was removed from "${collab.cookbook_title}" because they are no longer friends`,
-          JSON.stringify({ cookbook_id: collab.cookbook_id })
-        ]
-      )
+      if (targetNotifyPrefs.notify_collab_removed) {
+        await pool.query(
+          "INSERT INTO notifications (user_id, type, message, data) VALUES (?, 'collab_removed', ?, ?)",
+          [
+            collab.owner_id,
+            `${currentUser[0].name} was removed from "${collab.cookbook_title}" because they are no longer friends`,
+            JSON.stringify({ cookbook_id: collab.cookbook_id })
+          ]
+        )
+        sendPush(collab.owner_id, { title: "Collaborator removed", body: `${currentUser[0].name} was removed from "${collab.cookbook_title}"`, url: `/cookbook/${collab.cookbook_id}` }).catch(() => {})
+      }
     }
   }
 

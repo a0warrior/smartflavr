@@ -85,6 +85,15 @@ export default function MealPlannerPage() {
   const [selectedDate, setSelectedDate] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("")
   const [selectedCookbook, setSelectedCookbook] = useState("")
+  const [collaboratedCookbooks, setCollaboratedCookbooks] = useState<any[]>([])
+  const [addTab, setAddTab] = useState<"library" | "search" | "custom">("library")
+  const [mpSearchQuery, setMpSearchQuery] = useState("")
+  const [mpSearchType, setMpSearchType] = useState<"recipes" | "cookbooks" | "people">("recipes")
+  const [mpSearchResults, setMpSearchResults] = useState<any>({ recipes: [], cookbooks: [], users: [] })
+  const [mpSearchLoading, setMpSearchLoading] = useState(false)
+  const [mpBrowsingCookbook, setMpBrowsingCookbook] = useState<any>(null)
+  const [customMealText, setCustomMealText] = useState("")
+  const [addingCustomMeal, setAddingCustomMeal] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState("")
   const [groceryList, setGroceryList] = useState<any>({})
   const [generatingGrocery, setGeneratingGrocery] = useState(false)
@@ -194,6 +203,49 @@ export default function MealPlannerPage() {
     const res = await fetch("/api/cookbooks")
     const data = await res.json()
     setCookbooks(data.cookbooks || [])
+    setCollaboratedCookbooks(data.collaborated || [])
+  }
+
+  async function runMpSearch(query: string, type: "recipes" | "cookbooks" | "people") {
+    setMpSearchLoading(true)
+    const res = await fetch(`/api/explore?type=${type}&q=${encodeURIComponent(query)}`)
+    const data = await res.json()
+    setMpSearchLoading(false)
+    setMpSearchResults({ recipes: data.recipes || [], cookbooks: data.cookbooks || [], users: data.users || [] })
+  }
+
+  function browseSearchCookbook(cb: any) {
+    setMpBrowsingCookbook(cb)
+    fetchRecipesForCookbook(cb.id)
+  }
+
+  async function addCustomMeal() {
+    if (!customMealText.trim() || addingCustomMeal) return
+    setAddingCustomMeal(true)
+    const res = await fetch("/api/meal-plans", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ custom_title: customMealText.trim(), meal_date: selectedDate, meal_type: selectedCategory }),
+    })
+    setAddingCustomMeal(false)
+    if (!res.ok) { toast.error("Could not add that — try again."); return }
+    setCustomMealText("")
+    closeAddModal()
+    fetchMeals()
+    if (userId) pulse(`/updates/users/${userId}/mealplan`)
+  }
+
+  function closeAddModal() {
+    setShowAddModal(false)
+    setSelectedCookbook("")
+    setAllRecipes([])
+    setRecipeSearch("")
+    setSelectedCategoryFilter("")
+    setAddTab("library")
+    setMpSearchQuery("")
+    setMpSearchResults({ recipes: [], cookbooks: [], users: [] })
+    setMpBrowsingCookbook(null)
+    setCustomMealText("")
   }
 
   async function fetchExistingLists() {
@@ -259,7 +311,7 @@ export default function MealPlannerPage() {
   }
 
   async function addMeal(recipeId: string) {
-    await fetch("/api/meal-plans", {
+    const res = await fetch("/api/meal-plans", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -268,11 +320,8 @@ export default function MealPlannerPage() {
         meal_type: selectedCategory,
       }),
     })
-    setShowAddModal(false)
-    setSelectedCookbook("")
-    setAllRecipes([])
-    setRecipeSearch("")
-    setSelectedCategoryFilter("")
+    if (!res.ok) { toast.error("Could not add that recipe — try again."); return }
+    closeAddModal()
     if (liveSync) {
       const start = formatDate(weekDates[0])
       const end = formatDate(weekDates[6])
@@ -299,6 +348,7 @@ export default function MealPlannerPage() {
   }
 
   async function openMealRecipe(meal: any) {
+    if (!meal.recipe_id) return // custom text entry — nothing more to open
     if (loadingRecipe) return
     setLoadingRecipe(true)
     const res = await fetch(`/api/meal-plans/recipe?meal_id=${meal.id}`)
@@ -897,93 +947,246 @@ export default function MealPlannerPage() {
 
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4 max-h-[85vh] overflow-y-auto">
-            <h2 className="text-lg font-medium mb-1">Add recipe</h2>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4 max-h-[85vh] overflow-y-auto flex flex-col">
+            <h2 className="text-lg font-medium mb-1">Add to plan</h2>
             <p className="text-sm text-gray-400 mb-4">{selectedCategory} · {selectedDate}</p>
-            <div className="mb-3">
-              <label className="text-sm text-gray-500 mb-1 block">Cookbook</label>
-              <select
-                value={selectedCookbook}
-                onChange={e => { setSelectedCookbook(e.target.value); setRecipeSearch(""); setSelectedCategoryFilter("") }}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none">
-                <option value="">Choose a cookbook...</option>
-                {cookbooks.map((b: any) => (
-                  <option key={b.id} value={b.id}>{b.cover_emoji} {b.title}</option>
-                ))}
-              </select>
-              {cookbooks.length === 0 && (
-                <p className="text-xs text-gray-400 mt-2">
-                  You don't have any cookbooks with recipes yet — <a href="/dashboard" className="text-orange-500 underline">create one on your dashboard</a> first.
-                </p>
-              )}
+
+            <div className="flex gap-1.5 bg-gray-100 rounded-xl p-1 mb-4 flex-shrink-0">
+              {[["library", "My library"], ["search", "Search"], ["custom", "Write your own"]].map(([tab, label]) => (
+                <button
+                  key={tab}
+                  onClick={() => setAddTab(tab as any)}
+                  className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition ${addTab === tab ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+                  {label}
+                </button>
+              ))}
             </div>
-            {selectedCookbook && (
-              <div className="flex gap-2 mb-3">
-                <input
-                  value={recipeSearch}
-                  onChange={e => setRecipeSearch(e.target.value)}
-                  placeholder="Search recipes..."
-                  className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none"
-                />
-                {recipeCategories.length > 0 && (
+
+            {addTab === "library" && (
+              <>
+                <div className="mb-3">
+                  <label className="text-sm text-gray-500 mb-1 block">Cookbook</label>
                   <select
-                    value={selectedCategoryFilter}
-                    onChange={e => setSelectedCategoryFilter(e.target.value)}
-                    className="border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none">
-                    <option value="">All</option>
-                    {recipeCategories.map((cat: any) => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
+                    value={selectedCookbook}
+                    onChange={e => { setSelectedCookbook(e.target.value); setRecipeSearch(""); setSelectedCategoryFilter("") }}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none">
+                    <option value="">Choose a cookbook...</option>
+                    {cookbooks.length > 0 && (
+                      <optgroup label="My cookbooks">
+                        {cookbooks.map((b: any) => <option key={b.id} value={b.id}>{b.cover_emoji} {b.title}</option>)}
+                      </optgroup>
+                    )}
+                    {collaboratedCookbooks.length > 0 && (
+                      <optgroup label="Shared with me">
+                        {collaboratedCookbooks.map((b: any) => <option key={b.id} value={b.id}>{b.cover_emoji} {b.title} — {b.owner_name}</option>)}
+                      </optgroup>
+                    )}
                   </select>
+                  {cookbooks.length === 0 && collaboratedCookbooks.length === 0 && (
+                    <p className="text-xs text-gray-400 mt-2">
+                      You don't have any cookbooks with recipes yet — <a href="/dashboard" className="text-orange-500 underline">create one on your dashboard</a> first.
+                    </p>
+                  )}
+                </div>
+                {selectedCookbook && (
+                  <div className="flex gap-2 mb-3">
+                    <input
+                      value={recipeSearch}
+                      onChange={e => setRecipeSearch(e.target.value)}
+                      placeholder="Search recipes..."
+                      className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none"
+                    />
+                    {recipeCategories.length > 0 && (
+                      <select
+                        value={selectedCategoryFilter}
+                        onChange={e => setSelectedCategoryFilter(e.target.value)}
+                        className="border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none">
+                        <option value="">All</option>
+                        {recipeCategories.map((cat: any) => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
                 )}
-              </div>
+                {selectedCookbook && filteredRecipes.length === 0 && (
+                  <p className="text-sm text-gray-400 text-center py-6">
+                    {allRecipes.length === 0 ? "This cookbook doesn't have any recipes yet." : "No recipes match your search."}
+                  </p>
+                )}
+                {filteredRecipes.length > 0 && (
+                  <div className="space-y-2">
+                    {filteredRecipes.map((r: any) => (
+                      <div
+                        key={r.id}
+                        onClick={() => addMeal(r.id)}
+                        className="flex items-center gap-3 p-3 border border-gray-100 rounded-xl cursor-pointer hover:bg-orange-50 hover:border-orange-200 transition">
+                        {r.image_url ? (
+                          <img src={r.image_url} className="w-10 h-10 rounded-lg object-cover flex-shrink-0"/>
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
+                            <div className="text-orange-400"><PlateIcon size={20} /></div>
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-gray-900 truncate">{r.title}</div>
+                          <div className="flex gap-2 text-xs text-gray-400 mt-0.5 flex-wrap">
+                            {r.category_name && (
+                              <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">{r.category_name}</span>
+                            )}
+                            {r.prep_time && <span className="flex items-center gap-1"><ClockIcon size={11} />{r.prep_time}</span>}
+                            {r.servings && <span className="flex items-center gap-1"><UserIcon size={11} />{r.servings}</span>}
+                            {r.nutrition && (() => {
+                              const n = typeof r.nutrition === "string" ? JSON.parse(r.nutrition) : r.nutrition
+                              return <span className="flex items-center gap-1"><FlameIcon size={11} />{Math.round(n.calories)} cal</span>
+                            })()}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
-            {selectedCookbook && filteredRecipes.length === 0 && (
-              <p className="text-sm text-gray-400 text-center py-6">
-                {allRecipes.length === 0 ? "This cookbook doesn't have any recipes yet." : "No recipes match your search."}
-              </p>
-            )}
-            {filteredRecipes.length > 0 && (
-              <div className="space-y-2">
-                {filteredRecipes.map((r: any) => (
-                  <div
-                    key={r.id}
-                    onClick={() => addMeal(r.id)}
-                    className="flex items-center gap-3 p-3 border border-gray-100 rounded-xl cursor-pointer hover:bg-orange-50 hover:border-orange-200 transition">
-                    {r.image_url ? (
-                      <img src={r.image_url} className="w-10 h-10 rounded-lg object-cover flex-shrink-0"/>
-                    ) : (
-                      <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
-                        <div className="text-orange-400"><PlateIcon size={20} /></div>
+
+            {addTab === "search" && (
+              <>
+                {mpBrowsingCookbook ? (
+                  <>
+                    <button onClick={() => { setMpBrowsingCookbook(null); setAllRecipes([]) }} className="text-xs text-orange-500 hover:text-orange-600 mb-3 flex items-center gap-1">← Back to search</button>
+                    <p className="text-sm font-medium text-gray-900 mb-3">{mpBrowsingCookbook.cover_emoji} {mpBrowsingCookbook.title}</p>
+                    {allRecipes.length === 0 && <p className="text-sm text-gray-400 text-center py-6">No recipes in this cookbook.</p>}
+                    <div className="space-y-2">
+                      {allRecipes.map((r: any) => (
+                        <div
+                          key={r.id}
+                          onClick={() => addMeal(r.id)}
+                          className="flex items-center gap-3 p-3 border border-gray-100 rounded-xl cursor-pointer hover:bg-orange-50 hover:border-orange-200 transition">
+                          {r.image_url ? (
+                            <img src={r.image_url} className="w-10 h-10 rounded-lg object-cover flex-shrink-0"/>
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0"><div className="text-orange-400"><PlateIcon size={20} /></div></div>
+                          )}
+                          <div className="text-sm font-medium text-gray-900 truncate flex-1 min-w-0">{r.title}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex gap-1.5 mb-3">
+                      {(["recipes", "cookbooks", "people"] as const).map(t => (
+                        <button
+                          key={t}
+                          onClick={() => { setMpSearchType(t); if (mpSearchQuery.trim()) runMpSearch(mpSearchQuery, t) }}
+                          className={`text-xs px-3 py-1.5 rounded-full border transition capitalize ${mpSearchType === t ? "bg-orange-500 text-white border-orange-500" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                    <input
+                      value={mpSearchQuery}
+                      onChange={e => {
+                        const q = e.target.value
+                        setMpSearchQuery(q)
+                        if (q.trim()) runMpSearch(q, mpSearchType); else setMpSearchResults({ recipes: [], cookbooks: [], users: [] })
+                      }}
+                      placeholder={`Search ${mpSearchType}...`}
+                      autoFocus
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none mb-3"
+                    />
+                    {mpSearchLoading && <p className="text-sm text-gray-400 text-center py-6">Searching...</p>}
+                    {!mpSearchLoading && mpSearchQuery.trim() && mpSearchType === "recipes" && mpSearchResults.recipes.length === 0 && (
+                      <p className="text-sm text-gray-400 text-center py-6">No public recipes match.</p>
+                    )}
+                    {!mpSearchLoading && mpSearchType === "recipes" && (
+                      <div className="space-y-2">
+                        {mpSearchResults.recipes.map((r: any) => (
+                          <div
+                            key={r.id}
+                            onClick={() => addMeal(r.id)}
+                            className="flex items-center gap-3 p-3 border border-gray-100 rounded-xl cursor-pointer hover:bg-orange-50 hover:border-orange-200 transition">
+                            {r.image_url ? (
+                              <img src={r.image_url} className="w-10 h-10 rounded-lg object-cover flex-shrink-0"/>
+                            ) : (
+                              <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0"><div className="text-orange-400"><PlateIcon size={20} /></div></div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-gray-900 truncate">{r.title}</div>
+                              <div className="text-xs text-gray-400 truncate">by {r.owner_name}{r.cookbook_title ? ` · ${r.cookbook_title}` : ""}</div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     )}
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-gray-900 truncate">{r.title}</div>
-                      <div className="flex gap-2 text-xs text-gray-400 mt-0.5 flex-wrap">
-                        {r.category_name && (
-                          <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">{r.category_name}</span>
-                        )}
-                        {r.prep_time && <span className="flex items-center gap-1"><ClockIcon size={11} />{r.prep_time}</span>}
-                        {r.servings && <span className="flex items-center gap-1"><UserIcon size={11} />{r.servings}</span>}
-                        {r.nutrition && (() => {
-                          const n = typeof r.nutrition === "string" ? JSON.parse(r.nutrition) : r.nutrition
-                          return <span className="flex items-center gap-1"><FlameIcon size={11} />{Math.round(n.calories)} cal</span>
-                        })()}
+                    {!mpSearchLoading && mpSearchType === "cookbooks" && (
+                      <div className="space-y-2">
+                        {mpSearchResults.cookbooks.length === 0 && mpSearchQuery.trim() && <p className="text-sm text-gray-400 text-center py-6">No public cookbooks match.</p>}
+                        {mpSearchResults.cookbooks.map((cb: any) => (
+                          <div
+                            key={cb.id}
+                            onClick={() => browseSearchCookbook(cb)}
+                            className="flex items-center gap-3 p-3 border border-gray-100 rounded-xl cursor-pointer hover:bg-orange-50 hover:border-orange-200 transition">
+                            <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0 text-lg">{cb.cover_emoji || "📖"}</div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-gray-900 truncate">{cb.title}</div>
+                              <div className="text-xs text-gray-400 truncate">by {cb.owner_name} · {cb.recipe_count} recipes</div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    )}
+                    {!mpSearchLoading && mpSearchType === "people" && (
+                      <div className="space-y-2">
+                        {mpSearchResults.users.length === 0 && mpSearchQuery.trim() && <p className="text-sm text-gray-400 text-center py-6">No one matches.</p>}
+                        {mpSearchResults.users.map((u: any) => (
+                          <div
+                            key={u.id}
+                            onClick={() => { setMpSearchType("cookbooks"); setMpSearchQuery(u.username); runMpSearch(u.username, "cookbooks") }}
+                            className="flex items-center gap-3 p-3 border border-gray-100 rounded-xl cursor-pointer hover:bg-orange-50 hover:border-orange-200 transition">
+                            {u.profile_image ? (
+                              <img src={u.profile_image} className="w-10 h-10 rounded-full object-cover flex-shrink-0"/>
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-white text-sm flex-shrink-0">{u.name?.charAt(0)}</div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-gray-900 truncate">{u.name}</div>
+                              <div className="text-xs text-gray-400 truncate">@{u.username} · {u.cookbook_count} public cookbooks</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </>
             )}
-            {selectedCookbook && filteredRecipes.length === 0 && allRecipes.length > 0 && (
-              <div className="text-center py-8 text-sm text-gray-400">No recipes match your search</div>
+
+            {addTab === "custom" && (
+              <>
+                <label className="text-sm text-gray-500 mb-1 block">What are you having?</label>
+                <input
+                  value={customMealText}
+                  onChange={e => setCustomMealText(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && addCustomMeal()}
+                  placeholder='e.g. "Leftover pizza" or "Eating out"'
+                  maxLength={200}
+                  autoFocus
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none mb-1"
+                />
+                <p className="text-xs text-gray-300 mb-4">{customMealText.length}/200 — just a note, not linked to a recipe</p>
+                <button
+                  onClick={addCustomMeal}
+                  disabled={!customMealText.trim() || addingCustomMeal}
+                  className="w-full bg-orange-500 text-white rounded-xl py-2.5 text-sm font-medium hover:bg-orange-600 disabled:opacity-50 transition">
+                  {addingCustomMeal ? "Adding..." : "Add to plan"}
+                </button>
+              </>
             )}
-            {selectedCookbook && allRecipes.length === 0 && (
-              <div className="text-center py-8 text-sm text-gray-400">No recipes in this cookbook</div>
-            )}
+
             <button
-              onClick={() => { setShowAddModal(false); setSelectedCookbook(""); setAllRecipes([]); setRecipeSearch(""); setSelectedCategoryFilter("") }}
-              className="w-full border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50 mt-4">
+              onClick={closeAddModal}
+              className="w-full border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50 mt-4 flex-shrink-0">
               Cancel
             </button>
           </div>
@@ -1193,7 +1396,7 @@ export default function MealPlannerPage() {
       )}
 
       {viewingRecipe && cookingRecipe && (
-        <CookingMode recipe={viewingRecipe} initialScale={viewScale} onClose={() => setCookingRecipe(false)} />
+        <CookingMode recipes={[viewingRecipe]} initialScale={viewScale} onClose={() => setCookingRecipe(false)} />
       )}
 
       {showGoalsModal && (

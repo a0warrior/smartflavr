@@ -24,10 +24,18 @@ export async function PUT(req: Request) {
 
   const { user_id, is_admin, status, timeout_minutes } = await req.json()
 
+  const [targetRows]: any = await pool.query("SELECT email, is_admin FROM users WHERE id = ?", [user_id])
+
   // Protect the owner from any modification by other admins
-  const [targetRows]: any = await pool.query("SELECT email FROM users WHERE id = ?", [user_id])
   if (targetRows.length > 0 && targetRows[0].email === OWNER_EMAIL && session.user.email !== OWNER_EMAIL) {
     return NextResponse.json({ error: "This account cannot be modified." }, { status: 403 })
+  }
+
+  // Admins cannot moderate other admins — only the owner can act on an
+  // existing admin account (ban, suspend, timeout, or remove their admin
+  // status). Promoting a non-admin user is unaffected.
+  if (targetRows.length > 0 && targetRows[0].is_admin === 1 && session.user.email !== OWNER_EMAIL) {
+    return NextResponse.json({ error: "Admins cannot moderate other admins." }, { status: 403 })
   }
 
   if (status !== undefined) {
@@ -64,12 +72,15 @@ export async function DELETE(req: Request) {
 
   const { user_id } = await req.json()
 
-  const [target]: any = await pool.query("SELECT email FROM users WHERE id = ?", [user_id])
+  const [target]: any = await pool.query("SELECT email, is_admin FROM users WHERE id = ?", [user_id])
   if (target.length > 0 && target[0].email === session.user.email) {
     return NextResponse.json({ error: "You cannot delete your own account" }, { status: 400 })
   }
   if (target.length > 0 && target[0].email === OWNER_EMAIL) {
     return NextResponse.json({ error: "This account cannot be deleted." }, { status: 403 })
+  }
+  if (target.length > 0 && target[0].is_admin === 1 && session.user.email !== OWNER_EMAIL) {
+    return NextResponse.json({ error: "Admins cannot moderate other admins." }, { status: 403 })
   }
 
   const conn = await pool.getConnection()

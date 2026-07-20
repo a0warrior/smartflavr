@@ -1864,7 +1864,7 @@ export default function CookbookPage() {
       )}
 
       {cookingMode && recipe && (
-        <CookingMode recipe={recipe} initialScale={scaleFactor} onClose={() => setCookingMode(false)} />
+        <CookingMode recipes={[recipe]} availableRecipes={recipes} initialScale={scaleFactor} onClose={() => setCookingMode(false)} />
       )}
     </div>
   )

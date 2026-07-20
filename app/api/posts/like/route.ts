@@ -1,6 +1,30 @@
 import { NextResponse } from "next/server"
 import pool from "@/lib/db"
 import { auth } from "@/auth"
+import { sendPush } from "@/lib/push"
+
+// Lightweight counts-only fetch so other viewers can live-sync a post's
+// like/comment counts without refetching (or re-authoring-checking) the
+// whole feed.
+export async function GET(req: Request) {
+  const session = await auth()
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const { searchParams } = new URL(req.url)
+  const postId = searchParams.get("post_id")
+  if (!postId) return NextResponse.json({ error: "post_id required" }, { status: 400 })
+
+  const [rows] = await pool.query(
+    `SELECT
+      (SELECT COUNT(*) FROM post_likes WHERE post_id = ?) as like_count,
+      (SELECT COUNT(*) FROM post_comments WHERE post_id = ?) as comment_count`,
+    [postId, postId]
+  ) as any[]
+
+  return NextResponse.json({ like_count: rows[0]?.like_count ?? 0, comment_count: rows[0]?.comment_count ?? 0 })
+}
 
 export async function POST(req: Request) {
   const session = await auth()
@@ -48,6 +72,7 @@ export async function POST(req: Request) {
         JSON.stringify({ liker_username: currentUser[0].username, post_id }),
       ]
     )
+    sendPush(postRows[0].user_id, { title: "New like", body: `${currentUser[0].name} liked your post`, url: "/feed" }).catch(() => {})
   }
 
   return NextResponse.json({ liked: true })

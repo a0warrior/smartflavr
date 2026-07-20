@@ -8,6 +8,10 @@ import { WarningIcon, PeopleIcon, CheckIcon, ClockIcon, HeartIcon, UserIcon, Que
 import { pulse, subscribe, subscribeConnected } from "@/lib/firebase"
 import { PageSkeleton } from "@/app/components/Skeletons"
 
+function formatCount(n: number) {
+  return n > 99 ? "99+" : String(n)
+}
+
 function timeAgo(date: string) {
   const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000)
   if (seconds < 60) return "just now"
@@ -143,6 +147,7 @@ function PostCard({ post, currentUserId, isAdmin, isTimedOut, onDelete, onUpdate
     const data = await res.json()
     setLiked(data.liked)
     setLikeCount((prev: number) => data.liked ? prev + 1 : prev - 1)
+    pulse(`/updates/posts/${post.id}/engagement`)
     if (data.liked) {
       setHeartAnim(true)
       setBurstAnim(true)
@@ -188,6 +193,7 @@ function PostCard({ post, currentUserId, isAdmin, isTimedOut, onDelete, onUpdate
     const r2 = await fetch(`/api/posts/comment?post_id=${post.id}`)
     const d2 = await r2.json()
     setComments(d2.comments || [])
+    pulse(`/updates/posts/${post.id}/engagement`)
   }
 
   async function deleteComment(id: number) {
@@ -199,7 +205,28 @@ function PostCard({ post, currentUserId, isAdmin, isTimedOut, onDelete, onUpdate
     })
     setCommentCount((prev: number) => prev - 1)
     setComments((prev: any[]) => prev.filter((c: any) => c.id !== id))
+    pulse(`/updates/posts/${post.id}/engagement`)
   }
+
+  // Live-sync like/comment counts (and the open thread, if visible) when
+  // someone else interacts with this post
+  const showCommentsRef = useRef(showComments)
+  showCommentsRef.current = showComments
+  useEffect(() => {
+    return subscribe(`/updates/posts/${post.id}/engagement`, async () => {
+      const res = await fetch(`/api/posts/like?post_id=${post.id}`)
+      if (!res.ok) return
+      const data = await res.json().catch(() => null)
+      if (!data) return
+      setLikeCount(data.like_count)
+      setCommentCount(data.comment_count)
+      if (showCommentsRef.current) {
+        const r2 = await fetch(`/api/posts/comment?post_id=${post.id}`)
+        if (r2.ok) setComments((await r2.json()).comments || [])
+      }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [post.id])
 
   async function saveEditComment(id: number) {
     if (!editCommentText.trim()) return
@@ -514,7 +541,7 @@ function PostCard({ post, currentUserId, isAdmin, isTimedOut, onDelete, onUpdate
                   </div>
                 )}
               </div>
-              <span className="text-sm font-medium">{likeCount}</span>
+              <span className="text-sm font-medium">{formatCount(likeCount)}</span>
             </button>
 
             <button
@@ -523,7 +550,7 @@ function PostCard({ post, currentUserId, isAdmin, isTimedOut, onDelete, onUpdate
               <div className={bubbleAnim ? "animate-bubble-pop" : ""}>
                 <CommentIcon open={showComments} />
               </div>
-              <span className="text-sm font-medium">{commentCount}</span>
+              <span className="text-sm font-medium">{formatCount(commentCount)}</span>
             </button>
           </div>
         )}

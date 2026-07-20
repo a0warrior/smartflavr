@@ -1,5 +1,6 @@
 "use client"
 import { useState, useEffect } from "react"
+import { toast } from "@/app/components/Toast"
 
 export default function FollowButton({ username }: { username: string }) {
   const [isFollowing, setIsFollowing] = useState(false)
@@ -19,11 +20,15 @@ export default function FollowButton({ username }: { username: string }) {
   async function toggleFollow() {
     setLoading(true)
     const method = isFollowing ? "DELETE" : "POST"
-    await fetch("/api/follow", {
+    const res0 = await fetch("/api/follow", {
       method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username }),
     })
+    if (!res0.ok) {
+      const data0 = await res0.json().catch(() => ({}))
+      toast.error(data0.error || "Could not update follow status.")
+    }
     const res = await fetch(`/api/follow?username=${username}`)
     const data = await res.json()
     setIsFollowing(data.isFollowing)

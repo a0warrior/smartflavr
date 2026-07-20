@@ -8,6 +8,7 @@ import ImageCropper from "@/app/components/ImageCropper"
 import { WarningIcon } from "@/app/components/Icons"
 import { PageSkeleton } from "@/app/components/Skeletons"
 import { toast } from "@/app/components/Toast"
+import { enablePush, disablePush, pushSupported } from "@/lib/pushClient"
 
 function ProfileSettingsContent() {
   const { data: session, status } = useSession()
@@ -20,6 +21,8 @@ function ProfileSettingsContent() {
   const [name, setName] = useState("")
   const [username, setUsername] = useState("")
   const [bio, setBio] = useState("")
+  const [dietaryRestrictions, setDietaryRestrictions] = useState<string[]>([])
+  const [customDietary, setCustomDietary] = useState("")
   const [profileImage, setProfileImage] = useState("")
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -50,12 +53,15 @@ function ProfileSettingsContent() {
   const [appearInSuggestions, setAppearInSuggestions] = useState(true)
   const [privacySaving, setPrivacySaving] = useState(false)
   const [privacySuccess, setPrivacySuccess] = useState("")
+  const [pushEnabled, setPushEnabled] = useState(false)
+  const [pushLoading, setPushLoading] = useState(false)
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login?code=returning")
     if (status === "authenticated") {
       fetchProfile()
       fetchPlan()
+      fetch("/api/push/subscribe").then(r => r.ok ? r.json() : null).then(d => d && setPushEnabled(!!d.subscribed)).catch(() => {})
       if (searchParams.get("plan_success") === "1" || searchParams.get("tab") === "plan") setActiveTab("plan")
     }
   }, [status])
@@ -67,23 +73,26 @@ function ProfileSettingsContent() {
       setName(data.user.name || "")
       setUsername(data.user.username || "")
       setBio(data.user.bio || "")
+      setDietaryRestrictions(data.user.dietary_restrictions || [])
       setProfileImage(data.user.profile_image || "")
-      if (data.user.privacy) {
-        const p = data.user.privacy
-        setProfileVisibility(p.profile_visibility || "everyone")
-        setCookbookVisibility(p.cookbook_visibility || "everyone")
-        setShowOnExplore(p.show_on_explore ?? true)
-        setWhoCanFollow(p.who_can_follow || "anyone")
-        setWhoCanCollab(p.who_can_collab || "friends")
-        setShowFollowerCount(p.show_follower_count ?? true)
-        setNotifyNewFollower(p.notify_new_follower ?? true)
-        setNotifyCollabInvite(p.notify_collab_invite ?? true)
-        setNotifyNewRecipe(p.notify_new_recipe ?? false)
-        setNotifyCollabRemoved(p.notify_collab_removed ?? true)
-        setShowRecentRecipes(p.show_recent_recipes ?? true)
-        setShowFavorites(p.show_favorites ?? false)
-        setAppearInSuggestions(p.appear_in_suggestions ?? true)
-      }
+    }
+    const privacyRes = await fetch("/api/privacy")
+    const privacyData = await privacyRes.json().catch(() => null)
+    if (privacyData?.privacy) {
+      const p = privacyData.privacy
+      setProfileVisibility(p.profile_visibility || "everyone")
+      setCookbookVisibility(p.cookbook_visibility || "everyone")
+      setShowOnExplore(p.show_on_explore ?? true)
+      setWhoCanFollow(p.who_can_follow || "anyone")
+      setWhoCanCollab(p.who_can_collab || "friends")
+      setShowFollowerCount(p.show_follower_count ?? true)
+      setNotifyNewFollower(p.notify_new_follower ?? true)
+      setNotifyCollabInvite(p.notify_collab_invite ?? true)
+      setNotifyNewRecipe(p.notify_new_recipe ?? false)
+      setNotifyCollabRemoved(p.notify_collab_removed ?? true)
+      setShowRecentRecipes(p.show_recent_recipes ?? true)
+      setShowFavorites(p.show_favorites ?? false)
+      setAppearInSuggestions(p.appear_in_suggestions ?? true)
     }
   }
 
@@ -166,7 +175,7 @@ function selectProfilePhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const res = await fetch("/api/profile", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, bio, profile_image: profileImage, name }),
+      body: JSON.stringify({ username, bio, profile_image: profileImage, name, dietary_restrictions: dietaryRestrictions }),
     })
     const data = await res.json()
     if (data.error) {
@@ -179,7 +188,7 @@ function selectProfilePhoto(e: React.ChangeEvent<HTMLInputElement>) {
 
   async function savePrivacy() {
     setPrivacySaving(true); setPrivacySuccess("")
-    await fetch("/api/profile/privacy", {
+    const res = await fetch("/api/privacy", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -198,8 +207,9 @@ function selectProfilePhoto(e: React.ChangeEvent<HTMLInputElement>) {
         appear_in_suggestions: appearInSuggestions,
       }),
     })
-    setPrivacySuccess("Preferences saved!")
     setPrivacySaving(false)
+    if (!res.ok) { toast.error("Could not save your privacy preferences — try again."); return }
+    setPrivacySuccess("Preferences saved!")
     setTimeout(() => setPrivacySuccess(""), 3000)
   }
 
@@ -348,6 +358,64 @@ function selectProfilePhoto(e: React.ChangeEvent<HTMLInputElement>) {
                 <p className="text-xs text-gray-400 mt-1">{bio.length}/200</p>
               </div>
 
+              <div className="mb-6">
+                <label className="text-sm text-gray-500 mb-2 block">Dietary restrictions</label>
+                <p className="text-xs text-gray-400 mb-2.5">Used to steer AI recipe suggestions — never shown on your public profile.</p>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {["Vegetarian", "Vegan", "Gluten-free", "Dairy-free", "Nut-free", "Shellfish-free", "Egg-free", "Soy-free", "Halal", "Kosher", "Pescatarian", "Low-carb / Keto"].map(opt => {
+                    const active = dietaryRestrictions.includes(opt)
+                    return (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setDietaryRestrictions(prev => active ? prev.filter(d => d !== opt) : [...prev, opt])}
+                        className={`text-sm px-3.5 py-1.5 rounded-full border transition ${active ? "bg-orange-500 text-white border-orange-500" : "border-gray-200 text-gray-600 hover:bg-orange-50 hover:border-orange-200"}`}>
+                        {opt}
+                      </button>
+                    )
+                  })}
+                </div>
+                {dietaryRestrictions.filter(d => !["Vegetarian", "Vegan", "Gluten-free", "Dairy-free", "Nut-free", "Shellfish-free", "Egg-free", "Soy-free", "Halal", "Kosher", "Pescatarian", "Low-carb / Keto"].includes(d)).length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {dietaryRestrictions.filter(d => !["Vegetarian", "Vegan", "Gluten-free", "Dairy-free", "Nut-free", "Shellfish-free", "Egg-free", "Soy-free", "Halal", "Kosher", "Pescatarian", "Low-carb / Keto"].includes(d)).map(custom => (
+                      <button
+                        key={custom}
+                        type="button"
+                        onClick={() => setDietaryRestrictions(prev => prev.filter(d => d !== custom))}
+                        className="text-sm px-3.5 py-1.5 rounded-full border bg-orange-500 text-white border-orange-500 transition flex items-center gap-1.5">
+                        {custom}<span className="text-orange-100">✕</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <input
+                    value={customDietary}
+                    onChange={e => setCustomDietary(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === "Enter" && customDietary.trim()) {
+                        e.preventDefault()
+                        setDietaryRestrictions(prev => prev.includes(customDietary.trim()) ? prev : [...prev, customDietary.trim()])
+                        setCustomDietary("")
+                      }
+                    }}
+                    placeholder="Other (e.g. allergic to shellfish)..."
+                    maxLength={60}
+                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!customDietary.trim()) return
+                      setDietaryRestrictions(prev => prev.includes(customDietary.trim()) ? prev : [...prev, customDietary.trim()])
+                      setCustomDietary("")
+                    }}
+                    className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition">
+                    Add
+                  </button>
+                </div>
+              </div>
+
               {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
               {success && <p className="text-sm text-green-600 mb-4">{success}</p>}
 
@@ -407,6 +475,32 @@ function selectProfilePhoto(e: React.ChangeEvent<HTMLInputElement>) {
               <SelectRow label="Who can invite me to collaborate" sub="Cookbook collaboration requests" value={whoCanCollab} onChange={setWhoCanCollab} options={[{ value: "friends", label: "Friends only" }, { value: "anyone", label: "Anyone" }, { value: "no_one", label: "No one" }]}/>
               <ToggleRow label="Show my follower count" sub="Display followers and following on your profile" checked={showFollowerCount} onChange={setShowFollowerCount}/>
             </div>
+
+            {pushSupported() && (
+              <div className="bg-white border border-gray-100 rounded-2xl px-5 py-2">
+                <div className="pt-3 pb-2">
+                  <div className="text-sm font-medium text-gray-900">Push notifications</div>
+                  <div className="text-xs text-gray-400 mt-0.5">Get notified on this device even when SmartFlavr isn't open</div>
+                </div>
+                <ToggleRow
+                  label="Enable on this device"
+                  sub={pushEnabled ? "Notifications will arrive here" : "Off"}
+                  checked={pushEnabled}
+                  onChange={async (on: boolean) => {
+                    setPushLoading(true)
+                    if (on) {
+                      const result = await enablePush()
+                      if (!result.success) { toast.error(result.error || "Could not enable push notifications."); setPushLoading(false); return }
+                      setPushEnabled(true)
+                    } else {
+                      await disablePush()
+                      setPushEnabled(false)
+                    }
+                    setPushLoading(false)
+                  }}
+                />
+              </div>
+            )}
 
             <div className="bg-white border border-gray-100 rounded-2xl px-5 py-2">
               <div className="pt-3 pb-2 border-b border-gray-50">

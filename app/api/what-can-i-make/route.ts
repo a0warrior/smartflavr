@@ -15,9 +15,12 @@ export async function POST() {
     return NextResponse.json({ error: "limit_reached", plan: status.plan, limit: status.weeklyLimit }, { status: 402 })
   }
 
-  const [users]: any = await pool.query("SELECT id FROM users WHERE email = ?", [session.user.email])
+  try { await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS dietary_restrictions TEXT") } catch {}
+  const [users]: any = await pool.query("SELECT id, dietary_restrictions FROM users WHERE email = ?", [session.user.email])
   if (users.length === 0) return NextResponse.json({ error: "User not found" }, { status: 404 })
   const userId = users[0].id
+  let dietaryRestrictions: string[] = []
+  try { dietaryRestrictions = users[0].dietary_restrictions ? JSON.parse(users[0].dietary_restrictions) : [] } catch {}
 
   const [pantry]: any = await pool.query(
     "SELECT name, quantity FROM inventory_items WHERE user_id = ? AND in_stock = 1",
@@ -50,7 +53,7 @@ KITCHEN INVENTORY:
 ${pantryList}
 
 Assume the user also has these basics even if unlisted: water, salt, pepper, and basic cooking oil.
-
+${dietaryRestrictions.length > 0 ? `\nThe user's dietary restrictions: ${dietaryRestrictions.join(", ")}. Exclude any recipe that conflicts with these.\n` : ""}
 RECIPES (one per line):
 ${recipeList}
 

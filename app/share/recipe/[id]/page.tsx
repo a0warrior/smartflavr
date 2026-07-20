@@ -5,6 +5,7 @@ import Image from "next/image"
 import { auth } from "@/auth"
 import NutritionPanel from "@/app/components/NutritionPanel"
 import ShareCookButton from "@/app/components/ShareCookButton"
+import ShareFavoriteButton from "@/app/components/ShareFavoriteButton"
 import { ClockIcon, UserIcon, StarIcon, LightBulbIcon } from "@/app/components/Icons"
 
 export default async function ShareRecipePage({
@@ -83,7 +84,10 @@ export default async function ShareRecipePage({
             <span className="text-xs text-gray-400">from {recipe.cookbook_title}</span>
           </div>
 
-          <h1 className="text-2xl font-medium mb-3">{recipe.title}</h1>
+          <div className="flex items-center justify-between mb-3 gap-3">
+            <h1 className="text-2xl font-medium">{recipe.title}</h1>
+            {isLoggedIn && <ShareFavoriteButton recipeId={recipe.id} />}
+          </div>
 
           <div className="flex gap-2 mb-4 flex-wrap">
             {recipe.prep_time && <span className="bg-gray-100 rounded-full px-3 py-1 text-xs text-gray-500 flex items-center gap-1.5"><ClockIcon size={11} />{recipe.prep_time}</span>}

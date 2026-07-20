@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import pool from "@/lib/db"
 import { auth } from "@/auth"
+import { getPrivacy } from "@/lib/privacy"
+import { sendPush } from "@/lib/push"
 
 // Collaborators can be editors (full edit access) or viewers (can see a
 // private cookbook but not change it). Lazily add the role column.
@@ -64,18 +66,26 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "User not found" }, { status: 404 })
   }
 
-  const [following] = await pool.query(
-    "SELECT id FROM follows WHERE follower_id = ? AND following_id = ?",
-    [currentUser[0].id, targetUser[0].id]
-  ) as any[]
+  const targetPrivacy = await getPrivacy(targetUser[0].id)
 
-  const [followedBack] = await pool.query(
-    "SELECT id FROM follows WHERE follower_id = ? AND following_id = ?",
-    [targetUser[0].id, currentUser[0].id]
-  ) as any[]
+  if (targetPrivacy.who_can_collab === "no_one") {
+    return NextResponse.json({ error: "This user isn't accepting collaboration invites" }, { status: 403 })
+  }
 
-  if (following.length === 0 || followedBack.length === 0) {
-    return NextResponse.json({ error: "You can only invite friends (mutual follows)" }, { status: 400 })
+  if (targetPrivacy.who_can_collab === "friends") {
+    const [following] = await pool.query(
+      "SELECT id FROM follows WHERE follower_id = ? AND following_id = ?",
+      [currentUser[0].id, targetUser[0].id]
+    ) as any[]
+
+    const [followedBack] = await pool.query(
+      "SELECT id FROM follows WHERE follower_id = ? AND following_id = ?",
+      [targetUser[0].id, currentUser[0].id]
+    ) as any[]
+
+    if (following.length === 0 || followedBack.length === 0) {
+      return NextResponse.json({ error: "You can only invite friends (mutual follows)" }, { status: 400 })
+    }
   }
 
   const [existing] = await pool.query(
@@ -92,16 +102,23 @@ export async function POST(req: Request) {
     [cookbook_id, targetUser[0].id, currentUser[0].id, collabRole]
   )
 
-  await pool.query(
-    `INSERT INTO notifications (user_id, type, message, data) VALUES (?, 'collab_invite', ?, ?)`,
-    [
-      targetUser[0].id,
-      collabRole === "viewer"
-        ? `${currentUser[0].name} invited you to view "${cookbook[0].title}"`
-        : `${currentUser[0].name} invited you to collaborate on "${cookbook[0].title}"`,
-      JSON.stringify({ cookbook_id: cookbook[0].id, cookbook_title: cookbook[0].title, invited_by: currentUser[0].name, role: collabRole })
-    ]
-  )
+  if (targetPrivacy.notify_collab_invite) {
+    await pool.query(
+      `INSERT INTO notifications (user_id, type, message, data) VALUES (?, 'collab_invite', ?, ?)`,
+      [
+        targetUser[0].id,
+        collabRole === "viewer"
+          ? `${currentUser[0].name} invited you to view "${cookbook[0].title}"`
+          : `${currentUser[0].name} invited you to collaborate on "${cookbook[0].title}"`,
+        JSON.stringify({ cookbook_id: cookbook[0].id, cookbook_title: cookbook[0].title, invited_by: currentUser[0].name, role: collabRole })
+      ]
+    )
+    sendPush(targetUser[0].id, {
+      title: "Collaboration invite",
+      body: collabRole === "viewer" ? `${currentUser[0].name} invited you to view "${cookbook[0].title}"` : `${currentUser[0].name} invited you to collaborate on "${cookbook[0].title}"`,
+      url: "/dashboard",
+    }).catch(() => {})
+  }
 
   return NextResponse.json({ success: true })
 }

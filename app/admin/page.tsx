@@ -178,6 +178,7 @@ export default function AdminPage() {
 
   const usedCodes = codes.filter((c: any) => c.used_by !== null)
   const unusedCodes = codes.filter((c: any) => c.used_by === null)
+  const currentUserIsOwner = !!(users as any[]).find((u: any) => u.email === session?.user?.email)?.is_owner
   const filteredUsers = users.filter((user: any) =>
     user.name?.toLowerCase().includes(userSearch.toLowerCase()) ||
     user.username?.toLowerCase().includes(userSearch.toLowerCase()) ||
@@ -358,8 +359,11 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    {/* Action buttons */}
-                    {user.email !== session?.user?.email && !user.is_owner && (
+                    {/* Action buttons — admins can't moderate other admins; only the owner can */}
+                    {user.email !== session?.user?.email && !user.is_owner && user.is_admin === 1 && !currentUserIsOwner && (
+                      <p className="mt-2 pl-12 text-xs text-gray-400">Admins can't moderate other admins.</p>
+                    )}
+                    {user.email !== session?.user?.email && !user.is_owner && (user.is_admin !== 1 || currentUserIsOwner) && (
                       <div className="mt-3 pl-12 space-y-2">
                         <div className="flex flex-wrap gap-2">
                           <button
