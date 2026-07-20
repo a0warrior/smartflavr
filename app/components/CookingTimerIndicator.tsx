@@ -39,17 +39,35 @@ export default function CookingTimerIndicator() {
   const [, setTick] = useState(0)
   const audioCtx = useRef<AudioContext | null>(null)
   const wasDoneRef = useRef(false)
+  // Dismissing filters timers out client-side immediately rather than only
+  // waiting on the server DELETE + next 15s poll — otherwise a dismissed
+  // timer could get resurrected by a poll that lands before the delete has
+  // taken effect, which is what made the alarm look like it "kept playing
+  // after dismiss."
+  const [dismissedIds, setDismissedIds] = useState<Set<number>>(new Set())
 
   // Web Audio requires its context to be created/resumed during a genuine
   // user gesture before it's allowed to play sound later — unlock it on
   // the first tap/click anywhere in the app so it's ready by the time a
   // timer actually finishes (which happens on its own, not from a click).
+  // iOS Safari in particular won't reliably unlock from resume() alone —
+  // it needs an actual (silent) sound played within the gesture too.
   useEffect(() => {
     function unlock() {
       if (!audioCtx.current) {
         try { audioCtx.current = new (window.AudioContext || (window as any).webkitAudioContext)() } catch {}
       }
-      audioCtx.current?.resume?.()
+      const ctx = audioCtx.current
+      if (!ctx) return
+      ctx.resume?.()
+      try {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        gain.gain.value = 0.00001
+        osc.connect(gain).connect(ctx.destination)
+        osc.start()
+        osc.stop(ctx.currentTime + 0.05)
+      } catch {}
     }
     document.addEventListener("pointerdown", unlock)
     return () => document.removeEventListener("pointerdown", unlock)
@@ -61,7 +79,17 @@ export default function CookingTimerIndicator() {
     function poll() {
       fetch("/api/cook-timers")
         .then(r => r.ok ? r.json() : null)
-        .then(data => { if (!cancelled && Array.isArray(data?.timers)) setTimers(data.timers) })
+        .then(data => {
+          if (cancelled || !Array.isArray(data?.timers)) return
+          setTimers(data.timers)
+          // Once a dismissed timer actually drops out of the server list,
+          // stop tracking it — keeps the set from growing unbounded.
+          const liveIds = new Set(data.timers.map((t: CookTimer) => t.id))
+          setDismissedIds(prev => {
+            const next = new Set([...prev].filter(id => liveIds.has(id)))
+            return next.size === prev.size ? prev : next
+          })
+        })
         .catch(() => {})
     }
     poll()
@@ -76,8 +104,9 @@ export default function CookingTimerIndicator() {
     return () => clearInterval(interval)
   }, [timers.length])
 
-  const soonest = timers.length > 0
-    ? [...timers].sort((a, b) => new Date(a.ends_at).getTime() - new Date(b.ends_at).getTime())[0]
+  const visibleTimers = timers.filter(t => !dismissedIds.has(t.id))
+  const soonest = visibleTimers.length > 0
+    ? [...visibleTimers].sort((a, b) => new Date(a.ends_at).getTime() - new Date(b.ends_at).getTime())[0]
     : null
   const remaining = soonest ? new Date(soonest.ends_at).getTime() - Date.now() : 0
   const isDone = !!soonest && remaining <= 0
@@ -87,6 +116,7 @@ export default function CookingTimerIndicator() {
     try {
       const ctx = audioCtx.current
       if (!ctx) return
+      ctx.resume?.() // iOS suspends the context when the tab backgrounds/foregrounds
       const osc = ctx.createOscillator()
       const gain = ctx.createGain()
       osc.type = "sine"
@@ -122,12 +152,13 @@ export default function CookingTimerIndicator() {
 
   function dismiss(e: React.MouseEvent) {
     e.stopPropagation()
+    const id = soonest!.id
+    setDismissedIds(prev => new Set(prev).add(id))
     fetch("/api/cook-timers", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: soonest!.id }),
+      body: JSON.stringify({ id }),
     }).catch(() => {})
-    setTimers(prev => prev.filter(t => t.id !== soonest!.id))
   }
 
   return (
@@ -150,7 +181,7 @@ export default function CookingTimerIndicator() {
           {isDone ? "Timer done!" : formatRemaining(remaining)}
         </span>
         <span className={`block text-[10px] truncate leading-tight ${isDone ? "text-green-100" : "text-gray-400"}`}>
-          {soonest.label}{timers.length > 1 ? ` · +${timers.length - 1} more` : ""}
+          {soonest.label}{visibleTimers.length > 1 ? ` · +${visibleTimers.length - 1} more` : ""}
         </span>
       </span>
       <button

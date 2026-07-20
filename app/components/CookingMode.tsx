@@ -126,8 +126,14 @@ export default function CookingMode({
   )
 
   function addRecipeToSession(r: any) {
+    const saved = savedProgressRef.current[String(r.id)]
     setActiveRecipes(prev => [...prev, r])
-    setSessions(prev => ({ ...prev, [String(r.id)]: { scale: initialScale, stepIndex: 0, checkedIngredients: new Set() } }))
+    setSessions(prev => ({
+      ...prev,
+      [String(r.id)]: saved
+        ? { scale: initialScale, stepIndex: saved.step_index, checkedIngredients: new Set(saved.checked_ingredients) }
+        : { scale: initialScale, stepIndex: 0, checkedIngredients: new Set() },
+    }))
     setActiveId(r.id)
     setShowAddRecipe(false)
   }
@@ -138,6 +144,60 @@ export default function CookingMode({
     setActiveRecipes(remaining)
     if (String(activeId) === String(id)) setActiveId(remaining[0].id)
   }
+
+  // Cooking progress (current step + checked ingredients) is saved
+  // server-side per recipe, so it's still there if you cook multiple
+  // dishes in one session, wander off, and come back later — not just for
+  // whichever recipe happens to have a timer running.
+  const savedProgressRef = useRef<Record<string, { step_index: number; checked_ingredients: number[] }>>({})
+
+  useEffect(() => {
+    const cookbookId = initialRecipes[0]?.cookbook_id
+    if (!cookbookId) return
+    fetch(`/api/cook-sessions?cookbook_id=${cookbookId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!Array.isArray(data?.sessions)) return
+        const map: Record<string, { step_index: number; checked_ingredients: number[] }> = {}
+        for (const s of data.sessions) map[String(s.recipe_id)] = s
+        savedProgressRef.current = map
+        // Only fill in recipes still at their untouched default — a resume
+        // link's explicit step (seeded synchronously above) wins over this.
+        setSessions(prev => {
+          const next = { ...prev }
+          for (const r of initialRecipes) {
+            const saved = map[String(r.id)]
+            const current = next[String(r.id)]
+            if (saved && current && current.stepIndex === 0 && current.checkedIngredients.size === 0) {
+              next[String(r.id)] = { ...current, stepIndex: saved.step_index, checkedIngredients: new Set(saved.checked_ingredients) }
+            }
+          }
+          return next
+        })
+      })
+      .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Debounced save of the currently-active recipe's progress
+  useEffect(() => {
+    const cookbookId = recipe.cookbook_id
+    if (!cookbookId || !recipe.id) return
+    const handle = setTimeout(() => {
+      fetch("/api/cook-sessions", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cookbook_id: cookbookId,
+          recipe_id: recipe.id,
+          step_index: stepIndex,
+          checked_ingredients: Array.from(checkedIngredients),
+        }),
+      }).catch(() => {})
+    }, 1000)
+    return () => clearTimeout(handle)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recipe.id, stepIndex, checkedIngredients])
 
   // Mobile ingredients sheet: draggable between a partial and a near-full snap point
   const [sheetExpanded, setSheetExpanded] = useState(false)
@@ -277,6 +337,7 @@ export default function CookingMode({
     try {
       const ctx = audioCtx.current
       if (!ctx) return
+      ctx.resume?.() // iOS suspends the context when the tab backgrounds/foregrounds
       for (let i = 0; i < 3; i++) {
         const osc = ctx.createOscillator()
         const gain = ctx.createGain()
@@ -380,6 +441,8 @@ export default function CookingMode({
     const finished = celebrating
     setCelebrating(null)
     if (!finished) return
+    // Progress no longer needs to be remembered once the dish is done.
+    if (finished.id) fetch("/api/cook-sessions", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ recipe_id: finished.id }) }).catch(() => {})
     if (activeRecipes.length > 1) removeRecipeFromSession(finished.id)
     else onClose()
   }
