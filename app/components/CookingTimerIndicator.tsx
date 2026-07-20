@@ -45,6 +45,9 @@ export default function CookingTimerIndicator() {
   // taken effect, which is what made the alarm look like it "kept playing
   // after dismiss."
   const [dismissedIds, setDismissedIds] = useState<Set<number>>(new Set())
+  // Cleared/killed immediately on dismiss — clearing the ring interval alone
+  // only stops *future* chimes, not one already scheduled and playing.
+  const activeOscillatorsRef = useRef<OscillatorNode[]>([])
 
   // Web Audio requires its context to be created/resumed during a genuine
   // user gesture before it's allowed to play sound later — unlock it on
@@ -127,7 +130,17 @@ export default function CookingTimerIndicator() {
       osc.connect(gain).connect(ctx.destination)
       osc.start()
       osc.stop(ctx.currentTime + 0.4)
+      activeOscillatorsRef.current.push(osc)
+      osc.onended = () => { activeOscillatorsRef.current = activeOscillatorsRef.current.filter(o => o !== osc) }
     } catch {}
+  }
+
+  function stopRinging() {
+    try { (navigator as any).vibrate?.(0) } catch {}
+    for (const osc of activeOscillatorsRef.current) {
+      try { osc.stop(0) } catch {}
+    }
+    activeOscillatorsRef.current = []
   }
 
   // Ring once right when a timer flips to done, then keep a slow repeat
@@ -154,6 +167,7 @@ export default function CookingTimerIndicator() {
     e.stopPropagation()
     const id = soonest!.id
     setDismissedIds(prev => new Set(prev).add(id))
+    stopRinging()
     fetch("/api/cook-timers", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },

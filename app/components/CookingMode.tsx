@@ -96,7 +96,13 @@ export default function CookingMode({
   const { scale, stepIndex, checkedIngredients } = session
 
   function updateSession(patch: Partial<Session>) {
-    setSessions(prev => ({ ...prev, [String(recipe.id)]: { ...prev[String(recipe.id)], ...patch } }))
+    const recipeId = String(recipe.id)
+    const cookbookId = recipe.cookbook_id
+    setSessions(prev => {
+      const nextSession = { ...prev[recipeId], ...patch }
+      scheduleSave(recipeId, cookbookId, nextSession)
+      return { ...prev, [recipeId]: nextSession }
+    })
   }
   function setScale(v: number) { updateSession({ scale: v }) }
   function setStepIndex(updater: number | ((prev: number) => number)) {
@@ -185,25 +191,47 @@ export default function CookingMode({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Debounced save of the currently-active recipe's progress
-  useEffect(() => {
-    const cookbookId = recipe.cookbook_id
-    if (!cookbookId || !recipe.id) return
+  // Debounced save, kept per-recipe (keyed by recipe id) rather than as a
+  // single effect keyed on the currently-active recipe. A single shared
+  // effect meant switching to another recipe — or closing Cooking Mode —
+  // within the debounce window cancelled the pending save via the effect's
+  // own cleanup, silently dropping whatever progress hadn't saved yet.
+  const saveTimersRef = useRef<Record<string, { handle: ReturnType<typeof setTimeout>; cookbookId: number; session: Session }>>({})
+
+  function persistSession(recipeId: string, cookbookId: number, sess: Session) {
+    fetch("/api/cook-sessions", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        cookbook_id: cookbookId,
+        recipe_id: Number(recipeId),
+        step_index: sess.stepIndex,
+        checked_ingredients: Array.from(sess.checkedIngredients),
+      }),
+    }).catch(() => {})
+  }
+
+  function scheduleSave(recipeId: string, cookbookId: number | undefined, sess: Session) {
+    if (!cookbookId) return
+    const existing = saveTimersRef.current[recipeId]
+    if (existing) clearTimeout(existing.handle)
     const handle = setTimeout(() => {
-      fetch("/api/cook-sessions", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          cookbook_id: cookbookId,
-          recipe_id: recipe.id,
-          step_index: stepIndex,
-          checked_ingredients: Array.from(checkedIngredients),
-        }),
-      }).catch(() => {})
+      persistSession(recipeId, cookbookId, sess)
+      delete saveTimersRef.current[recipeId]
     }, 1000)
-    return () => clearTimeout(handle)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recipe.id, stepIndex, checkedIngredients])
+    saveTimersRef.current[recipeId] = { handle, cookbookId, session: sess }
+  }
+
+  // Flush anything still pending the instant Cooking Mode closes, so a
+  // change made right before leaving isn't lost to the debounce.
+  useEffect(() => {
+    return () => {
+      for (const [recipeId, entry] of Object.entries(saveTimersRef.current)) {
+        clearTimeout(entry.handle)
+        persistSession(recipeId, entry.cookbookId, entry.session)
+      }
+    }
+  }, [])
 
   // Mobile ingredients sheet: draggable between a partial and a near-full snap point
   const [sheetExpanded, setSheetExpanded] = useState(false)
@@ -289,6 +317,12 @@ export default function CookingMode({
     return () => { document.body.style.overflow = prev }
   }, [])
 
+  // Don't let an alarm keep sounding after Cooking Mode itself closes
+  useEffect(() => {
+    return () => stopRinging()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Pick up any timers that were still running server-side from a previous
   // cooking-mode session (e.g. the user closed the app and reopened it).
   useEffect(() => {
@@ -338,6 +372,12 @@ export default function CookingMode({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasDoneTimer])
 
+  // Tracks in-flight oscillator nodes so a dismiss can cut them off
+  // immediately — clearing the setInterval alone only stops *future* ring
+  // cycles, not tones already scheduled and playing out (each ringAlarm
+  // call schedules ~1.75s of audio up front).
+  const activeOscillatorsRef = useRef<OscillatorNode[]>([])
+
   function ringAlarm() {
     try { (navigator as any).vibrate?.([300, 120, 300, 120, 300]) } catch {}
     try {
@@ -355,8 +395,18 @@ export default function CookingMode({
         osc.connect(gain).connect(ctx.destination)
         osc.start(ctx.currentTime + i * 0.45)
         osc.stop(ctx.currentTime + i * 0.45 + 0.4)
+        activeOscillatorsRef.current.push(osc)
+        osc.onended = () => { activeOscillatorsRef.current = activeOscillatorsRef.current.filter(o => o !== osc) }
       }
     } catch {}
+  }
+
+  function stopRinging() {
+    try { (navigator as any).vibrate?.(0) } catch {}
+    for (const osc of activeOscillatorsRef.current) {
+      try { osc.stop(0) } catch {}
+    }
+    activeOscillatorsRef.current = []
   }
 
   function startTimer(label: string, ms: number) {
@@ -396,6 +446,7 @@ export default function CookingMode({
   function dismissTimer(id: number) {
     const t = timers.find(x => x.id === id)
     setTimers(prev => prev.filter(t => t.id !== id))
+    stopRinging()
     // Cancel the server-side push too — otherwise a notification could
     // still arrive after the user already handled it in-app.
     if (t?.serverId) {
