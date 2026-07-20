@@ -51,6 +51,8 @@ export default function InventoryPage() {
   const [activeCategory, setActiveCategory] = useState("All")
   const [newName, setNewName] = useState("")
   const [newQty, setNewQty] = useState("")
+  const [newExpiry, setNewExpiry] = useState("")
+  const [showNewExpiry, setShowNewExpiry] = useState(false)
   const [newCategory, setNewCategory] = useState("Pantry")
   const [adding, setAdding] = useState(false)
   const [groceryLists, setGroceryLists] = useState<any[]>([])
@@ -129,13 +131,19 @@ export default function InventoryPage() {
 
   async function findRecipes() {
     setFinding(true)
-    const res = await fetch("/api/what-can-i-make", { method: "POST" })
-    const data = await res.json()
+    let data: any
+    try {
+      const res = await fetch("/api/what-can-i-make", { method: "POST" })
+      data = await res.json()
+    } catch {
+      setFinding(false)
+      return toast.error("Something went wrong. Try again.")
+    }
     setFinding(false)
     if (data.error === "limit_reached") return toast.info("You've used all your AI actions for this week.")
     if (data.error === "no_recipes") return toast.info("Add some recipes to your cookbooks first.")
     if (data.error === "no_inventory") return toast.info("Add items to your inventory first.")
-    if (data.error) return toast.error("Something went wrong. Try again.")
+    if (data.error) return toast.error(typeof data.error === "string" && data.error.length > 20 ? data.error : "Something went wrong. Try again.")
     setMatches(data.results || [])
     setAddedMissing(new Set())
     setMatchListId(groceryLists[0]?.id?.toString() || "")
@@ -144,12 +152,18 @@ export default function InventoryPage() {
 
   async function generateIdeas() {
     setGeneratingIdeas(true)
-    const res = await fetch("/api/inventory-suggest", { method: "POST" })
-    const data = await res.json()
+    let data: any
+    try {
+      const res = await fetch("/api/inventory-suggest", { method: "POST" })
+      data = await res.json()
+    } catch {
+      setGeneratingIdeas(false)
+      return toast.error("Something went wrong. Try again.")
+    }
     setGeneratingIdeas(false)
     if (data.error === "limit_reached") return toast.info("You've used all your AI actions for this week.")
     if (data.error === "no_inventory") return toast.info("Add items to your inventory first.")
-    if (data.error) return toast.error("Something went wrong. Try again.")
+    if (data.error) return toast.error(typeof data.error === "string" && data.error.length > 20 ? data.error : "Something went wrong. Try again.")
     setIdeas(data.results || [])
     setSavedIdeas(new Set())
     setShowIdeas(true)
@@ -231,10 +245,12 @@ export default function InventoryPage() {
     await fetch("/api/inventory", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{ name: newName.trim(), quantity: newQty.trim(), category: newCategory }] }),
+      body: JSON.stringify({ items: [{ name: newName.trim(), quantity: newQty.trim(), category: newCategory, expires_at: newExpiry || null }] }),
     })
     setNewName("")
     setNewQty("")
+    setNewExpiry("")
+    setShowNewExpiry(false)
     await fetchInventory()
     setAdding(false)
     // Keep the flow going — focus back on the name field so you can keep typing
@@ -508,6 +524,12 @@ export default function InventoryPage() {
               +
             </button>
             <button
+              onClick={() => setShowNewExpiry(v => !v)}
+              title="Set expiration date"
+              className={`w-11 flex-shrink-0 border rounded-xl transition flex items-center justify-center bg-white ${showNewExpiry || newExpiry ? "border-orange-300 text-orange-500" : "border-gray-200 text-gray-400 hover:text-orange-500 hover:border-orange-200"}`}>
+              <ClockIcon size={15} />
+            </button>
+            <button
               onClick={addItem}
               disabled={adding || !newName.trim()}
               className="bg-orange-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-orange-600 transition disabled:opacity-50 flex-shrink-0">
@@ -515,6 +537,21 @@ export default function InventoryPage() {
             </button>
           </div>
         </div>
+
+        {showNewExpiry && (
+          <div className="flex items-center gap-2 -mt-4 mb-6">
+            <label className="text-xs text-gray-400 flex-shrink-0">Expires</label>
+            <input
+              type="date"
+              value={newExpiry}
+              onChange={e => setNewExpiry(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none bg-white"
+            />
+            {newExpiry && (
+              <button onClick={() => setNewExpiry("")} className="text-xs text-gray-300 hover:text-red-400 transition">Clear</button>
+            )}
+          </div>
+        )}
 
         <div className="flex gap-2 flex-wrap mb-6">
           {["All", ...allCategories].map(cat => {

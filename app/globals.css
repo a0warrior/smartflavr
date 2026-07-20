@@ -69,6 +69,24 @@ html.dark .skeleton {
   background-size: 200% 100%;
 }
 
+/* Tailwind's opacity-modifier classes (bg-white/90 etc.) compile to a
+   different selector than the plain utility, so the overrides above miss
+   them — covering the handful actually used in the app (bottom nav,
+   cooking mode's desktop sidebar, a few card headers). */
+html.dark .bg-white\/70  { background-color: rgba(24, 24, 27, 0.7); }
+html.dark .bg-white\/90  { background-color: rgba(24, 24, 27, 0.9); }
+html.dark .bg-white\/95  { background-color: rgba(24, 24, 27, 0.95); }
+html.dark .bg-gray-50\/60 { background-color: rgba(10, 10, 11, 0.6); }
+
+/* Small floating white pill buttons that always sit on top of a photo/cover
+   image (dashboard cookbook cards, cookbook cover back button) are meant to
+   stay light regardless of theme — same specificity trick as .sf-landing. */
+html.dark .sf-overlay-pill.text-gray-400 { color: #9ca3af; }
+html.dark .sf-overlay-pill.text-gray-300 { color: #d1d5db; }
+html.dark .sf-overlay-pill.text-gray-700 { color: #374151; }
+html.dark .sf-overlay-pill.hover\:text-gray-600:hover { color: #4b5563; }
+html.dark .sf-overlay-pill.hover\:text-gray-500:hover { color: #6b7280; }
+
 html.dark select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
 }
@@ -76,6 +94,28 @@ html.dark select {
 /* Scrollbar + form control chrome follow the theme on browsers that support it */
 html.dark { color-scheme: dark; }
 html:not(.dark) { color-scheme: light; }
+
+/* The marketing landing page (app/page.tsx) has its own fixed cream/orange
+   gradient branding via hardcoded inline styles, not the app's gray/white
+   utility palette — so it can't follow the dark-mode overrides above (they'd
+   flip text to near-white while the background stays cream, killing
+   contrast). It always renders light, regardless of the visitor's theme.
+   Every selector here has one more class than its html.dark counterpart
+   above, so it wins on specificity without needing !important. */
+html.dark .sf-landing { color-scheme: light; }
+html.dark .sf-landing .bg-white       { background-color: #ffffff; }
+html.dark .sf-landing .bg-gray-50     { background-color: #f9fafb; }
+html.dark .sf-landing .bg-gray-100    { background-color: #f3f4f6; }
+html.dark .sf-landing .bg-gray-200    { background-color: #e5e7eb; }
+html.dark .sf-landing .text-gray-900  { color: #111827; }
+html.dark .sf-landing .text-gray-600  { color: #4b5563; }
+html.dark .sf-landing .text-gray-500  { color: #6b7280; }
+html.dark .sf-landing .text-gray-400  { color: #9ca3af; }
+html.dark .sf-landing .text-gray-300  { color: #d1d5db; }
+html.dark .sf-landing .border-gray-50  { border-color: #f9fafb; }
+html.dark .sf-landing .border-gray-100 { border-color: #f3f4f6; }
+html.dark .sf-landing .border-gray-200 { border-color: #e5e7eb; }
+html.dark .sf-landing .hover\:bg-gray-50:hover { background-color: #f9fafb; }
 
 /* Like burst particles */
 .burst-particle {

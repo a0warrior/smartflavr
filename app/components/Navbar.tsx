@@ -16,6 +16,19 @@ const navLinks = [
   { href: "/meal-planner", label: "Meal Plan" },
 ]
 
+function ThemeSwitch({ on, onClick }: { on: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      role="switch"
+      aria-checked={on}
+      aria-label="Toggle dark mode"
+      className={`relative w-10 h-6 rounded-full flex-shrink-0 transition-colors ${on ? "bg-orange-500" : "bg-gray-200"}`}>
+      <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${on ? "translate-x-4" : "translate-x-0"}`} />
+    </button>
+  )
+}
+
 export default function Navbar() {
   const { data: session } = useSession()
   const { theme, toggleTheme } = useTheme()
@@ -325,10 +338,10 @@ export default function Navbar() {
                     Admin Panel
                   </Link>
                 )}
-                <button onClick={toggleTheme} className="flex items-center justify-between w-full px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition">
-                  <span>{theme === "dark" ? "Dark mode" : "Light mode"}</span>
-                  <span className="text-xs">{theme === "dark" ? "🌙" : "☀️"}</span>
-                </button>
+                <div className="flex items-center justify-between w-full px-4 py-2 text-sm text-gray-600">
+                  <span>Dark mode</span>
+                  <ThemeSwitch on={theme === "dark"} onClick={toggleTheme} />
+                </div>
                 <div className="border-t border-gray-100 my-1" />
                 <button onClick={() => signOut({ callbackUrl: "/" })} className="block w-full text-left px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition">
                   Sign out
@@ -402,10 +415,10 @@ export default function Navbar() {
               Admin Panel
             </Link>
           )}
-          <button onClick={toggleTheme} className="flex items-center justify-between w-full px-5 py-3 text-sm text-gray-600 hover:bg-gray-50 transition">
-            <span>{theme === "dark" ? "Dark mode" : "Light mode"}</span>
-            <span>{theme === "dark" ? "🌙" : "☀️"}</span>
-          </button>
+          <div className="flex items-center justify-between w-full px-5 py-3 text-sm text-gray-600">
+            <span>Dark mode</span>
+            <ThemeSwitch on={theme === "dark"} onClick={toggleTheme} />
+          </div>
         </div>
 
         {/* Sign out pinned to bottom */}

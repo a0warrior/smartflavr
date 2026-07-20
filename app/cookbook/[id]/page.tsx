@@ -31,6 +31,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
+import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers"
 
 import { HeartIcon, ShareIcon, PeopleIcon, PrintIcon, SearchIcon, ClockIcon, ChevronRightIcon, SortIcon, ListIcon, LeaveIcon, SparkleIcon, UserIcon, StarIcon, LightBulbIcon, CameraIcon, PlateIcon, TrashIcon, LockIcon, LinkIcon, CheckIcon, BookIcon } from "@/app/components/Icons"
 
@@ -50,7 +51,7 @@ function SortableRecipeItem({ recipe, isSelected, onClick, isOwner, isFavorited,
   return (
     <div ref={setNodeRef} style={style} onClick={renaming ? undefined : onClick}
       className={`mx-2 mb-0.5 px-3 py-2.5 rounded-xl cursor-pointer flex items-center gap-3 group transition-colors md:rounded-xl ${
-        isSelected ? "bg-orange-50 border border-orange-100" : "hover:bg-gray-50 border border-transparent"
+        isSelected ? "border border-orange-300" : "hover:bg-gray-50 border border-transparent"
       } md:mx-2 mx-1 md:py-2.5 py-3.5 md:gap-3 gap-2`}>
       {isOwner && (
         <span {...attributes} {...listeners} onClick={e => e.stopPropagation()}
@@ -309,6 +310,12 @@ export default function CookbookPage() {
       if (target) setSelectedRecipe(target)
     } else if (sorted.length > 0 && !selectedRecipe) {
       setSelectedRecipe(sorted[0])
+    } else if (selectedRecipe) {
+      // Someone else may have just saved changes to the recipe we're
+      // currently viewing — re-sync it instead of leaving it stale until
+      // the viewer manually clicks away and back (or refreshes).
+      const fresh = sorted.find((r: any) => r.id === selectedRecipe.id)
+      if (fresh && !editMode) setSelectedRecipe(fresh)
     }
   }
 
@@ -789,7 +796,7 @@ export default function CookbookPage() {
                 )}
                 <button
                   onClick={() => withUnsavedCheck(() => router.push("/dashboard"))}
-                  className="absolute top-4 left-4 flex items-center gap-1.5 bg-white/90 backdrop-blur-sm rounded-xl px-3 py-2 text-xs font-medium text-gray-700 shadow-sm">
+                  className="sf-overlay-pill absolute top-4 left-4 flex items-center gap-1.5 bg-white/90 backdrop-blur-sm rounded-xl px-3 py-2 text-xs font-medium text-gray-700 shadow-sm">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
                   Dashboard
                 </button>
@@ -1118,7 +1125,7 @@ export default function CookbookPage() {
               <div className="space-y-0.5">
                 <button
                   onClick={() => { setActiveCategory("all"); setShowFavoritesOnly(false); setSelectedRecipe(recipes[0] || null) }}
-                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm transition ${activeCategory === "all" && !showFavoritesOnly ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-600 hover:bg-gray-50"}`}>
+                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm border transition ${activeCategory === "all" && !showFavoritesOnly ? "border-orange-300 text-orange-600 font-medium" : "border-transparent text-gray-600 hover:bg-gray-50"}`}>
                   <ListIcon size={14} />
                   <span className="flex-1 text-left">All</span>
                   <span className="text-xs text-gray-400 tabular-nums">{recipes.length}</span>
@@ -1137,7 +1144,7 @@ export default function CookbookPage() {
                     <button
                       key={cat.id}
                       onClick={() => { setActiveCategory(cat.id); setShowFavoritesOnly(false); setSelectedRecipe(null) }}
-                      className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm transition ${isActive ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-600 hover:bg-gray-50"}`}>
+                      className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm border transition ${isActive ? "border-orange-300 text-orange-600 font-medium" : "border-transparent text-gray-600 hover:bg-gray-50"}`}>
                       <span className="text-base leading-none flex-shrink-0">{cat.emoji === "📋" ? <ListIcon size={15} className="text-gray-400" /> : cat.emoji}</span>
                       <span className="flex-1 text-left truncate">{cat.name}</span>
                       <span className="text-xs text-gray-400 tabular-nums">{count}</span>
@@ -1163,7 +1170,7 @@ export default function CookbookPage() {
                 Recipes {filteredRecipes.length !== recipes.length && <span className="normal-case font-normal text-gray-400">({filteredRecipes.length} shown)</span>}
               </p>
             </div>
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis, restrictToParentElement]}>
               <SortableContext items={filteredRecipes.map(r => r.id)} strategy={verticalListSortingStrategy}>
                 {filteredRecipes.map((r: any) => (
                   <SortableRecipeItem
@@ -1285,9 +1292,9 @@ export default function CookbookPage() {
               <>
                 {!editMode ? (
                   <>
-                    <div className="flex items-center justify-between mb-3">
-                      <h1 className="text-2xl font-medium">{recipe.title || "New Recipe"}</h1>
-                      <button onClick={() => toggleFavorite(recipe.id)} className={`transition ${favorites.has(recipe.id) ? "text-red-400" : "text-gray-300 hover:text-red-300"}`}>
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <h1 className="text-2xl font-medium min-w-0 break-words">{recipe.title || "New Recipe"}</h1>
+                      <button onClick={() => toggleFavorite(recipe.id)} className={`flex-shrink-0 transition ${favorites.has(recipe.id) ? "text-red-400" : "text-gray-300 hover:text-red-300"}`}>
                         <HeartIcon filled={favorites.has(recipe.id)} size={24} />
                       </button>
                     </div>

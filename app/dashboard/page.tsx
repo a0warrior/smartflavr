@@ -26,6 +26,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
+import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers"
 import { ClockIcon, UserIcon, StarIcon, LinkIcon, DocumentIcon, CameraIcon, PrintIcon, ListIcon, CheckIcon, PencilIcon, GlobeIcon, LockIcon, SparkleIcon, PinIcon, SearchIcon } from "@/app/components/Icons"
 import { pulse, subscribe } from "@/lib/firebase"
 
@@ -710,13 +711,13 @@ export default function Dashboard() {
               </Link>
               <button
                 onClick={() => { setEditingCookbook({ ...book }); setShowEditModal(true) }}
-                className="absolute top-2 right-2 w-7 h-7 bg-white/90 shadow-sm rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 text-xs transition">
+                className="sf-overlay-pill absolute top-2 right-2 w-7 h-7 bg-white/90 shadow-sm rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 text-xs transition">
                 <PencilIcon size={12} />
               </button>
               <button
                 onClick={() => togglePin(book)}
                 title={book.is_pinned ? "Unpin" : "Pin to top"}
-                className={`absolute top-2 left-2 w-7 h-7 bg-white/90 shadow-sm rounded-lg flex items-center justify-center text-xs transition ${book.is_pinned ? "text-orange-500" : "text-gray-300 hover:text-gray-500"}`}>
+                className={`sf-overlay-pill absolute top-2 left-2 w-7 h-7 bg-white/90 shadow-sm rounded-lg flex items-center justify-center text-xs transition ${book.is_pinned ? "text-orange-500" : "text-gray-300 hover:text-gray-500"}`}>
                 <PinIcon filled={!!book.is_pinned} size={12} />
               </button>
             </div>
@@ -834,31 +835,41 @@ export default function Dashboard() {
             if (e.target !== e.currentTarget) return
             setShowGroceryListModal(false); setActiveGroceryList(null); setAddItemValue("")
           }}>
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4 max-h-[85vh] overflow-y-auto">
-            {/* List name */}
-            <div className="mb-3">
-              {editingListName ? (
-                <input value={listNameInput} onChange={e => setListNameInput(e.target.value)}
-                  onBlur={async () => {
-                    if (listNameInput.trim() && listNameInput !== activeGroceryList.name) {
-                      await fetch("/api/grocery-lists", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: activeGroceryList.id, name: listNameInput.trim() }) })
-                      pulse(`/updates/grocery/${activeGroceryList.id}`)
-                      setActiveGroceryList((prev: any) => ({ ...prev, name: listNameInput.trim() }))
-                      setGroceryLists(prev => prev.map((l: any) => l.id === activeGroceryList.id ? { ...l, name: listNameInput.trim() } : l))
-                    }
-                    setEditingListName(false)
-                  }}
-                  onKeyDown={e => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-                  autoFocus className="text-lg font-medium border-b border-orange-300 outline-none w-full"/>
-              ) : (
-                <h2 onClick={() => { setListNameInput(activeGroceryList.name); setEditingListName(true) }} className="text-lg font-medium cursor-pointer hover:text-orange-500 transition flex items-center gap-2" title="Click to rename">
-                  {activeGroceryList.name} <PencilIcon size={13} className="text-gray-300" />
-                </h2>
-              )}
+          <div className="bg-white rounded-2xl w-full max-w-md mx-4 max-h-[85vh] flex flex-col">
+            {/* Sticky header — always reachable without scrolling the item list */}
+            <div className="flex items-start justify-between gap-3 px-6 pt-6 pb-3 flex-shrink-0">
+              <div className="min-w-0 flex-1">
+                {editingListName ? (
+                  <input value={listNameInput} onChange={e => setListNameInput(e.target.value)}
+                    onBlur={async () => {
+                      if (listNameInput.trim() && listNameInput !== activeGroceryList.name) {
+                        await fetch("/api/grocery-lists", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: activeGroceryList.id, name: listNameInput.trim() }) })
+                        pulse(`/updates/grocery/${activeGroceryList.id}`)
+                        setActiveGroceryList((prev: any) => ({ ...prev, name: listNameInput.trim() }))
+                        setGroceryLists(prev => prev.map((l: any) => l.id === activeGroceryList.id ? { ...l, name: listNameInput.trim() } : l))
+                      }
+                      setEditingListName(false)
+                    }}
+                    onKeyDown={e => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+                    autoFocus className="text-lg font-medium border-b border-orange-300 outline-none w-full"/>
+                ) : (
+                  <h2 onClick={() => { setListNameInput(activeGroceryList.name); setEditingListName(true) }} className="text-lg font-medium cursor-pointer hover:text-orange-500 transition flex items-center gap-2 truncate" title="Click to rename">
+                    <span className="truncate">{activeGroceryList.name}</span> <PencilIcon size={13} className="text-gray-300 flex-shrink-0" />
+                  </h2>
+                )}
+                {activeGroceryList.shared_by && (
+                  <p className="text-xs text-blue-500 mt-0.5">Shared by {activeGroceryList.shared_by}</p>
+                )}
+              </div>
+              <button
+                onClick={() => { setShowGroceryListModal(false); setActiveGroceryList(null); setAddItemValue(""); setGrocerySearch("") }}
+                title="Done"
+                className="w-8 h-8 flex-shrink-0 rounded-full border border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition flex items-center justify-center text-sm">
+                ✕
+              </button>
             </div>
-            {activeGroceryList.shared_by && (
-              <p className="text-xs text-blue-500 mb-2">Shared by {activeGroceryList.shared_by}</p>
-            )}
+
+            <div className="flex-1 overflow-y-auto px-6 pb-6">
             {/* Actions row */}
             <div className="flex items-center gap-2 mb-4">
               {activeGroceryList.shared_by ? (
@@ -918,7 +929,7 @@ export default function Dashboard() {
                 const householdItems = (activeGroceryList.items || []).filter((i: any) => i.is_household && matches(i))
                 return (
                   <>
-                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleGroceryDragEnd}>
+                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleGroceryDragEnd} modifiers={[restrictToVerticalAxis, restrictToParentElement]}>
                       <SortableContext items={foodItems.map((i: any) => i.id)} strategy={verticalListSortingStrategy}>
                         {foodItems.map((item: any) => (
                           <SortableGroceryItem key={item.id} item={item} onToggle={toggleGroceryItem} onDelete={deleteGroceryItem} onHousehold={toggleItemHousehold}/>
@@ -977,7 +988,7 @@ export default function Dashboard() {
                 </button>
               </div>
             </div>
-            <button onClick={() => { setShowGroceryListModal(false); setActiveGroceryList(null); setAddItemValue(""); setGrocerySearch("") }} className="w-full border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Done</button>
+            </div>
           </div>
         </div>
       )}
@@ -1150,9 +1161,9 @@ export default function Dashboard() {
               <p className="text-sm text-gray-500 mb-2">Save to cookbook(s)</p>
               <div className="space-y-2">
                 {cookbooks.map((book: any) => (
-                  <label key={book.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 cursor-pointer">
-                    <input type="checkbox" checked={selectedCookbooks.includes(book.id)} onChange={() => toggleCookbook(book.id)} className="w-4 h-4 accent-orange-500"/>
-                    <span className="text-sm">{book.cover_emoji} {book.title}</span>
+                  <label key={book.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 cursor-pointer min-w-0">
+                    <input type="checkbox" checked={selectedCookbooks.includes(book.id)} onChange={() => toggleCookbook(book.id)} className="w-4 h-4 accent-orange-500 flex-shrink-0"/>
+                    <span className="text-sm truncate min-w-0">{book.cover_emoji} {book.title}</span>
                   </label>
                 ))}
                 {showQuickCb ? (
@@ -1244,9 +1255,9 @@ export default function Dashboard() {
                       <p className="text-xs text-gray-500 mb-2">Save to:</p>
                       <div className="space-y-1">
                         {cookbooks.map((book: any) => (
-                          <label key={book.id} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-white cursor-pointer">
-                            <input type="checkbox" checked={(importCookbooks[i] || []).includes(book.id)} onChange={() => toggleImportCookbook(i, book.id)} className="w-3.5 h-3.5 accent-orange-500"/>
-                            <span className="text-xs">{book.cover_emoji} {book.title}</span>
+                          <label key={book.id} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-white cursor-pointer min-w-0">
+                            <input type="checkbox" checked={(importCookbooks[i] || []).includes(book.id)} onChange={() => toggleImportCookbook(i, book.id)} className="w-3.5 h-3.5 accent-orange-500 flex-shrink-0"/>
+                            <span className="text-xs truncate min-w-0">{book.cover_emoji} {book.title}</span>
                           </label>
                         ))}
                       </div>

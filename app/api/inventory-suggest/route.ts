@@ -60,18 +60,28 @@ Return ONLY a JSON array, no explanation, no markdown:
 ]
 "status" is "ready" or "almost". "missing" lists only what they'd need to buy, as short ingredient names (empty array when status is "ready").`
 
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-5",
-    max_tokens: 2000,
-    messages: [{ role: "user", content: prompt }],
-  })
+  let content = ""
+  try {
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-5",
+      max_tokens: 2000,
+      messages: [{ role: "user", content: prompt }],
+    })
+    content = response.content[0].type === "text" ? response.content[0].text : ""
+  } catch (err) {
+    console.error("[inventory-suggest] Anthropic call failed:", err)
+    return NextResponse.json({ error: "Could not reach the AI right now. Try again." }, { status: 502 })
+  }
 
-  const content = response.content[0].type === "text" ? response.content[0].text : ""
-  const clean = content.replace(/```json|```/g, "").trim()
+  // The model is asked for ONLY a JSON array, but may still wrap it in
+  // markdown fences or add a stray sentence — pull out just the array
+  // instead of assuming the whole response is clean JSON.
+  const jsonMatch = content.match(/\[[\s\S]*\]/)
   let ideas: any[]
   try {
-    ideas = JSON.parse(clean)
-  } catch {
+    ideas = JSON.parse(jsonMatch ? jsonMatch[0] : content)
+  } catch (err) {
+    console.error("[inventory-suggest] Could not parse AI response:", err, content)
     return NextResponse.json({ error: "Could not generate ideas. Try again." }, { status: 500 })
   }
 

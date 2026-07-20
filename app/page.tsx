@@ -95,7 +95,7 @@ export default function HomePage() {
   ]
 
   return (
-    <div className="min-h-screen bg-white overflow-x-hidden">
+    <div className="sf-landing min-h-screen bg-white overflow-x-hidden">
       {/* Nav */}
       <nav className="flex items-center justify-between px-8 py-4 border-b border-orange-100/60 relative z-20 bg-white/80 backdrop-blur-sm">
         <div className="flex items-center gap-2">

@@ -66,18 +66,28 @@ Return ONLY a JSON array — no explanation, no markdown. Include up to 8 recipe
 ]
 "status" is "ready" when they have every ingredient (given the assumed basics), otherwise "almost". "missing" lists only what they lack, as short ingredient names.`
 
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-5",
-    max_tokens: 1500,
-    messages: [{ role: "user", content: prompt }],
-  })
+  let content = ""
+  try {
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-5",
+      max_tokens: 1500,
+      messages: [{ role: "user", content: prompt }],
+    })
+    content = response.content[0].type === "text" ? response.content[0].text : ""
+  } catch (err) {
+    console.error("[what-can-i-make] Anthropic call failed:", err)
+    return NextResponse.json({ error: "Could not reach the AI right now. Try again." }, { status: 502 })
+  }
 
-  const content = response.content[0].type === "text" ? response.content[0].text : ""
-  const clean = content.replace(/```json|```/g, "").trim()
+  // The model is asked for ONLY a JSON array, but may still wrap it in
+  // markdown fences or add a stray sentence — pull out just the array
+  // instead of assuming the whole response is clean JSON.
+  const jsonMatch = content.match(/\[[\s\S]*\]/)
   let matches: any[]
   try {
-    matches = JSON.parse(clean)
-  } catch {
+    matches = JSON.parse(jsonMatch ? jsonMatch[0] : content)
+  } catch (err) {
+    console.error("[what-can-i-make] Could not parse AI response:", err, content)
     return NextResponse.json({ error: "Could not analyze recipes. Try again." }, { status: 500 })
   }
 

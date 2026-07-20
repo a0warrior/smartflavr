@@ -303,7 +303,9 @@ export default function CookingMode({
             className="md:hidden px-3 py-1.5 border border-gray-200 rounded-xl text-xs font-medium text-gray-500 hover:bg-gray-50 transition">
             Ingredients
           </button>
-          <button onClick={onClose} className="p-2 rounded-xl text-gray-400 hover:bg-gray-50 transition" aria-label="Exit cooking mode">
+          <button
+            onClick={() => { if (confirm("Leave cooking mode? Any running timers will stop.")) onClose() }}
+            className="p-2 rounded-xl text-gray-400 hover:bg-gray-50 transition" aria-label="Exit cooking mode">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
@@ -402,6 +404,12 @@ export default function CookingMode({
             <p className="text-2xl md:text-3xl leading-relaxed md:leading-relaxed text-gray-900 font-medium">
               {renderStepText(steps[stepIndex] || "")}
             </p>
+            {new RegExp(DURATION_RE.source, "i").test(steps[stepIndex] || "") && (
+              <p className="text-xs text-orange-400 mt-3 flex items-center gap-1.5">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="13" r="8"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="10" y1="2" x2="14" y2="2"/></svg>
+                Tap a highlighted time to start a timer
+              </p>
+            )}
             {steps[stepIndex + 1] && (
               <p className="text-sm text-gray-300 mt-8 leading-relaxed">
                 <span className="font-semibold uppercase text-[10px] tracking-wide">Up next: </span>
@@ -414,7 +422,7 @@ export default function CookingMode({
 
       {/* Finished timers — full-width alarm banner */}
       {doneTimers.length > 0 && (
-        <div className="px-4 pb-2 space-y-2 flex-shrink-0">
+        <div className="px-4 pb-2 space-y-2 flex-shrink-0 max-h-[30vh] overflow-y-auto">
           {doneTimers.map(t => (
             <button
               key={t.id}
@@ -435,14 +443,16 @@ export default function CookingMode({
         </div>
       )}
 
-      {/* Running timers — countdown cards with progress */}
+      {/* Running timers — countdown cards with progress, wrapping onto new
+          rows instead of scrolling horizontally so a growing timer count
+          never pushes past the edge of the screen */}
       {activeTimers.length > 0 && (
-        <div className="px-4 pb-2 flex gap-2.5 overflow-x-auto flex-shrink-0">
+        <div className="px-4 pb-2 flex flex-wrap gap-2.5 flex-shrink-0 max-h-[30vh] overflow-y-auto">
           {activeTimers.map(t => {
             const remaining = t.endsAt - Date.now()
             const pct = Math.max(0, Math.min(100, (remaining / t.totalMs) * 100))
             return (
-              <div key={t.id} className="relative bg-gray-900 text-white rounded-2xl px-4 py-3 min-w-[150px] flex-shrink-0 overflow-hidden">
+              <div key={t.id} className="relative bg-gray-900 text-white rounded-2xl px-4 py-3 w-[calc(50%-0.3125rem)] sm:w-[150px] flex-shrink-0 overflow-hidden">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="text-2xl font-bold tabular-nums leading-tight">{formatCountdown(remaining)}</div>
