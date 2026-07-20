@@ -1161,7 +1161,7 @@ export default function CookbookPage() {
                       onClick={() => { setActiveCategory(cat.id); setShowFavoritesOnly(false); setSelectedRecipe(null) }}
                       className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm border transition text-gray-600 ${isActive ? "border-orange-300 font-medium" : "border-transparent hover:bg-gray-50"}`}>
                       <span className="text-base leading-none flex-shrink-0">{cat.emoji === "📋" ? <ListIcon size={15} className="text-gray-400" /> : cat.emoji}</span>
-                      <span className="flex-1 text-left truncate">{cat.name}</span>
+                      <span className="flex-1 min-w-0 text-left truncate">{cat.name}</span>
                       <span className="text-xs text-gray-400 tabular-nums">{count}</span>
                     </button>
                   )
@@ -1220,13 +1220,13 @@ export default function CookbookPage() {
           )}
         </div>
 
-        <div className={`flex-col bg-gray-50 md:overflow-hidden ${mobileView === "detail" ? "flex" : "hidden"} md:flex md:flex-1`}>
+        <div className={`flex-col bg-gray-50 md:overflow-hidden min-w-0 ${mobileView === "detail" ? "flex" : "hidden"} md:flex md:flex-1`}>
           {/* Mobile header — back + title + primary action + overflow */}
           <div className="md:hidden flex items-center gap-2 px-3 py-3 bg-white border-b border-gray-100 flex-shrink-0">
             <button onClick={() => withUnsavedCheck(() => setMobileView("list"))} className="p-1.5 -ml-1 rounded-lg text-orange-500 flex-shrink-0">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
             </button>
-            <span onClick={() => withUnsavedCheck(() => setMobileView("list"))} className="flex-1 font-medium text-gray-900 truncate text-sm cursor-pointer active:text-orange-500">{recipe?.title || cookbookInfo?.title}</span>
+            <span onClick={() => withUnsavedCheck(() => setMobileView("list"))} className="flex-1 min-w-0 font-medium text-gray-900 truncate text-sm cursor-pointer active:text-orange-500">{recipe?.title || cookbookInfo?.title}</span>
             {editMode ? (
               <>
                 <button onClick={cancelEdit} className="text-sm text-gray-400 px-2 py-1">Cancel</button>

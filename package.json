@@ -10,7 +10,8 @@
   },
   "overrides": {
     "postcss": "^8.5.15",
-    "nodemailer": "^9.0.3"
+    "nodemailer": "^9.0.3",
+    "brace-expansion": "^1.1.16"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0",
