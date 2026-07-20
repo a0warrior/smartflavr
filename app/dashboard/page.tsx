@@ -70,11 +70,11 @@ function SortableGroceryItem({ item, onToggle, onDelete, onHousehold }: any) {
         {displayText}
       </span>
       {onHousehold && (
-        <button onClick={() => onHousehold(item)} title="Move to Household" className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-blue-400 transition flex-shrink-0">
+        <button onClick={() => onHousehold(item)} title="Move to Household" className="opacity-100 md:opacity-0 md:group-hover:opacity-100 text-gray-300 hover:text-blue-400 transition flex-shrink-0 p-1 -m-1">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
         </button>
       )}
-      <button onClick={() => onDelete(item.id)} className="text-gray-300 hover:text-red-400 text-xs transition flex-shrink-0">✕</button>
+      <button onClick={() => onDelete(item.id)} className="text-gray-300 hover:text-red-400 text-xs transition flex-shrink-0 p-1 -m-1">✕</button>
     </div>
   )
 }
@@ -94,10 +94,10 @@ function HouseholdGroceryItem({ item, onToggle, onDelete, onHousehold }: any) {
         className={`text-sm flex-1 cursor-pointer ${item.checked ? "line-through text-gray-400" : "text-gray-900"}`}>
         {item.ingredient}
       </span>
-      <button onClick={() => onHousehold(item)} title="Move back to Food" className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-orange-400 transition flex-shrink-0">
+      <button onClick={() => onHousehold(item)} title="Move back to Food" className="opacity-100 md:opacity-0 md:group-hover:opacity-100 text-gray-300 hover:text-orange-400 transition flex-shrink-0 p-1 -m-1">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/></svg>
       </button>
-      <button onClick={() => onDelete(item.id)} className="text-gray-300 hover:text-red-400 text-xs transition flex-shrink-0">✕</button>
+      <button onClick={() => onDelete(item.id)} className="text-gray-300 hover:text-red-400 text-xs transition flex-shrink-0 p-1 -m-1">✕</button>
     </div>
   )
 }
@@ -228,13 +228,17 @@ export default function Dashboard() {
 
   async function fetchGroceryLists() {
     const res = await fetch("/api/grocery-lists")
-    const data = await res.json()
+    if (!res.ok) return
+    const data = await res.json().catch(() => null)
+    if (!data) return
     setGroceryLists(data.lists || [])
   }
 
   async function refreshActiveList(listId: number) {
     const res = await fetch("/api/grocery-lists")
-    const data = await res.json()
+    if (!res.ok) return
+    const data = await res.json().catch(() => null)
+    if (!data) return
     const lists = data.lists || []
     setGroceryLists(lists)
     const fresh = lists.find((l: any) => l.id === listId)
@@ -246,7 +250,11 @@ export default function Dashboard() {
     const unsubs = groceryLists.map((l: any) =>
       subscribe(`/updates/grocery/${l.id}`, async () => {
         const res = await fetch("/api/grocery-lists")
-        const data = await res.json()
+        // A failed/rate-limited refetch must never wipe local state — just skip
+        // this sync tick and let the next pulse (or manual refresh) catch up.
+        if (!res.ok) return
+        const data = await res.json().catch(() => null)
+        if (!data) return
         const lists = data.lists || []
         setGroceryLists(lists)
         setActiveGroceryList((prev: any) => {
@@ -267,19 +275,20 @@ export default function Dashboard() {
   }, [groceryLists.map((l: any) => l.id).join(",")])
 
   async function toggleGroceryItem(itemId: number, checked: boolean) {
-    await fetch("/api/grocery-lists/check", {
+    const res = await fetch("/api/grocery-lists/check", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: itemId, checked }),
     })
+    if (!res.ok) { toast.error("Could not update that item — try again."); return }
     setActiveGroceryList((prev: any) => ({ ...prev, items: prev.items.map((item: any) => item.id === itemId ? { ...item, checked: checked ? 1 : 0 } : item) }))
     setGroceryLists(prev => prev.map((list: any) => list.id === activeGroceryList?.id ? { ...list, items: list.items.map((item: any) => item.id === itemId ? { ...item, checked: checked ? 1 : 0 } : item) } : list))
     if (activeGroceryList) pulse(`/updates/grocery/${activeGroceryList.id}`)
   }
 
   async function deleteGroceryItem(itemId: number) {
-    if (!confirm("Remove this item from the list?")) return
-    await fetch("/api/grocery-lists", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: activeGroceryList.id, deleteItemIds: [itemId] }) })
+    const res = await fetch("/api/grocery-lists", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: activeGroceryList.id, deleteItemIds: [itemId] }) })
+    if (!res.ok) { toast.error("Could not remove that item — try again."); return }
     const updated = { ...activeGroceryList, items: activeGroceryList.items.filter((i: any) => i.id !== itemId) }
     setActiveGroceryList(updated)
     setGroceryLists(prev => prev.map((l: any) => l.id === updated.id ? updated : l))
@@ -288,15 +297,18 @@ export default function Dashboard() {
 
   async function addItemToList(value: string) {
     if (!value.trim()) return
-    await fetch("/api/grocery-lists", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: activeGroceryList.id, addItems: [value.trim()], household: addAsHousehold }) })
+    const res = await fetch("/api/grocery-lists", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: activeGroceryList.id, addItems: [value.trim()], household: addAsHousehold }) })
+    if (!res.ok) { toast.error("Could not add that item — try again."); return }
     await refreshActiveList(activeGroceryList.id)
     pulse(`/updates/grocery/${activeGroceryList.id}`)
   }
 
   async function toggleItemHousehold(item: any) {
     const next = item.is_household ? 0 : 1
+    const res = await fetch("/api/grocery-lists", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: activeGroceryList.id, setHousehold: { id: item.id, is_household: next } }) })
+    if (!res.ok) { toast.error("Could not move that item — try again."); return }
     setActiveGroceryList((prev: any) => ({ ...prev, items: prev.items.map((i: any) => i.id === item.id ? { ...i, is_household: next } : i) }))
-    await fetch("/api/grocery-lists", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: activeGroceryList.id, setHousehold: { id: item.id, is_household: next } }) })
+    setGroceryLists(prev => prev.map((list: any) => list.id === activeGroceryList?.id ? { ...list, items: list.items.map((i: any) => i.id === item.id ? { ...i, is_household: next } : i) } : list))
     pulse(`/updates/grocery/${activeGroceryList.id}`)
   }
 
@@ -318,7 +330,13 @@ export default function Dashboard() {
 
   async function confirmDeleteGroceryList() {
     if (!groceryListToDelete) return
-    await fetch("/api/grocery-lists", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: groceryListToDelete }) })
+    const res = await fetch("/api/grocery-lists", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: groceryListToDelete }) })
+    if (!res.ok) {
+      toast.error("Could not delete this list — try again.")
+      setShowDeleteGroceryModal(false)
+      setGroceryListToDelete(null)
+      return
+    }
     pulse(`/updates/grocery/${groceryListToDelete}`)
     setGroceryLists(prev => prev.filter((l: any) => l.id !== groceryListToDelete))
     if (activeGroceryList?.id === groceryListToDelete) { setShowGroceryListModal(false); setActiveGroceryList(null) }
@@ -406,8 +424,14 @@ export default function Dashboard() {
   async function createCookbook() {
     if (!title) return
     setLoading(true)
-    await fetch("/api/cookbooks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, cover_emoji: emoji, cover_color: color, cover_image: coverImage, is_public: isPublic }) })
-    setTitle(""); setEmoji("📖"); setColor("#F97316"); setCoverImage(""); setIsPublic(0); setShowModal(false); setLoading(false)
+    const res = await fetch("/api/cookbooks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, cover_emoji: emoji, cover_color: color, cover_image: coverImage, is_public: isPublic }) })
+    setLoading(false)
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      toast.error(data.error || "Could not create this cookbook — try again.")
+      return
+    }
+    setTitle(""); setEmoji("📖"); setColor("#F97316"); setCoverImage(""); setIsPublic(0); setShowModal(false)
     fetchCookbooks()
     if (userId) pulse(`/updates/users/${userId}/cookbooks`)
   }
@@ -415,8 +439,14 @@ export default function Dashboard() {
   async function updateCookbook() {
     if (!editingCookbook) return
     setLoading(true)
-    await fetch(`/api/cookbooks/${editingCookbook.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: editingCookbook.title, cover_emoji: editingCookbook.cover_emoji, cover_color: editingCookbook.cover_color, cover_image: editingCookbook.cover_image || "", is_public: editingCookbook.is_public ?? 0 }) })
-    setShowEditModal(false); setEditingCookbook(null); setLoading(false)
+    const res = await fetch(`/api/cookbooks/${editingCookbook.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: editingCookbook.title, cover_emoji: editingCookbook.cover_emoji, cover_color: editingCookbook.cover_color, cover_image: editingCookbook.cover_image || "", is_public: editingCookbook.is_public ?? 0 }) })
+    setLoading(false)
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      toast.error(data.error || "Could not save changes — try again.")
+      return
+    }
+    setShowEditModal(false); setEditingCookbook(null)
     fetchCookbooks()
     if (userId) pulse(`/updates/users/${userId}/cookbooks`)
   }
