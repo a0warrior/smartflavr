@@ -950,6 +950,17 @@ export default function Dashboard() {
                   className={`text-[10px] font-semibold rounded-full px-2.5 py-1 border transition flex-shrink-0 ${addAsHousehold ? "bg-blue-500 text-white border-blue-500" : "border-gray-200 text-gray-400 hover:bg-gray-50"}`}>
                   Household
                 </button>
+                <button
+                  onClick={async () => {
+                    if (!addItemValue.trim()) return
+                    await addItemToList(addItemValue)
+                    setAddItemValue("")
+                  }}
+                  disabled={!addItemValue.trim()}
+                  title="Add item"
+                  className="w-7 h-7 rounded-full bg-orange-500 text-white flex items-center justify-center flex-shrink-0 hover:bg-orange-600 disabled:opacity-30 disabled:hover:bg-orange-500 transition">
+                  <span className="text-base leading-none">+</span>
+                </button>
               </div>
             </div>
             <button onClick={() => { setShowGroceryListModal(false); setActiveGroceryList(null); setAddItemValue(""); setGrocerySearch("") }} className="w-full border border-gray-200 rounded-xl py-2 text-sm text-gray-500 hover:bg-gray-50">Done</button>
@@ -990,10 +1001,18 @@ export default function Dashboard() {
                       className="flex-1 text-[16px] md:text-sm outline-none bg-transparent py-2.5 min-w-0"
                     />
                     {newListItems.length > 1 && (
-                      <button onClick={() => setNewListItems(prev => prev.filter((_, j) => j !== i))} className="text-gray-200 hover:text-red-400 text-xs opacity-0 group-hover:opacity-100 transition p-1">✕</button>
+                      <button onClick={() => setNewListItems(prev => prev.filter((_, j) => j !== i))} className="text-gray-200 hover:text-red-400 text-xs opacity-100 md:opacity-0 md:group-hover:opacity-100 transition p-1">✕</button>
                     )}
                   </div>
                 ))}
+                <button
+                  onClick={() => {
+                    setNewListItems(prev => [...prev, ""])
+                    setTimeout(() => { const els = document.querySelectorAll<HTMLInputElement>("[data-newitem]"); els[els.length - 1]?.focus() }, 0)
+                  }}
+                  className="w-full text-left text-xs text-orange-500 hover:text-orange-600 font-medium px-3 py-2.5 transition">
+                  + Add another item
+                </button>
               </div>
             </div>
             <div className="flex gap-3">

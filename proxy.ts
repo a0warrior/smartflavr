@@ -12,14 +12,19 @@ type Window = { count: number; resetAt: number }
 const hits = new Map<string, Window>()
 const WINDOW_MS = 60_000
 
+// Every pattern is anchored with (\/|$) after the route name so it can't
+// prefix-match a longer, unrelated route — e.g. bare "grocery-list" (the AI
+// endpoint) was matching "grocery-lists", "grocery-lists/check", and
+// "grocery-list-collaborators" too, silently dropping normal list CRUD from
+// the 300/min general tier to the 10/min AI tier.
 const TIERS: { name: string; pattern: RegExp; limit: number }[] = [
   // AI endpoints cost real money per call (weekly plan caps exist, but this
   // stops a burst from burning a week's quota in seconds)
-  { name: "ai", pattern: /^\/api\/(extract|extract-file|grocery-list|what-can-i-make|ai-assist)/, limit: 10 },
+  { name: "ai", pattern: /^\/api\/(extract|extract-file|grocery-list|what-can-i-make|ai-assist)(\/|$)/, limit: 10 },
   // Brute-forceable: invite-code guessing, backup-secret guessing
-  { name: "guessable", pattern: /^\/api\/(invite|backup)/, limit: 10 },
+  { name: "guessable", pattern: /^\/api\/(invite|backup)(\/|$)/, limit: 10 },
   // Uploads are large and consume Cloudinary quota
-  { name: "upload", pattern: /^\/api\/(upload|upload-video)/, limit: 20 },
+  { name: "upload", pattern: /^\/api\/(upload|upload-video)(\/|$)/, limit: 20 },
 ]
 // Generous: normal pages fire many parallel API calls, and households share IPs
 const GENERAL_LIMIT = 300
