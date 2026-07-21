@@ -7,6 +7,7 @@ import { ThemeProvider } from "./components/ThemeProvider"
 import PresenceHeartbeat from "./components/PresenceHeartbeat"
 import CookingTimerIndicator from "./components/CookingTimerIndicator"
 import { CookingModeStatusProvider } from "./components/CookingModeStatus"
+import PushNavigationListener from "./components/PushNavigationListener"
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -19,6 +20,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             <ModalScrollLock />
             <PresenceHeartbeat />
             <CookingTimerIndicator />
+            <PushNavigationListener />
           </CookingModeStatusProvider>
         </ExtractionProvider>
       </SessionProvider>

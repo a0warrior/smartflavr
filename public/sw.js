@@ -30,9 +30,14 @@ self.addEventListener("notificationclick", event => {
       const existing = clients[0]
       if (existing) {
         await existing.focus()
-        if ("navigate" in existing) {
-          try { return await existing.navigate(url) } catch {}
-        }
+        // Deliberately NOT WindowClient.navigate() here — a service-worker
+        // -driven navigation of an already-open document isn't reliably
+        // treated as a top-level user navigation for SameSite=Lax cookie
+        // purposes in every browser, which was dropping the session cookie
+        // and signing people out. Posting a message and letting the
+        // already-authenticated page navigate itself via its own router
+        // sidesteps that entirely — it's just a normal in-app transition.
+        existing.postMessage({ type: "NAVIGATE", url })
         return existing
       }
       if (self.clients.openWindow) return self.clients.openWindow(url)

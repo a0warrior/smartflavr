@@ -139,13 +139,16 @@ export default function CookingMode({
 
   function addRecipeToSession(r: any) {
     const saved = savedProgressRef.current[String(r.id)]
+    const initialSession: Session = saved
+      ? { scale: initialScale, stepIndex: saved.step_index, checkedIngredients: new Set(saved.checked_ingredients) }
+      : { scale: initialScale, stepIndex: 0, checkedIngredients: new Set() }
     setActiveRecipes(prev => [...prev, r])
-    setSessions(prev => ({
-      ...prev,
-      [String(r.id)]: saved
-        ? { scale: initialScale, stepIndex: saved.step_index, checkedIngredients: new Set(saved.checked_ingredients) }
-        : { scale: initialScale, stepIndex: 0, checkedIngredients: new Set() },
-    }))
+    setSessions(prev => ({ ...prev, [String(r.id)]: initialSession }))
+    // Persist immediately rather than waiting for the first interaction —
+    // otherwise adding a second recipe and leaving before touching it left
+    // no saved row for it at all, so reopening the first recipe later had
+    // nothing to find and couldn't bring it back into the tab bar.
+    scheduleSave(String(r.id), r.cookbook_id, initialSession)
     setActiveId(r.id)
     setShowAddRecipe(false)
   }
@@ -220,6 +223,16 @@ export default function CookingMode({
       .catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Other recipes with saved progress that aren't part of this session (a
+  // different session_id, or simply not auto-restored) — surfaced as a
+  // one-tap shortcut instead of making someone dig through "Cook another"'s
+  // search for something they were already partway through.
+  const otherSavedRecipes = Object.values(savedProgressRef.current)
+    .filter(s => !activeRecipes.some((r: any) => String(r.id) === String(s.recipe_id)))
+    .map(s => availableRecipes.find((r: any) => String(r.id) === String(s.recipe_id)))
+    .filter(Boolean)
+    .slice(0, 3) as any[]
 
   // Drops every other recipe from this session (their saved progress isn't
   // deleted, just no longer auto-restored together) and starts a fresh
@@ -615,6 +628,15 @@ export default function CookingMode({
               </button>
             )
           })}
+          {otherSavedRecipes.map(r => (
+            <button
+              key={`continue-${r.id}`}
+              onClick={() => addRecipeToSession(r)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border border-orange-200 text-orange-600 bg-orange-50 hover:bg-orange-100 transition flex-shrink-0">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+              Continue: <span className="max-w-[7rem] truncate">{r.title}</span>
+            </button>
+          ))}
           {addCandidates.length > 0 && (
             <button
               onClick={() => setShowAddRecipe(true)}
