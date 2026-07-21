@@ -27,7 +27,7 @@ export async function PUT(req: Request) {
   const userId = await getUserId(session.user.email)
   if (!userId) return NextResponse.json({ error: "User not found" }, { status: 404 })
 
-  const { cookbook_id, recipe_id, step_index, checked_ingredients } = await req.json()
+  const { cookbook_id, recipe_id, step_index, checked_ingredients, session_id } = await req.json()
   if (!cookbook_id || !recipe_id) return NextResponse.json({ error: "cookbook_id and recipe_id required" }, { status: 400 })
 
   await saveCookSession(
@@ -35,7 +35,8 @@ export async function PUT(req: Request) {
     Number(cookbook_id),
     Number(recipe_id),
     typeof step_index === "number" ? step_index : 0,
-    Array.isArray(checked_ingredients) ? checked_ingredients.slice(0, 200) : []
+    Array.isArray(checked_ingredients) ? checked_ingredients.slice(0, 200) : [],
+    typeof session_id === "string" ? session_id.slice(0, 64) : null
   )
   return NextResponse.json({ success: true })
 }

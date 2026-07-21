@@ -161,7 +161,15 @@ export default function CookingMode({
   // server-side per recipe, so it's still there if you cook multiple
   // dishes in one session, wander off, and come back later — not just for
   // whichever recipe happens to have a timer running.
-  const savedProgressRef = useRef<Record<string, { step_index: number; checked_ingredients: number[] }>>({})
+  const savedProgressRef = useRef<Record<string, { recipe_id: number; step_index: number; checked_ingredients: number[]; session_id: string | null }>>({})
+
+  // Groups recipes cooked together (e.g. via "Cook another") so reopening
+  // one of them can pull the rest of the group back in too. Reused from a
+  // saved row if the recipe you clicked into was part of one; otherwise a
+  // fresh id for this new session.
+  const sessionIdRef = useRef<string>(
+    typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`
+  )
 
   useEffect(() => {
     const cookbookId = initialRecipes[0]?.cookbook_id
@@ -170,9 +178,10 @@ export default function CookingMode({
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (!Array.isArray(data?.sessions)) return
-        const map: Record<string, { step_index: number; checked_ingredients: number[] }> = {}
+        const map: Record<string, { recipe_id: number; step_index: number; checked_ingredients: number[]; session_id: string | null }> = {}
         for (const s of data.sessions) map[String(s.recipe_id)] = s
         savedProgressRef.current = map
+
         // Only fill in recipes still at their untouched default — a resume
         // link's explicit step (seeded synchronously above) wins over this.
         setSessions(prev => {
@@ -186,10 +195,42 @@ export default function CookingMode({
           }
           return next
         })
+
+        // The recipe you opened was part of a multi-recipe session — pull
+        // the rest of that session's recipes back in too, not just this one.
+        const primary = map[String(initialRecipes[0]?.id)]
+        if (!primary?.session_id) return
+        sessionIdRef.current = primary.session_id
+        const already = new Set(initialRecipes.map((r: any) => String(r.id)))
+        const restoredRecipes = Object.values(map)
+          .filter(s => s.session_id === primary.session_id && !already.has(String(s.recipe_id)))
+          .map(s => availableRecipes.find((r: any) => String(r.id) === String(s.recipe_id)))
+          .filter(Boolean) as any[]
+        if (restoredRecipes.length === 0) return
+        setActiveRecipes(prev => [...prev, ...restoredRecipes])
+        setSessions(prev => {
+          const next = { ...prev }
+          for (const r of restoredRecipes) {
+            const saved = map[String(r.id)]
+            next[String(r.id)] = { scale: initialScale, stepIndex: saved.step_index, checkedIngredients: new Set(saved.checked_ingredients) }
+          }
+          return next
+        })
       })
       .catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Drops every other recipe from this session (their saved progress isn't
+  // deleted, just no longer auto-restored together) and starts a fresh
+  // session id, for when you don't want to keep inheriting an old group.
+  function startNewSession() {
+    if (activeRecipes.length <= 1) return
+    if (!confirm("Start a new cooking session? The other recipes will stop showing up together — your progress on them is still saved individually.")) return
+    sessionIdRef.current = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`
+    setActiveRecipes([recipe])
+    setActiveId(recipe.id)
+  }
 
   // Debounced save, kept per-recipe (keyed by recipe id) rather than as a
   // single effect keyed on the currently-active recipe. A single shared
@@ -207,6 +248,7 @@ export default function CookingMode({
         recipe_id: Number(recipeId),
         step_index: sess.stepIndex,
         checked_ingredients: Array.from(sess.checkedIngredients),
+        session_id: sessionIdRef.current,
       }),
     }).catch(() => {})
   }
@@ -578,6 +620,13 @@ export default function CookingMode({
               onClick={() => setShowAddRecipe(true)}
               className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border border-dashed border-gray-300 text-gray-500 hover:bg-gray-50 transition flex-shrink-0">
               + Cook another
+            </button>
+          )}
+          {isMulti && (
+            <button
+              onClick={startNewSession}
+              className="ml-1 text-xs text-gray-300 hover:text-red-400 underline whitespace-nowrap flex-shrink-0 transition">
+              Start new session
             </button>
           )}
         </div>

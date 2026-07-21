@@ -20,9 +20,20 @@ self.addEventListener("notificationclick", event => {
   event.notification.close()
   const url = event.notification.data?.url || "/dashboard"
   event.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(clients => {
-      for (const client of clients) {
-        if (client.url.includes(url) && "focus" in client) return client.focus()
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(async clients => {
+      // Reuse an already-open tab instead of opening a new one — matching
+      // on the full URL (including query string) almost never hit, so this
+      // used to open a duplicate tab nearly every time. That second tab ran
+      // its own independent timer/alarm logic, so dismissing the alarm in
+      // the tab you were looking at didn't touch the other one, which kept
+      // ringing until you actually closed it.
+      const existing = clients[0]
+      if (existing) {
+        await existing.focus()
+        if ("navigate" in existing) {
+          try { return await existing.navigate(url) } catch {}
+        }
+        return existing
       }
       if (self.clients.openWindow) return self.clients.openWindow(url)
     })
