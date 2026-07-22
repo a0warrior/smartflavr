@@ -199,21 +199,39 @@ export default function CookingMode({
           return next
         })
 
-        // The recipe you opened was part of a multi-recipe session — pull
-        // the rest of that session's recipes back in too, not just this one.
+        // The recipe you opened was part of a multi-recipe session — ask
+        // before pulling the rest of it back in, rather than silently
+        // repopulating every time. This is meant to cover accidentally
+        // leaving Cooking Mode mid-cook, not to keep resurfacing recipes
+        // you were deliberately done with — so it only asks once: saying
+        // no detaches this recipe from the old group for good (a fresh
+        // session_id, saved immediately) instead of asking again later.
         const primary = map[String(initialRecipes[0]?.id)]
         if (!primary?.session_id) return
-        sessionIdRef.current = primary.session_id
         const already = new Set(initialRecipes.map((r: any) => String(r.id)))
-        const restoredRecipes = Object.values(map)
+        const groupmates = Object.values(map)
           .filter(s => s.session_id === primary.session_id && !already.has(String(s.recipe_id)))
           .map(s => availableRecipes.find((r: any) => String(r.id) === String(s.recipe_id)))
           .filter(Boolean) as any[]
-        if (restoredRecipes.length === 0) return
-        setActiveRecipes(prev => [...prev, ...restoredRecipes])
+        if (groupmates.length === 0) { sessionIdRef.current = primary.session_id; return }
+
+        const names = groupmates.map(r => r.title).join(", ")
+        const continueOld = confirm(`Continue your last cooking session? You were also cooking: ${names}.`)
+
+        if (!continueOld) {
+          // Fresh id, persisted right away so this doesn't ask again next time.
+          sessionIdRef.current = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`
+          const primaryRecipeId = String(initialRecipes[0].id)
+          const primarySession = sessions[primaryRecipeId]
+          if (primarySession) persistSession(primaryRecipeId, cookbookId, primarySession)
+          return
+        }
+
+        sessionIdRef.current = primary.session_id
+        setActiveRecipes(prev => [...prev, ...groupmates])
         setSessions(prev => {
           const next = { ...prev }
-          for (const r of restoredRecipes) {
+          for (const r of groupmates) {
             const saved = map[String(r.id)]
             next[String(r.id)] = { scale: initialScale, stepIndex: saved.step_index, checkedIngredients: new Set(saved.checked_ingredients) }
           }
@@ -223,16 +241,6 @@ export default function CookingMode({
       .catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  // Other recipes with saved progress that aren't part of this session (a
-  // different session_id, or simply not auto-restored) — surfaced as a
-  // one-tap shortcut instead of making someone dig through "Cook another"'s
-  // search for something they were already partway through.
-  const otherSavedRecipes = Object.values(savedProgressRef.current)
-    .filter(s => !activeRecipes.some((r: any) => String(r.id) === String(s.recipe_id)))
-    .map(s => availableRecipes.find((r: any) => String(r.id) === String(s.recipe_id)))
-    .filter(Boolean)
-    .slice(0, 3) as any[]
 
   // Drops every other recipe from this session (their saved progress isn't
   // deleted, just no longer auto-restored together) and starts a fresh
@@ -628,15 +636,6 @@ export default function CookingMode({
               </button>
             )
           })}
-          {otherSavedRecipes.map(r => (
-            <button
-              key={`continue-${r.id}`}
-              onClick={() => addRecipeToSession(r)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border border-orange-200 text-orange-600 bg-orange-50 hover:bg-orange-100 transition flex-shrink-0">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-              Continue: <span className="max-w-[7rem] truncate">{r.title}</span>
-            </button>
-          ))}
           {addCandidates.length > 0 && (
             <button
               onClick={() => setShowAddRecipe(true)}
