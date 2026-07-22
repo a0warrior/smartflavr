@@ -42,9 +42,7 @@ ${pantryList}
 
 Assume the user also has these basics even if unlisted: water, salt, pepper, and basic cooking oil.
 ${dietaryRestrictions.length > 0 ? `\nThe user's dietary restrictions: ${dietaryRestrictions.join(", ")}. Every idea must respect these.\n` : ""}
-Come up with:
-- Up to 3 dishes fully makeable RIGHT NOW with what's on hand (plus the assumed basics)
-- Up to 3 more dishes that are close — needing only 1-3 additional ingredients
+Come up with up to 3 dish ideas total — prioritize ones fully makeable RIGHT NOW with what's on hand (plus the assumed basics), but include a close "almost" idea (needing only 1-3 additional ingredients) if there's a good one, so the result isn't only "ready" dishes.
 
 If the inventory is very short (even just one ingredient), do your best anyway — a single protein or vegetable is still enough for at least one or two simple "almost" ideas that need a few pantry staples. Never refuse or respond with only an explanation; always return the JSON array, even if it only has one item in it.
 
