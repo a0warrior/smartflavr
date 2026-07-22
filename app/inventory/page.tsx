@@ -75,6 +75,7 @@ export default function InventoryPage() {
   const [ideaCookbooks, setIdeaCookbooks] = useState<any[]>([])
   const [savingIdeaFor, setSavingIdeaFor] = useState<string | null>(null)
   const [savedIdeas, setSavedIdeas] = useState<Set<string>>(new Set())
+  const [expandedIdeas, setExpandedIdeas] = useState<Set<string>>(new Set())
   const [customCategories, setCustomCategories] = useState<any[]>([])
   const [showNewCatModal, setShowNewCatModal] = useState(false)
   const [newCatName, setNewCatName] = useState("")
@@ -843,6 +844,43 @@ export default function InventoryPage() {
                       {idea.missing.map((ing: string, i: number) => (
                         <span key={i} className="text-xs bg-gray-50 border border-gray-100 text-gray-500 rounded-full px-2.5 py-0.5">{ing}</span>
                       ))}
+                    </div>
+                  )}
+                  <button
+                    onClick={() => setExpandedIdeas(prev => {
+                      const next = new Set(prev)
+                      if (next.has(idea.id)) next.delete(idea.id); else next.add(idea.id)
+                      return next
+                    })}
+                    className="text-xs text-indigo-500 hover:text-indigo-600 font-medium mt-2.5">
+                    {expandedIdeas.has(idea.id) ? "See less" : "See full recipe"}
+                  </button>
+                  {expandedIdeas.has(idea.id) && (
+                    <div className="mt-2.5 pt-3 border-t border-gray-50 space-y-3">
+                      {idea.ingredients && (
+                        <div>
+                          <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Ingredients</div>
+                          <ul className="space-y-1">
+                            {idea.ingredients.split("\n").filter(Boolean).map((ing: string, i: number) => (
+                              <li key={i} className="text-xs text-gray-600 flex gap-1.5">
+                                <span className="text-gray-300">•</span>{ing}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {idea.instructions && (
+                        <div>
+                          <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Instructions</div>
+                          <ol className="space-y-1.5">
+                            {idea.instructions.split("\n").filter(Boolean).map((step: string, i: number) => (
+                              <li key={i} className="text-xs text-gray-600 flex gap-2">
+                                <span className="text-gray-300 flex-shrink-0">{i + 1}.</span>{step.replace(/^\d+[.)]\s*/, "")}
+                              </li>
+                            ))}
+                          </ol>
+                        </div>
+                      )}
                     </div>
                   )}
                   <button
