@@ -115,11 +115,11 @@ export default function CookingCompleteModal({ recipe, onDone }: { recipe: any; 
 
       <div className="relative max-w-sm w-full text-center animate-pop-in">
         <div className="flex justify-center mb-6">
-          {/* logo.svg's mascot sits left-of-center in its own viewBox (the
-              spoon graphic extends further right than the jar extends
-              left), so centering the box alone visually reads as
-              off-center — nudge it back to compensate. */}
-          <Image src="/logo.svg" alt="SmartFlavr" width={110} height={98} style={{ transform: "translateX(-8%)" }} />
+          {/* logo.svg's mascot artwork isn't centered within its own
+              viewBox (the jar+spoon's true bounding box sits ~15% left of
+              the viewBox's horizontal center), so centering the image box
+              alone still reads as off-center — shift it right to compensate. */}
+          <Image src="/logo.svg" alt="SmartFlavr" width={110} height={98} style={{ transform: "translate(15%, -3%)" }} />
         </div>
 
         {mode === "celebrate" ? (

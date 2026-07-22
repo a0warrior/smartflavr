@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react"
 import { useRouter, useParams } from "next/navigation"
 import Navbar from "@/app/components/Navbar"
 import ImageCropper from "@/app/components/ImageCropper"
+import EmojiPicker from "@/app/components/EmojiPicker"
 import CollaboratorModal from "@/app/components/CollaboratorModal"
 import NutritionPanel from "@/app/components/NutritionPanel"
 import { toast } from "@/app/components/Toast"
@@ -1680,8 +1681,8 @@ export default function CookbookPage() {
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm mx-4">
             <h2 className="text-lg font-medium mb-4">New Category</h2>
             <div className="mb-4">
-              <label className="text-sm text-gray-500 mb-1 block">Emoji</label>
-              <input value={newCatEmoji} onChange={e => setNewCatEmoji(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 w-16 text-center text-2xl"/>
+              <label className="text-sm text-gray-500 mb-2 block">Emoji</label>
+              <EmojiPicker value={newCatEmoji} onChange={setNewCatEmoji} />
             </div>
             <div className="mb-6">
               <label className="text-sm text-gray-500 mb-1 block">Name</label>

@@ -9,6 +9,7 @@ import { PageSkeleton } from "../components/Skeletons"
 import { useExtraction } from "../components/ExtractionProvider"
 import { escapeHtml } from "@/lib/sanitize"
 import ImageCropper from "../components/ImageCropper"
+import EmojiPicker from "../components/EmojiPicker"
 import Link from "next/link"
 import {
   DndContext,
@@ -1095,8 +1096,8 @@ export default function Dashboard() {
             {!coverImage && (
               <>
                 <div className="mb-4">
-                  <label className="text-sm text-gray-500 mb-1 block">Emoji (shown if no image)</label>
-                  <input value={emoji} onChange={e => setEmoji(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 w-20 text-center text-2xl"/>
+                  <label className="text-sm text-gray-500 mb-2 block">Emoji (shown if no image)</label>
+                  <EmojiPicker value={emoji} onChange={setEmoji} />
                 </div>
                 <div className="mb-4">
                   <label className="text-sm text-gray-500 mb-2 block">Cover color</label>
@@ -1140,8 +1141,8 @@ export default function Dashboard() {
             {!editingCookbook.cover_image && (
               <>
                 <div className="mb-4">
-                  <label className="text-sm text-gray-500 mb-1 block">Emoji</label>
-                  <input value={editingCookbook.cover_emoji} onChange={e => setEditingCookbook({ ...editingCookbook, cover_emoji: e.target.value })} className="border border-gray-200 rounded-lg px-3 py-2 w-20 text-center text-2xl"/>
+                  <label className="text-sm text-gray-500 mb-2 block">Emoji</label>
+                  <EmojiPicker value={editingCookbook.cover_emoji} onChange={em => setEditingCookbook({ ...editingCookbook, cover_emoji: em })} />
                 </div>
                 <div className="mb-4">
                   <label className="text-sm text-gray-500 mb-2 block">Cover color</label>
