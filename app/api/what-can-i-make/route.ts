@@ -59,9 +59,9 @@ ${recipeList}
 
 For each recipe, compare its ingredients against the inventory. Be sensible about matching: "chicken breasts" in the pantry covers "2 lbs chicken breast", "tomatoes" covers "diced tomatoes", etc. Then pick the best matches.
 
-If nothing matches well, that's fine — just return an empty array. Never refuse or respond with only an explanation; always return valid JSON, even if it's just [].
+The pantry may be very short — even just one or two items. That's fine: a single ingredient like "chicken" is still a legitimate starting point for several recipes that mostly need pantry staples on top of it. Don't require a high match ratio — surface recipes built around what they DO have, marked "almost" with what's missing, rather than filtering everything out. Only return an empty array if truly nothing in the recipe list shares any ingredient with the inventory at all.
 
-Return ONLY a JSON array — no explanation, no markdown, nothing before or after it. Include up to 8 recipes, best matches first. Only include recipes where the user has at least half the ingredients:
+Return ONLY a JSON array — no explanation, no markdown, nothing before or after it. Include up to 8 recipes, best matches first (recipes needing fewer additional ingredients first):
 [
   { "id": 123, "status": "ready", "missing": [] },
   { "id": 456, "status": "almost", "missing": ["soy sauce", "sesame oil"] }
