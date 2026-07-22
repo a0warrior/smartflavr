@@ -75,7 +75,10 @@ Return ONLY a JSON array — no explanation, no markdown, nothing before or afte
       max_tokens: 1500,
       messages: [{ role: "user", content: prompt }],
     })
-    content = response.content[0].type === "text" ? response.content[0].text : ""
+    // Don't assume the text reply is content[0] — find it instead of
+    // silently returning "" (and degrading to zero results) if it isn't.
+    const textBlock = response.content.find((b: any) => b.type === "text")
+    content = textBlock && "text" in textBlock ? textBlock.text : ""
   } catch (err) {
     console.error("[what-can-i-make] Anthropic call failed:", err)
     return NextResponse.json({ error: "Could not reach the AI right now. Try again." }, { status: 502 })

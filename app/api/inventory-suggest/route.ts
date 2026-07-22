@@ -66,10 +66,13 @@ Return ONLY a JSON array, no explanation, no markdown, nothing before or after i
   try {
     const response = await anthropic.messages.create({
       model: "claude-sonnet-5",
-      max_tokens: 2000,
+      max_tokens: 3500,
       messages: [{ role: "user", content: prompt }],
     })
-    content = response.content[0].type === "text" ? response.content[0].text : ""
+    // Don't assume the text reply is content[0] — find it instead of
+    // silently returning "" (and degrading to zero results) if it isn't.
+    const textBlock = response.content.find((b: any) => b.type === "text")
+    content = textBlock && "text" in textBlock ? textBlock.text : ""
   } catch (err) {
     console.error("[inventory-suggest] Anthropic call failed:", err)
     return NextResponse.json({ error: "Could not reach the AI right now. Try again." }, { status: 502 })
