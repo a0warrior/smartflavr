@@ -845,7 +845,11 @@ export default function CookingMode({
         const s = parseFloat(customSeconds) || 0
         const rawMs = (h * 3600 + m * 60 + s) * 1000
         const totalMs = Math.min(rawMs, MAX_TIMER_MS)
-        const defaultLabel = [h && `${h}h`, m && `${m}m`, s && `${s}s`].filter(Boolean).join(" ") || "Timer"
+        const unit = (n: number, word: string) => n ? `${n} ${word}${n === 1 ? "" : "s"}` : ""
+        // Spelled out rather than abbreviated (1h 30m) since this becomes
+        // the push notification body — "1 hour 30 minutes" reads clearly
+        // in a notification tray, "1h 30m" doesn't as obviously.
+        const defaultLabel = [unit(h, "hour"), unit(m, "minute"), unit(s, "second")].filter(Boolean).join(" ") || "Timer"
         const submit = () => {
           if (totalMs <= 0) return
           if (rawMs > MAX_TIMER_MS) toast.info("Timers are capped at 12 hours — started at 12h instead.")
