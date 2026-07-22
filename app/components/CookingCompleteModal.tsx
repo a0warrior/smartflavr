@@ -20,6 +20,24 @@ function useConfettiPieces(count: number) {
   })), [count])
 }
 
+// A small SmartFlavr-original mark for this moment specifically — a party
+// popper with its own confetti burst (same palette as the falling
+// confetti above) — instead of reaching for a generic platform emoji.
+function CelebrationBurst({ size = 30 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="inline-block align-middle -mt-1">
+      <path d="M12 42 L22 10 L34 18 Z" fill="#F97316" strokeLinejoin="round"/>
+      <ellipse cx="27" cy="15" rx="7" ry="4.5" transform="rotate(24 27 15)" fill="#FDBA74"/>
+      <circle cx="15" cy="8" r="2.4" fill="#ef4444"/>
+      <rect x="33" y="3" width="5" height="5" rx="1.2" fill="#3b82f6" transform="rotate(20 35.5 5.5)"/>
+      <circle cx="41" cy="13" r="2" fill="#22c55e"/>
+      <rect x="21" y="2" width="4" height="4" rx="1" fill="#fbbf24" transform="rotate(45 23 4)"/>
+      <rect x="43" y="21" width="4" height="4" rx="1" fill="#f97316" transform="rotate(-15 45 23)"/>
+      <circle cx="7" cy="19" r="1.8" fill="#fb923c"/>
+    </svg>
+  )
+}
+
 export default function CookingCompleteModal({ recipe, onDone }: { recipe: any; onDone: () => void }) {
   const { theme } = useTheme()
   const dark = theme === "dark"
@@ -96,13 +114,17 @@ export default function CookingCompleteModal({ recipe, onDone }: { recipe: any; 
       ))}
 
       <div className="relative max-w-sm w-full text-center animate-pop-in">
-        <div className="flex justify-center mb-5">
-          <Image src="/logo.svg" alt="SmartFlavr" width={56} height={56} />
+        <div className="flex justify-center mb-6">
+          {/* logo.svg's mascot sits left-of-center in its own viewBox (the
+              spoon graphic extends further right than the jar extends
+              left), so centering the box alone visually reads as
+              off-center — nudge it back to compensate. */}
+          <Image src="/logo.svg" alt="SmartFlavr" width={110} height={98} style={{ transform: "translateX(-8%)" }} />
         </div>
 
         {mode === "celebrate" ? (
           <>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Nicely done! 🎉</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-2">Nicely done! <CelebrationBurst /></h2>
             <p className="text-gray-500 text-sm mb-8 leading-relaxed">
               <span className="font-semibold text-gray-700">{recipe.title}</span> is ready to eat.
             </p>
